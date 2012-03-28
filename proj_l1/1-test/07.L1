@@ -1,0 +1,53 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program to iteration and
+;; min operation over an array
+(
+  ;; this is the program entry point
+  (:main
+    (esi <- 21)               ;; store "10" in edi
+    (eax <- (allocate esi 1))
+    (edi <- eax)
+
+    ((mem edi 4)  <- 11)
+    ((mem edi 8)  <- 41)
+    ((mem edi 12) <- 35)
+    ((mem edi 16) <- 39)
+    ((mem edi 20) <- 85)
+    ((mem edi 24) <- 161)
+    ((mem edi 28) <- 5)
+    ((mem edi 32) <- 7)
+    ((mem edi 36) <- 47)
+    ((mem edi 40) <- 9)
+
+    (eax <- (print edi))
+
+    (ebx <- 1)                ;; store "0" for initial array index
+    (edx <- 20001)            ;; very large value for the min
+
+    :loop
+    (cjump ebx < esi :continue :done)
+    :continue
+
+    (ecx <- ebx)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += edi)
+    (ecx += 4)
+    (eax <- (mem ecx 0))
+    (cjump eax <= edx :update :ignore)
+    :update
+    (edx <- eax)
+    :ignore
+    ((mem ecx 0) <- edx)
+    (ebx += 2)
+    (goto :loop)
+
+    :done
+    (eax <- (print edx))
+    (eax <- (print edi))
+  )
+)

@@ -7,14 +7,14 @@
 (
   ;; this is the program entry point
   (:main
-    (esi <- 41)          ;; store "10" in edi
+    (esi <- 41)                 ;; store "20" in edi
     (eax <- (allocate esi esi))
     (edi <- eax)
 
     (eax <- (print edi))
 
-    (ebx <- esi)          ;; index to the end of the array
-    (ebx -= 2)            ;; subtract 1
+    (ebx <- esi)                ;; index to the end of the array
+    (ebx -= 2)                  ;; subtract 1
 
     :loop
     (cjump 1 <= ebx  :continue :done)
