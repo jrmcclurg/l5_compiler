@@ -8,7 +8,6 @@
 (
   ;; this is the program entry point
   (:main
-    (eax <- (print esp))
     (esi <- 7)
     (call :one)         ;; call the first function
     (eax <- (print esi))  ;; print "3"
