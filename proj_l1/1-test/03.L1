@@ -5,6 +5,7 @@
 
 ;; Simple L1 program to test function calls
 ;; where callee needs to restore esi/edi
+;; using the stack
 (
   ;; this is the program entry point
   (:main
