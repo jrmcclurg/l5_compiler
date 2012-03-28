@@ -1,0 +1,36 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program to test forward array iteration
+(
+  ;; this is the program entry point
+  (:main
+    (esi <- 41)          ;; store "10" in edi
+    (eax <- (allocate esi 1))
+    (edi <- eax)
+
+    (eax <- (print edi))
+
+    (ebx <- 3)          ;; store "1" for initial array index
+
+    :loop
+    (cjump ebx < esi :continue :done)
+    :continue
+
+    (ecx <- ebx)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += edi)
+    (ecx += 4)
+    ;; (ecx <- (mem ecx 0))
+    ((mem ecx 0) <- ebx)
+    (ebx += 2)
+    (goto :loop)
+
+    :done
+    (eax <- (print ebx))
+    (eax <- (print edi))
+  )
+)
