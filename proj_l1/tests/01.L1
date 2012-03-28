@@ -1,0 +1,25 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+
+;; Simple L1 program to test basic function call
+(
+  ;; this is the program entry point
+  (:main
+    (call :one)         ;; call the first function
+    (eax <- (print 7))  ;; print "3"
+  )
+  ;; this is the second function
+  (:two
+    (eax <- 5)
+    (eax <- (print eax)) ;; print "2"
+    (return)
+  )
+  ;; this is the first function
+  (:one
+    (eax <- 3)            
+    (eax <- (print eax)) ;; print "1"
+    (call :two)          ;; call the second function
+    (return)
+  )
+)
