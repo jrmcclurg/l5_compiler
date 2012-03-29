@@ -1,0 +1,94 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program to iteration and
+;; min operation over an array
+(
+  ;; this is the program entry point
+  (:main
+    (ebx <- 21)               ;; store "10" in ebx (length of list)
+    (ebx *= 2)
+    (ebx -= 1)
+    (eax <- (allocate ebx 1)) ;; allocate an array of twice that length
+    (edi <- eax)              ;; store the array pointer in edi
+
+    ;; put some values in the first half
+    ((mem edi 4)  <- 11)
+    ((mem edi 8)  <- 41)
+    ((mem edi 12) <- 35)
+    ((mem edi 16) <- 39)
+    ((mem edi 20) <- 85)
+    ((mem edi 24) <- 161)
+    ((mem edi 28) <- 5)
+    ((mem edi 32) <- 7)
+    ((mem edi 36) <- 47)
+    ((mem edi 40) <- 9)
+
+    (eax <- (print edi))
+
+    (esi <- 1);
+
+    :outerloop
+    (eax <- (mem edi 0))
+    ;;(eax *= 2)
+    (eax += 1)
+    (cjump esi < eax :continue2 :done2)
+    :continue2
+
+    (ebx <- 1)                ;; store "0" for initial array index
+    (edx <- 20001)            ;; very large value for the min
+
+    (esp -= 4)
+    ((mem ebp -4) <- esi)  ;; put esi on the stack
+
+    (esi <- 1)
+
+    :loop
+    (eax <- (mem edi 0))
+    ;;(eax *= 2)
+    (eax += 1)
+    (cjump ebx < eax :continue :done)
+    :continue
+
+    (ecx <- ebx)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += edi)
+    (ecx += 4)
+    (eax <- (mem ecx 0))
+    (cjump eax <= edx :update :ignore)
+    :update
+    (edx <- eax)
+    (esi <- ecx)
+    :ignore
+    (ebx += 2)
+    (goto :loop)
+
+    :done
+
+    ((mem esi 0) <- 20001)
+
+    (esi <- (mem ebp -4))  ;; pop esi off the stack
+    (esp += 4)
+
+    (eax <- (mem edi 0))
+    ;;(eax *= 2)
+    ;;(eax += 1)
+    (ecx <- esi)
+    (ecx += eax)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += edi)
+    (ecx += 4)
+    ((mem ecx 0) <- edx)  ;; use <- edi here for debug
+
+    (esi += 2)       ;; increment by 1
+    (goto :outerloop)
+
+    :done2
+    (eax <- (print edx))
+    (eax <- (print edi))
+  )
+)
