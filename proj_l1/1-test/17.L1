@@ -1,0 +1,40 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program which does some comparisons
+(
+  ;; this is the program entry point
+  (:main
+    (eax <- 13 < 15)
+    (eax *= 2)
+    (eax += 1)
+    (eax <- (print eax))
+
+    (eax <- 15 < 15)
+    (eax *= 2)
+    (eax += 1)
+    (eax <- (print eax))
+
+    (eax <- 17 < 15)
+    (eax *= 2)
+    (eax += 1)
+    (eax <- (print eax))
+
+    (ebx <- 23 <= 15)
+    (ebx *= 2)
+    (ebx += 1)
+    (eax <- (print ebx))
+
+    (ecx <- 15 = 15)
+    (ecx *= 2)
+    (ecx += 1)
+    (eax <- (print ecx))
+
+    (edx <- 19 = 15)
+    (edx *= 2)
+    (edx += 1)
+    (eax <- (print edx))
+  )
+)
