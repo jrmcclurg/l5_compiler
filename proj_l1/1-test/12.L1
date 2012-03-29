@@ -1,0 +1,41 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program which does some counting
+;; with very large numbers to test numeric
+;; bounds
+(
+  ;; this is the program entry point
+  (:main
+    (ebx <- 2147483637)
+    (eax <- (print ebx))
+
+    (esi <- 1)
+    :loop1
+    (cjump esi < 11 :continue1 :end1)
+    :continue1
+    (ebx += 2)
+    (eax <- (print ebx))
+    (esi += 2)
+    (goto :loop1)
+    :end1
+
+    (ebx <- -13)
+    (eax <- (print ebx))
+
+    (esi <- 1)
+    :loop2
+    (cjump esi < 21 :continue2 :end2)
+    :continue2
+    (ebx += 2)
+    (eax <- (print ebx))
+    (esi += 2)
+    (goto :loop2)
+    :end2
+
+    (ebx <- -2147483647)
+    (eax <- (print ebx))
+  )
+)
