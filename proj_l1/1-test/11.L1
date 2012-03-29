@@ -3,8 +3,8 @@
 ;; Jedidiah R. McClurg
 ;; 3-29-12
 
-;; Simple L1 program to iteration and
-;; min operation over an array
+;; Simple L1 program which implements
+;; a dumb n^2 sort on an array of numbers
 (
   ;; this is the program entry point
   (:main
@@ -68,7 +68,7 @@
 
     :done
 
-    ((mem esi 0) <- 20001)
+    ((mem esi 0) <- 201)
 
     (esi <- (mem ebp -4))  ;; pop esi off the stack
     (esp += 4)
@@ -88,7 +88,6 @@
     (goto :outerloop)
 
     :done2
-    (eax <- (print edx))
     (eax <- (print edi))
   )
 )
