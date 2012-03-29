@@ -3,9 +3,8 @@
 ;; Jedidiah R. McClurg
 ;; 3-29-12
 
-;; Simple L1 program which does some counting
-;; with very large numbers to test numeric
-;; bounds
+;; Simple L1 program which demos faulty
+;; array access indicated by the array-error function
 (
   ;; this is the program entry point
   (:main
