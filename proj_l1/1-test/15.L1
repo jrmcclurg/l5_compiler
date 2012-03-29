@@ -1,0 +1,25 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program which does some arithmetic
+(
+  ;; this is the program entry point
+  (:main
+    (edi <- 13)
+    (eax <- (print edi))
+    (edx <- edi)
+    (call :func)
+    (eax <- (print edx))
+  )
+  (:func
+    ;; (eax <- (print edx))
+    (cjump 0 < edx :continue :end)
+    :end
+    (return)
+    :continue
+    (edx -= 2)
+    (tail-call :func)
+  )
+)
