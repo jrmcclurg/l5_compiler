@@ -3,7 +3,7 @@
 ;; Jedidiah R. McClurg
 ;; 3-29-12
 
-;; Simple L1 program which does some arithmetic
+;; Simple L1 program which does some tail recursion
 (
   ;; this is the program entry point
   (:main

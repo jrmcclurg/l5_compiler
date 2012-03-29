@@ -1,0 +1,30 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program which does some gotos
+(
+  ;; this is the program entry point
+  (:main
+    (eax <- (print 15)) ;; print "7"
+    (goto :skip)
+
+    :hop
+    (eax <- (print 17)) ;; print "8"
+    (goto :skip2)
+
+    :skip
+    (eax <- (print 19)) ;; print "9"
+    (goto :hop)
+
+    :skip2
+    (eax <- (print 21)) ;; print "10"
+    (call :func)
+    (eax <- (print edx))
+  )
+  (:func
+    (edx <- 13)
+    (return)
+  )
+)
