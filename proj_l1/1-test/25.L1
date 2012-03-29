@@ -1,0 +1,20 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program which demonstrates interesting 
+;; array behavior
+(
+  ;; this is the program entry point
+  (:main
+    (eax <- (allocate 13 1))
+    (edi <- eax)
+
+    (eax <- (print edi))
+
+    ((mem edi 0) <- 1)
+
+    (eax <- (print edi))
+  )
+)

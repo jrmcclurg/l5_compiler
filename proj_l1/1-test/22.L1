@@ -1,0 +1,25 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program which jumps back and forth for a while
+(
+  ;; this is the program entry point
+  (:main
+    (esi <- 1)                ;; store "0" in edi
+    (edi <- 41)               ;; store "10" in edi
+
+    :ping
+    (eax <- (print esi))
+    (esi += 2)
+    (cjump esi < edi :pong :done)
+
+    :pong
+    (eax <- (print esi))
+    (esi += 2)
+    (cjump esi < edi :ping :done)
+
+    :done
+  )
+)

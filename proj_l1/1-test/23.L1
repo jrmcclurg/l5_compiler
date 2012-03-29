@@ -1,0 +1,21 @@
+;; EECS 322 Compiler Construction
+;; Test-1 Assignment (Test Cases for L1)
+;; Jedidiah R. McClurg
+;; 3-29-12
+
+;; Simple L1 program which calls a chain of functions
+(
+  ;; this is the program entry point
+  (:main
+    (call :func1)
+  )
+  (:func1 (call :func2) (return))
+  (:func2 (call :func3) (return))
+  (:func3 (call :func4) (return))
+  (:func4 (call :func5) (return))
+  (:func5 (call :func6) (return))
+  (:func6 (call :func7) (return))
+  (:func7 (call :func8) (return))
+  (:func8 (call :func9) (return))
+  (:func9 (eax <- (print 19)) (return))
+)
