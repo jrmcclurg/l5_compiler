@@ -9,11 +9,6 @@
 (
   ;; this is the program entry point
   (:main
-    (ebx <- 21)
-    (eax <- (allocate ebx 1))
-    (eax <- (array-error eax 3))
-
-
     (ebx <- 2147483637)
     (eax <- (print ebx))
 
