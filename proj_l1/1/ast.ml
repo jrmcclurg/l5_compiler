@@ -1,34 +1,51 @@
 type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
 
-type grammar = Grammar of pos * code * code * production list (* code,prods *)
- and code = Code of pos * string option
- and production = Production of pos * string * pattern list (* name,patterns *)
- and pattern = Pattern of pos * subpattern list * string * code (* subpatterns,code *)
- and subpattern = SimpleSubpattern of pos * atom * opts
-                | RangeSubpattern of pos * atom * atom * opts
- and atom = EOFAtom of pos
-          | IdentAtom of pos * string
-          | StringAtom of pos * string
-          | CharsetsAtom of pos * charsets
-          | ChoiceAtom of pos * subpatterns list
- and subpatterns = Subpatterns of pos * subpattern list
- and charsets = SingletonCharsets of pos * charset
-              | DiffCharsets of pos * charset * charset
- and charset = WildcardCharset of pos
-             | SingletonCharset of pos * char 
-             | ListCharset of pos * chars list * bool
- and chars = SingletonChars of pos * char
-           | RangeChars of pos * char * char
- and opts = Options of pos * op option * int option * assoc option
- and op = StarOp of pos
-        | PlusOp of pos
-        | QuestionOp of pos
- and assoc = LeftAssoc of pos
-           | RightAssoc of pos
-           | UnaryAssoc of pos
+type program = Program of pos * func list
+ and func = Function of pos * string option * instr list
+ and instr = AssignInstr of pos * xreg * sval
+           | MemReadInstr of pos * xreg * xreg * int
+           | MemWriteInstr of pos * xreg * int * sval
+           | PlusInstr of pos * xreg * tval
+           | MinusInstr of pos * xreg * tval
+           | TimesInstr of pos * xreg * tval
+           | BitAndInstr of pos * xreg * tval
+           | SllInstr of pos * xreg * sxreg
+           | SrlInstr of pos * xreg * sxreg
+           | LtInstr of pos * cxreg * tval * tval
+           | LeqInstr of pos * cxreg * tval * tval
+           | EqInstr of pos * cxreg * tval * tval
+           | LabelInstr of pos * string
+           | GotoInstr of pos * string
+           | LtJumpInstr of pos * tval * tval * string * string
+           | LeqJumpInstr of pos * tval * tval * string * string
+           | EqJumpInstr of pos * tval * tval * string * string
+           | CallInstr of pos * uval
+           | TailCallInstr of pos * uval
+           | ReturnInstr of pos
+           | PrintInstr of pos * tval
+           | AllocInstr of pos * tval * tval
+           | ArrayErrorInstr of pos * tval * tval
+ and xreg = CalleeSaveReg of pos * cxreg
+          | EsiReg of pos
+          | EdiReg of pos
+          | EbpReg of pos
+          | EspReg of pos
+ and cxreg = EaxReg of pos
+           | EcxReg of pos
+           | EdxReg of pos
+           | EbxReg of pos
+ and sxreg = EcxShReg of pos
+           | IntShVal of pos * int
+ and sval = RegSVal of pos * xreg
+          | IntSVal of pos * int
+          | LabelSVal of pos * string
+ and uval = RegUVal of pos * xreg
+          | LabelUVal of pos * string
+ and tval = RegTVal of pos * xreg
+          | IntTVal of pos * int
 ;;
 
-let rec string_explode (s:string) : char list =
+(* let rec string_explode (s:string) : char list =
    if (String.length s) > 0 then
       (String.get s 0)::(string_explode (String.sub s 1 ((String.length s)-1)))
    else
@@ -372,4 +389,4 @@ and print_assoc (n:int) (a:assoc option) : unit =
       print_indent n "UnaryAssoc(";
       print_pos 0 p;
       print_string ")";
-;;
+;; *)

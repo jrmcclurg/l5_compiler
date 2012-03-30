@@ -4,120 +4,115 @@
    open Utils;;
 %}
 %token <int> INT
-%token <string> IDENT
-%token <Lexing.position*string option> CODE
-%token <string> STRINGQUOT 
-%token <string> CHARSET
-%token <char> CHARQUOT
-%token PLUS MINUS TIMES DIV
+%token <string> LABEL
+%token ARRAYERR TAILCALL ALLOC RETURN PRINT CJUMP GOTO MEM CALL
+%token ESI EDI EBP ESP
+%token EAX ECX EDX EBX
 %token LPAREN RPAREN
-%token EOL
-%token RANGE
+%token PLUSEQ MINUSEQ TIMESEQ BITANDEQ
+%token SLLEQ SRLEQ
+%token GETS 
+%token LEQ LT EQ
 %token EOF
-%token COLON SEMI LBRACK RBRACK
-%token LEFT RIGHT UNARY
-%token ARROW BAR DQUOT QUOT STAR PLUS QUESTION WILDCARD DIFF ENDFILE
-%left PLUS MINUS /* lowest precedence */
-%left TIMES DIV /* medium precedence */
-%nonassoc UMINUS /* highest precedence */
+/* last tokens have highest precedence */
 %start main /* the entry point */
-%type <Ast.grammar> main
+%type <Ast.program> main
 %%
 main:
-   code_block production prod_list code_block EOF {
-      match $1 with
-      | Code(p,_) ->
-         Grammar((if p=NoPos then get_pos (rhs_start_pos 2) else
-            p),$1,$4,$2::$3)
+   LPAREN func func_list RPAREN { Program(get_current_pos (), $2::$3) }
+   /* NOTE XXX - at some point, add EOF here */
+;
+
+func:
+   | LPAREN instr instr_list RPAREN {
+      (* we need to see if this function has a name *)
+      (* (using a separate rule for the labeled functions
+       *  causes a shift/reduce conflict in the parser) *)
+      let il = $2::$3 in
+      let a = List.hd il in
+      let ax = List.tl il in
+      let (name,l) =
+      (match a with
+      | LabelInstr(_,s) -> (Some(s),ax)
+      | _ -> (None,il)) in
+      Function(get_current_pos (), name, l)
    }
 ;
 
-code_block:
-          { Code(NoPos,None) }
-   | CODE { let (p,s) = $1 in Code(get_pos p,s) }
-
-prod_list:
-                          { [] }
-   | production prod_list { $1::$2 }
+func_list:
+                   { [] }
+  | func func_list { $1::$2 }
 ;
 
-production:
-   IDENT ARROW pattern pattern_bar_list SEMI { Production(get_current_pos (),$1,$3::$4) }
+instr:
+   | LPAREN xreg GETS sval RPAREN                            { AssignInstr(get_current_pos (), $2, $4) }
+   | LPAREN xreg GETS LPAREN MEM xreg INT RPAREN RPAREN      { MemReadInstr(get_current_pos (), $2, $6, $7) }
+   | LPAREN LPAREN MEM xreg INT RPAREN GETS sval RPAREN      { MemWriteInstr(get_current_pos (), $4, $5, $8) }
+
+   | LPAREN xreg PLUSEQ tval RPAREN                          { PlusInstr(get_current_pos (), $2, $4) }
+   | LPAREN xreg MINUSEQ tval RPAREN                         { MinusInstr(get_current_pos (), $2, $4) }
+   | LPAREN xreg TIMESEQ tval RPAREN                         { TimesInstr(get_current_pos (), $2, $4) }
+   | LPAREN xreg BITANDEQ tval RPAREN                        { BitAndInstr(get_current_pos (), $2, $4) }
+   | LPAREN xreg SLLEQ sxreg RPAREN                          { SllInstr(get_current_pos (), $2, $4) }
+   | LPAREN xreg SRLEQ sxreg RPAREN                          { SrlInstr(get_current_pos (), $2, $4) }
+
+   /*| LPAREN cxreg GETS tval LT tval RPAREN                  { LtInstr(get_current_pos (), $2, $4, $6) }
+   | LPAREN cxreg GETS tval LEQ tval RPAREN                  { LeqInstr(get_current_pos (), $2, $4, $6) }
+   | LPAREN cxreg GETS tval EQ tval RPAREN                   { EqInstr(get_current_pos (), $2, $4, $6) }
+*/
+
+   | LABEL                                                   { LabelInstr(get_current_pos (), $1) }
+   | LPAREN GOTO LABEL RPAREN                                { GotoInstr(get_current_pos (), $3) }
+  | LPAREN CJUMP tval LT tval LABEL LABEL RPAREN            { LtJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN CJUMP tval LEQ tval LABEL LABEL RPAREN           { LeqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN CJUMP tval EQ tval LABEL LABEL RPAREN            { EqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN CALL uval RPAREN                                 { CallInstr(get_current_pos (), $3) }
+   | LPAREN TAILCALL uval RPAREN                             { TailCallInstr(get_current_pos (), $3) }
+   | LPAREN RETURN RPAREN                                    { ReturnInstr(get_current_pos ()) }
+
+ /*  | LPAREN EAX GETS LPAREN PRINT tval RPAREN RPAREN         { PrintInstr(get_current_pos (), $6) }
+   | LPAREN EAX GETS LPAREN ALLOC tval tval RPAREN RPAREN    { AllocInstr(get_current_pos (), $6, $7) }
+   | LPAREN EAX GETS LPAREN ARRAYERR tval tval RPAREN RPAREN { ArrayErrorInstr(get_current_pos (), $6, $7) }
+*/
 ;
 
-pattern_bar_list:
-                              { [] }
-   | BAR pattern pattern_bar_list { $2::$3 } 
+instr_list:
+                   { [] }
+  | instr instr_list { $1::$2 }
 ;
 
-pattern:
-   subpattern subpattern_list label code_block { Pattern(get_current_pos (),$1::$2,$3,$4) }
+xreg:
+     cxreg { CalleeSaveReg(get_current_pos (), $1) }
+   | ESI   { EsiReg(get_current_pos ()) }
+   | EDI   { EdiReg(get_current_pos ()) }
+   | EBP   { EbpReg(get_current_pos ()) }
+   | ESP   { EspReg(get_current_pos ()) }
 ;
 
-label:
-                 { "" }
-   | COLON IDENT { $2 }
+cxreg:
+   | EAX { EaxReg(get_current_pos ()) }
+   | ECX { EcxReg(get_current_pos ()) }
+   | EDX { EdxReg(get_current_pos ()) }
+   | EBX { EbxReg(get_current_pos ()) }
 ;
 
-subpattern_list:
-                                { [] }
-   | subpattern subpattern_list { $1::$2 }
+sxreg:
+   | ECX { EcxShReg(get_current_pos ()) }
+   | INT { IntShVal(get_current_pos (), $1) }
 ;
 
-subpattern:
-     atom opts                    { SimpleSubpattern(get_current_pos (),$1,$2) }
-   | atom RANGE atom opts         { RangeSubpattern(get_current_pos (),$1,$3,$4) }
+sval:
+   | xreg  { RegSVal(get_current_pos(), $1) }
+   | INT   { IntSVal(get_current_pos(), $1) }
+   | LABEL { LabelSVal(get_current_pos(), $1) }
 ;
 
-atom:
-     ENDFILE    { EOFAtom(get_current_pos ()) }
-   | IDENT      { IdentAtom(get_current_pos (),$1) }
-   | STRINGQUOT { StringAtom(get_current_pos (),$1) }
-   | charsets   { CharsetsAtom(get_current_pos(),$1) }
-  /*  | atom RANGE atom { RangeAtom(get_current_pos(),$1,$3) } */
-    | LPAREN subpatterns subpatterns_bar_list RPAREN {
-      ChoiceAtom(get_current_pos (),$2::$3) } 
+uval:
+   | xreg  { RegUVal(get_current_pos(), $1) }
+   | LABEL { LabelUVal(get_current_pos(), $1) }
 ;
 
-subpatterns_bar_list:
-                                     { [] }
-   | BAR subpatterns subpatterns_bar_list { $2::$3 }
-;
-
-subpatterns:
-     subpattern subpattern_list { Subpatterns(get_current_pos (),$1::$2) }
-
-charsets:
-     charset              { SingletonCharsets(get_current_pos (),$1) } 
-   | charset DIFF charset { DiffCharsets(get_current_pos (),$1,$3) } 
-
-charset:
-     WILDCARD { WildcardCharset(get_current_pos ()) }
-   | CHARQUOT { SingletonCharset(get_current_pos (),$1) }
-   | CHARSET  { let (l,b) = Ast.compile_charset $1 in
-                ListCharset(get_current_pos (),l,b) }
-
-opts:
-   op_opr op_int op_assoc {
-      Options(get_current_pos (),$1,$2,$3)
-   }
-;
-
-op_opr:
-          { None }
-   | STAR { Some(StarOp(get_current_pos ())) }
-   | PLUS { Some(PlusOp(get_current_pos ())) }
-   | QUESTION { Some(QuestionOp(get_current_pos ())) }
-;
-
-op_int:
-         { None }
-   | INT { Some($1) }
-;
-
-op_assoc:
-           { None }
-   | LEFT  { Some(LeftAssoc(get_current_pos ())) }
-   | RIGHT { Some(RightAssoc(get_current_pos ())) }
-   | UNARY { Some(UnaryAssoc(get_current_pos ())) }
+tval:
+   | xreg  { RegTVal(get_current_pos(), $1) }
+   | INT   { IntTVal(get_current_pos(), $1) }
 ;
