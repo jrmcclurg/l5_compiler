@@ -1,26 +1,23 @@
-pgg:	ast.cmo code.cmo utils.cmo parser.cmo lexer.cmo main.cmo
-	ocamlc -o pgg str.cma ast.cmo code.cmo utils.cmo parser.cmo lexer.cmo main.cmo
+l1c:	ast.cmx utils.cmx parser.cmx lexer.cmx main.cmx
+	ocamlopt -o L1c str.cmxa ast.cmx utils.cmx parser.cmx lexer.cmx main.cmx
 
-code.cmo:	code.ml ast.cmo
-		ocamlc -c code.ml
+main.cmx:	main.ml parser.cmx lexer.cmx 
+		ocamlopt -c main.ml
 
-main.cmo:	main.ml parser.cmo lexer.cmo 
-		ocamlc -c main.ml
+parser.cmx:	parser.ml parser.cmi utils.cmx
+		ocamlopt -c parser.ml
 
-parser.cmo:	parser.ml parser.cmi utils.cmo
-		ocamlc -c parser.ml
+lexer.cmx:	lexer.ml parser.cmi utils.cmx
+		ocamlopt -c lexer.ml
 
-lexer.cmo:	lexer.ml parser.cmi utils.cmo
-		ocamlc -c lexer.ml
+utils.cmx:	utils.ml ast.cmx
+		ocamlopt -c utils.ml
 
-utils.cmo:	utils.ml ast.cmo
-		ocamlc -c utils.ml
+parser.cmi:	parser.mli ast.cmx
+		ocamlopt -c parser.mli
 
-parser.cmi:	parser.mli ast.cmo
-		ocamlc -c parser.mli
-
-ast.cmo:	ast.ml
-		ocamlc -c ast.ml
+ast.cmx:	ast.ml
+		ocamlopt -c ast.ml
 
 parser.ml:	parser.mly
 		ocamlyacc parser.mly
@@ -32,7 +29,7 @@ lexer.ml:	lexer.mll
 		ocamllex lexer.mll
 
 clean:		
-		rm -rf *.cm* *.mli parser.ml lexer.ml
+		rm -rf *.cm* *.o *.mli parser.ml lexer.ml
 
 wc:		
-		wc -l lexer.mll parser.mly ast.ml utils.ml pp.ml main.ml 
+		wc -l lexer.mll parser.mly ast.ml utils.ml main.ml 
