@@ -1,5 +1,5 @@
-l1c:	ast.cmx utils.cmx parser.cmx lexer.cmx main.cmx
-	ocamlopt -o L1c str.cmxa ast.cmx utils.cmx parser.cmx lexer.cmx main.cmx
+l1c:	ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
+	ocamlopt -o L1c str.cmxa ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 
 main.cmx:	main.ml parser.cmx lexer.cmx 
 		ocamlopt -c main.ml
@@ -9,6 +9,9 @@ parser.cmx:	parser.ml parser.cmi utils.cmx
 
 lexer.cmx:	lexer.ml parser.cmi utils.cmx
 		ocamlopt -c lexer.ml
+
+code.cmx:	code.ml utils.cmx ast.cmx
+		ocamlopt -c code.ml
 
 utils.cmx:	utils.ml ast.cmx
 		ocamlopt -c utils.ml

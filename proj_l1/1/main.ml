@@ -6,6 +6,7 @@ let lexbuf = Lexing.from_channel in_stream in
 let result = Parser.main Lexer.token lexbuf in
 Ast.print_program result;
 print_newline();
+Code.compile_program result;
 print_string "\nDone";
 print_newline();
 exit 0
