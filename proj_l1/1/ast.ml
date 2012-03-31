@@ -58,7 +58,7 @@ let rec output_program out p = match p with
 and output_func out f = match f with
   | Function(_,n,il) -> output_string out "  (";
      (match n with
-     | Some(s) -> output_string out s;
+     | Some(s) -> output_string out (":"^s);
      | _ -> ());
      output_string out "\n";
      let _ = List.fold_left (fun flag i ->
@@ -230,10 +230,10 @@ and output_sreg out sr = match sr with
 and output_sval out s = match s with
    | RegSVal(_, r) -> output_reg out r
    | IntSVal(_, i) -> output_string out (string_of_int i)
-   | LabelSVal(_,s) -> output_string out s
+   | LabelSVal(_,s) -> output_string out (":"^s)
 and output_uval out u = match u with
    | RegUVal(_,r) -> output_reg out r
-   | LabelUVal(_,s) -> output_string out s
+   | LabelUVal(_,s) -> output_string out (":"^s)
 and output_tval out t = match t with
    | RegTVal(_,r) -> output_reg out r
    | IntTVal(_,i) -> output_string out (string_of_int i)

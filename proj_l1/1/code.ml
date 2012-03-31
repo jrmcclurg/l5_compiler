@@ -58,9 +58,10 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       let il2 = if first then (match so with
       | None -> il
       | Some(l) -> LabelInstr(ps,l)::il) else il in
-      List.iter (fun i ->
-         compile_instr o i first
-      ) il2;
+      List.fold_left (fun k i ->
+         compile_instr o i first k;
+         k+1
+      ) 1 il2;
       (* print some boilerplate if we're processing the "go" function *)
       if first then (
       output_string o "        ##### end function body #####\n" ;
@@ -77,20 +78,38 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       output_string o ("########## end function \""^name^"\" ##########\n");
       if first then (output_string o ("	.size	"^name^", .-"^name^"\n") )
 
-and compile_instr (o : out_channel) (i : instr) (first : bool) =
+and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
    output_string o "\t# ";
    output_instr o i;
    output_string o "\n";
    match i with
+   | AssignInstr(ps,r,sv) -> 
+      output_string o "\tmovl\t";
+      compile_sval o sv;
+      output_string o ",";
+      compile_reg o r;
+      output_string o "\n";
    | LabelInstr(ps,l) -> compile_label o l
    | GotoInstr(ps,l) -> output_string o ("\tjmp\t_"^l^"\n")
+   | CallInstr(ps, uv) ->
+      output_string o ("\tpushl\t$r_"^(string_of_int k)^"\n");
+      output_string o "\tpushl\t%ebp\n";
+      output_string o "\tmovl\t%esp,%ebp\n";
+      output_string o "\tjmp\t";
+      compile_uval o uv; (* TODO XXX - this may be wrong *)
+      output_string o "\n";
+      output_string o ("r_"^(string_of_int k)^":\n");
+
    | ReturnInstr(ps) ->
       if first then (
          output_string o "        popl   %ebp\n" ;
          output_string o "        popl   %edi\n" ;
          output_string o "        popl   %esi\n" ;
          output_string o "        popl   %ebx\n" ;
-         output_string o "        leave\n" ;
+         output_string o "        leave\n" 
+      ) else (
+         output_string o "\tmovl\t%ebp,%esp\n" ;
+         output_string o "\tpopl\t%ebp\n" 
       );
       output_string o ("\tret\n")
    | PrintInstr(ps,tv) ->
@@ -139,10 +158,10 @@ and compile_sreg (o : out_channel) (sr : sreg) = match sr with
 and compile_sval (o : out_channel) (sv : sval) = match sv with
    | RegSVal(ps,r) -> compile_reg o r;
    | IntSVal(ps,i) -> output_string o ("$"^(string_of_int i))
-   | LabelSVal(ps,l) -> output_string o ("_"^l)  (* TODO XXX - does this work? *)
+   | LabelSVal(ps,l) -> output_string o ("$_"^l)  (* TODO XXX - does this work? *)
 
 and compile_uval (o : out_channel) (uv : uval) = match uv with
-   | RegUVal(ps,r) -> compile_reg o r
+   | RegUVal(ps,r) -> output_string o "*"; compile_reg o r
    | LabelUVal(ps,l) -> output_string o ("_"^l)  (* TODO XXX - does this work? *)
 
 and compile_tval (o : out_channel) (t : tval) = match t with
