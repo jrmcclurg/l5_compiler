@@ -1,4 +1,4 @@
-l1c:	ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
+L1c:	ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 	ocamlopt -o L1c str.cmxa ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 
 main.cmx:	main.ml parser.cmx lexer.cmx 
@@ -32,7 +32,7 @@ lexer.ml:	lexer.mll
 		ocamllex lexer.mll
 
 clean:		
-		rm -rf *.cm* *.o *.mli parser.ml lexer.ml
+		rm -rf *.c *.S *.out *.cm* *.o *.mli parser.ml lexer.ml
 
 wc:		
 		wc -l lexer.mll parser.mly ast.ml utils.ml main.ml 
