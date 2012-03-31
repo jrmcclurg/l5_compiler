@@ -53,7 +53,11 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       output_string o "        # stack pointers equal\n" ;
       output_string o "        movl    %esp, %ebp\n" ;
       output_string o "\n" ;
-      output_string o "        ################ The code goes here\n" ;
+      output_string o "        ##### begin function body #####\n" ;
+      List.iter (fun i ->
+         compile_instr o i
+      ) il;
+      output_string o "        ##### end function body #####\n" ;
       output_string o "\n" ;
       output_string o "        # restore callee-saved registers\n" ;
       output_string o "        popl   %ebp\n" ;
@@ -66,6 +70,35 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       output_string o "        ret\n" ;
       output_string o ("########## end function \""^name^"\" ##########\n");
       output_string o ("	.size	"^name^", .-"^name^"\n") 
+
+and compile_instr (o : out_channel) (i : instr) = match i with
+   | PrintInstr(ps,tv) ->
+      output_string o "\t# ";
+      output_instr o i;
+      output_string o "\n";
+      output_string o "\tpushl\t";
+      compile_tval o tv;
+      output_string o "\n";
+      output_string o "\tcall\tprint\n";
+      output_string o "\taddl\t$4,%esp\n"
+   | _ -> output_string o "\t### TODO XXX - unhandled instruction ###\n"
+
+and compile_tval (o : out_channel) (t : tval) = match t with
+   | RegTVal(ps,r) -> compile_reg o r
+   | IntTVal(ps,i) -> output_string o ("$"^(string_of_int i))
+
+and compile_reg (o : out_channel) (r : reg) = match r with
+   | EsiReg(ps) -> output_string o "%esi"
+   | EdiReg(ps) -> output_string o "%edi"
+   | EbpReg(ps) -> output_string o "%ebp"
+   | EspReg(ps) -> output_string o "%esp"
+   | CallerSaveReg(ps,cr) -> compile_creg o cr
+
+and compile_creg (o : out_channel) (cr : creg) = match cr with
+   | EaxReg(ps) -> output_string o "%eax"
+   | EcxReg(ps) -> output_string o "%ecx"
+   | EdxReg(ps) -> output_string o "%edx"
+   | EbxReg(ps) -> output_string o "%ebx"
 
 and compile_label (o : out_channel) (l : string) = 
    output_string o ("_"^l^":\n") ;
