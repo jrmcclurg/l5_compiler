@@ -11,8 +11,9 @@ let parse_error s =
   let col_num   = (p.Lexing.pos_cnum-p.Lexing.pos_bol+1) in
   print_string ("Parse error in '"^file_name^
     "' on line "^(string_of_int line_num)^" col "^(string_of_int
-    col_num)^"!\n"
-  )
+    col_num)^": "^s^"\n"
+  );
+  exit 1
 ;;
 
 let get_current_pos () =
@@ -42,4 +43,9 @@ let rec count_newlines s lb = match s with
           let cs = String.sub s 1 ((String.length s)-1) in
           if (c="\n") then (do_newline lb; 1+(count_newlines cs lb))
                       else (count_newlines cs lb)
+;;
+
+let get_creg r = match r with
+  | CallerSaveReg(_,c) -> c
+  | _ -> parse_error "Destination must be one of EAX, ECX, EDX, EBX"
 ;;

@@ -2,18 +2,18 @@ type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
 
 type program = Program of pos * func list
  and func = Function of pos * string option * instr list
- and instr = AssignInstr of pos * xreg * sval
-           | MemReadInstr of pos * xreg * xreg * int
-           | MemWriteInstr of pos * xreg * int * sval
-           | PlusInstr of pos * xreg * tval
-           | MinusInstr of pos * xreg * tval
-           | TimesInstr of pos * xreg * tval
-           | BitAndInstr of pos * xreg * tval
-           | SllInstr of pos * xreg * sxreg
-           | SrlInstr of pos * xreg * sxreg
-           | LtInstr of pos * cxreg * tval * tval
-           | LeqInstr of pos * cxreg * tval * tval
-           | EqInstr of pos * cxreg * tval * tval
+ and instr = AssignInstr of pos * reg * sval
+           | MemReadInstr of pos * reg * reg * int
+           | MemWriteInstr of pos * reg * int * sval
+           | PlusInstr of pos * reg * tval
+           | MinusInstr of pos * reg * tval
+           | TimesInstr of pos * reg * tval
+           | BitAndInstr of pos * reg * tval
+           | SllInstr of pos * reg * sreg
+           | SrlInstr of pos * reg * sreg
+           | LtInstr of pos * creg * tval * tval
+           | LeqInstr of pos * creg * tval * tval
+           | EqInstr of pos * creg * tval * tval
            | LabelInstr of pos * string
            | GotoInstr of pos * string
            | LtJumpInstr of pos * tval * tval * string * string
@@ -25,23 +25,23 @@ type program = Program of pos * func list
            | PrintInstr of pos * tval
            | AllocInstr of pos * tval * tval
            | ArrayErrorInstr of pos * tval * tval
- and xreg = CalleeSaveReg of pos * cxreg
-          | EsiReg of pos
-          | EdiReg of pos
-          | EbpReg of pos
-          | EspReg of pos
- and cxreg = EaxReg of pos
-           | EcxReg of pos
-           | EdxReg of pos
-           | EbxReg of pos
- and sxreg = EcxShReg of pos
+ and reg = EsiReg of pos
+         | EdiReg of pos
+         | EbpReg of pos
+         | EspReg of pos
+         | CallerSaveReg of pos * creg
+ and creg = EaxReg of pos
+          | EcxReg of pos
+          | EdxReg of pos
+          | EbxReg of pos
+ and sreg = EcxShReg of pos
            | IntShVal of pos * int
- and sval = RegSVal of pos * xreg
+ and sval = RegSVal of pos * reg
           | IntSVal of pos * int
           | LabelSVal of pos * string
- and uval = RegUVal of pos * xreg
+ and uval = RegUVal of pos * reg
           | LabelUVal of pos * string
- and tval = RegTVal of pos * xreg
+ and tval = RegTVal of pos * reg
           | IntTVal of pos * int
 ;;
 
