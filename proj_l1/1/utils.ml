@@ -4,6 +4,9 @@ open Ast;;
 
 exception Parse_error;;
 
+let max_int = 2147483647 ;;
+let min_int = -2147483648 ;;
+
 let parse_error s = 
   let p         = symbol_end_pos ()  in
   let file_name = p.Lexing.pos_fname in
@@ -47,5 +50,9 @@ let rec count_newlines s lb = match s with
 
 let get_creg r = match r with
   | CallerSaveReg(_,c) -> c
-  | _ -> parse_error "Destination must be one of EAX, ECX, EDX, EBX"
+  | _ -> parse_error "destination must be one of eax, ecx, edx, ebx"
+;;
+
+let check_int_range i =
+   if ((i < min_int) or (i > max_int)) then parse_error "integer out of range"
 ;;

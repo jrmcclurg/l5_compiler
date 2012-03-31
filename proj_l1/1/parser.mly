@@ -46,15 +46,19 @@ func_list:
 
 instr:
    | LPAREN reg GETS sval RPAREN                             { AssignInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg GETS LPAREN MEM reg INT RPAREN RPAREN        { MemReadInstr(get_current_pos (), $2, $6, $7) }
-   | LPAREN LPAREN MEM reg INT RPAREN GETS sval RPAREN       { MemWriteInstr(get_current_pos (), $4, $5, $8) }
-
+   | LPAREN reg GETS LPAREN MEM reg INT RPAREN RPAREN        { let i = $7 in
+                                                               check_int_range i;
+                                                               if (i mod 4 <> 0) then parse_error "offset must be divisible by 4";
+                                                               MemReadInstr(get_current_pos (), $2, $6, i) }
+   | LPAREN LPAREN MEM reg INT RPAREN GETS sval RPAREN       { let i = $5 in
+                                                               if (i mod 4 <> 0) then parse_error "offset must be divisible by 4";
+                                                               MemWriteInstr(get_current_pos (), $4, i, $8) }
    | LPAREN reg PLUSEQ tval RPAREN                           { PlusInstr(get_current_pos (), $2, $4) }
    | LPAREN reg MINUSEQ tval RPAREN                          { MinusInstr(get_current_pos (), $2, $4) }
    | LPAREN reg TIMESEQ tval RPAREN                          { TimesInstr(get_current_pos (), $2, $4) }
    | LPAREN reg BITANDEQ tval RPAREN                         { BitAndInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg SLLEQ sreg RPAREN                           { SllInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg SRLEQ sreg RPAREN                           { SrlInstr(get_current_pos (), $2, $4) }
+   | LPAREN reg SLLEQ sreg RPAREN                            { SllInstr(get_current_pos (), $2, $4) }
+   | LPAREN reg SRLEQ sreg RPAREN                            { SrlInstr(get_current_pos (), $2, $4) }
    /* the "reg" in the following three lines gets parsed as creg */
    | LPAREN reg GETS tval LT tval RPAREN                     { LtInstr(get_current_pos (), get_creg $2, $4, $6) }
    | LPAREN reg GETS tval LEQ tval RPAREN                    { LeqInstr(get_current_pos (), get_creg $2, $4, $6) }
@@ -71,17 +75,17 @@ instr:
    | LPAREN reg GETS LPAREN PRINT tval RPAREN RPAREN         { let r = $2 in
                                                                (match r with
                                                                 | CallerSaveReg(_,EaxReg(_)) -> ()
-                                                                | _ -> parse_error "Destination must be EAX");
+                                                                | _ -> parse_error "destination must be eax");
                                                                PrintInstr(get_current_pos (), $6) }
    | LPAREN reg GETS LPAREN ALLOC tval tval RPAREN RPAREN    { let r = $2 in
                                                                (match r with
                                                                 | CallerSaveReg(_,EaxReg(_)) -> ()
-                                                                | _ -> parse_error "Destination must be EAX");
+                                                                | _ -> parse_error "destination must be eax");
                                                                AllocInstr(get_current_pos (), $6, $7) }
    | LPAREN reg GETS LPAREN ARRAYERR tval tval RPAREN RPAREN { let r = $2 in
                                                                (match r with
                                                                 | CallerSaveReg(_,EaxReg(_)) -> ()
-                                                                | _ -> parse_error "Destination must be EAX");
+                                                                | _ -> parse_error "destination must be eax");
                                                                ArrayErrorInstr(get_current_pos (), $6, $7) }
 ;
 
