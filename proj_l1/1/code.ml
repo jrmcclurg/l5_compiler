@@ -31,14 +31,13 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       let name = (if first then "go" else (match so with
         | None -> die_error ps "function must be named"
         | Some(s) -> ("_"^s))) in
+      (* print some boilerplate if we're processing the "go" function *)
+      if first then (
       output_string o ("	.globl	"^name^"\n") ;
-      output_string o ("	.type	"^name^", @function\n") ;
+      output_string o ("	.type	"^name^", @function\n")  );
       output_string o ("########## begin function \""^name^"\" ##########\n");
       output_string o (name^":\n") ;
-      (* if the "go" function (i.e. the first one) had a label, just print it *)
-      if first then (match so with
-      | None -> () 
-      | Some(l) -> compile_label o l);
+      if first then (
       output_string o "        # save caller's base pointer\n" ;
       output_string o "        pushl   %ebp\n" ;
       output_string o "        movl    %esp, %ebp\n" ;
@@ -53,10 +52,17 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       output_string o "        # stack pointers equal\n" ;
       output_string o "        movl    %esp, %ebp\n" ;
       output_string o "\n" ;
-      output_string o "        ##### begin function body #####\n" ;
+      output_string o "        ##### begin function body #####\n" );
+      (* if the "go" function (i.e. the first one) had a label, we need 
+       * to add it to the instruction list *)
+      let il2 = if first then (match so with
+      | None -> il
+      | Some(l) -> LabelInstr(ps,l)::il) else il in
       List.iter (fun i ->
-         compile_instr o i
-      ) il;
+         compile_instr o i first
+      ) il2;
+      (* print some boilerplate if we're processing the "go" function *)
+      if first then (
       output_string o "        ##### end function body #####\n" ;
       output_string o "\n" ;
       output_string o "        # restore callee-saved registers\n" ;
@@ -67,25 +73,51 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       output_string o "\n" ;
       output_string o "        # restore caller's base pointer\n" ;
       output_string o "        leave\n" ;
-      output_string o "        ret\n" ;
+      output_string o "        ret\n" );
       output_string o ("########## end function \""^name^"\" ##########\n");
-      output_string o ("	.size	"^name^", .-"^name^"\n") 
+      if first then (output_string o ("	.size	"^name^", .-"^name^"\n") )
 
-and compile_instr (o : out_channel) (i : instr) = match i with
+and compile_instr (o : out_channel) (i : instr) (first : bool) =
+   output_string o "\t# ";
+   output_instr o i;
+   output_string o "\n";
+   match i with
+   | LabelInstr(ps,l) -> compile_label o l
+   | GotoInstr(ps,l) -> output_string o ("\tjmp\t_"^l^"\n")
+   | ReturnInstr(ps) ->
+      if first then (
+         output_string o "        popl   %ebp\n" ;
+         output_string o "        popl   %edi\n" ;
+         output_string o "        popl   %esi\n" ;
+         output_string o "        popl   %ebx\n" ;
+         output_string o "        leave\n" ;
+      );
+      output_string o ("\tret\n")
    | PrintInstr(ps,tv) ->
-      output_string o "\t# ";
-      output_instr o i;
-      output_string o "\n";
       output_string o "\tpushl\t";
       compile_tval o tv;
       output_string o "\n";
       output_string o "\tcall\tprint\n";
       output_string o "\taddl\t$4,%esp\n"
+   | AllocInstr(ps,tv1,tv2) ->
+      output_string o "\tpushl\t";
+      compile_tval o tv2;
+      output_string o "\n";
+      output_string o "\tpushl\t";
+      compile_tval o tv1;
+      output_string o "\n";
+      output_string o "\tcall\tallocate\n";
+      output_string o "\taddl\t$8,%esp\n"
+   | ArrayErrorInstr(ps,tv1,tv2) ->
+      output_string o "\tpushl\t";
+      compile_tval o tv2;
+      output_string o "\n";
+      output_string o "\tpushl\t";
+      compile_tval o tv1;
+      output_string o "\n";
+      output_string o "\tcall\tprint_error\n";
+      output_string o "\taddl\t$8,%esp\n"
    | _ -> output_string o "\t### TODO XXX - unhandled instruction ###\n"
-
-and compile_tval (o : out_channel) (t : tval) = match t with
-   | RegTVal(ps,r) -> compile_reg o r
-   | IntTVal(ps,i) -> output_string o ("$"^(string_of_int i))
 
 and compile_reg (o : out_channel) (r : reg) = match r with
    | EsiReg(ps) -> output_string o "%esi"
@@ -99,6 +131,23 @@ and compile_creg (o : out_channel) (cr : creg) = match cr with
    | EcxReg(ps) -> output_string o "%ecx"
    | EdxReg(ps) -> output_string o "%edx"
    | EbxReg(ps) -> output_string o "%ebx"
+
+and compile_sreg (o : out_channel) (sr : sreg) = match sr with
+   | EcxShReg(ps) -> output_string o "%ecx"
+   | IntShVal(ps,i) -> output_string o ("$"^(string_of_int i))
+
+and compile_sval (o : out_channel) (sv : sval) = match sv with
+   | RegSVal(ps,r) -> compile_reg o r;
+   | IntSVal(ps,i) -> output_string o ("$"^(string_of_int i))
+   | LabelSVal(ps,l) -> output_string o ("_"^l)  (* TODO XXX - does this work? *)
+
+and compile_uval (o : out_channel) (uv : uval) = match uv with
+   | RegUVal(ps,r) -> compile_reg o r
+   | LabelUVal(ps,l) -> output_string o ("_"^l)  (* TODO XXX - does this work? *)
+
+and compile_tval (o : out_channel) (t : tval) = match t with
+   | RegTVal(ps,r) -> compile_reg o r
+   | IntTVal(ps,i) -> output_string o ("$"^(string_of_int i))
 
 and compile_label (o : out_channel) (l : string) = 
    output_string o ("_"^l^":\n") ;

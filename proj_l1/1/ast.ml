@@ -2,7 +2,8 @@ type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
 
 type program = Program of pos * func list
  and func = Function of pos * string option * instr list
- and instr = AssignInstr of pos * reg * sval
+ and instr = 
+             AssignInstr of pos * reg * sval
            | MemReadInstr of pos * reg * reg * int
            | MemWriteInstr of pos * reg * int * sval
            | PlusInstr of pos * reg * tval
@@ -14,17 +15,17 @@ type program = Program of pos * func list
            | LtInstr of pos * creg * tval * tval
            | LeqInstr of pos * creg * tval * tval
            | EqInstr of pos * creg * tval * tval
-           | LabelInstr of pos * string
-           | GotoInstr of pos * string
+      (**)     | LabelInstr of pos * string
+     (**)      | GotoInstr of pos * string
            | LtJumpInstr of pos * tval * tval * string * string
            | LeqJumpInstr of pos * tval * tval * string * string
            | EqJumpInstr of pos * tval * tval * string * string
            | CallInstr of pos * uval
            | TailCallInstr of pos * uval
            | ReturnInstr of pos
-           | PrintInstr of pos * tval
-           | AllocInstr of pos * tval * tval
-           | ArrayErrorInstr of pos * tval * tval
+     (**)      | PrintInstr of pos * tval
+      (**)     | AllocInstr of pos * tval * tval
+      (**)     | ArrayErrorInstr of pos * tval * tval
  and reg = EsiReg of pos
          | EdiReg of pos
          | EbpReg of pos
@@ -151,7 +152,7 @@ and output_instr out i = match i with
       output_tval out tv2;
       output_string out ")";
    | LabelInstr(_,s) ->
-      output_string out s;
+      output_string out (":"^s);
    | GotoInstr(_,s) ->
       output_string out "(goto ";
       output_string out s;
