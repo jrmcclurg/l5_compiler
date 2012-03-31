@@ -45,6 +45,199 @@ type program = Program of pos * func list
           | IntTVal of pos * int
 ;;
 
+let rec print_program p = match p with
+  | Program(_,fl) ->
+     print_string "(\n";
+     let _ = List.fold_left (fun flag f ->
+        if flag then print_string "\n";
+        print_func f;
+        true
+     ) false fl in ();
+     print_string "\n)"
+and print_func f = match f with
+  | Function(_,n,il) -> print_string "  (";
+     (match n with
+     | Some(s) -> print_string s;
+     | _ -> ());
+     print_string "\n";
+     let _ = List.fold_left (fun flag i ->
+        print_string "    ";
+        print_instr i;
+        print_string "\n";
+        true
+     ) false il in ();
+     print_string "  )"
+and print_instr i = match i with
+   | AssignInstr(_,r,sv) ->
+      print_string "(";
+      print_reg r;
+      print_string " <- ";
+      print_sval sv;
+      print_string ")";
+   | MemReadInstr(_,r1,r2,i) ->
+      print_string "(";
+      print_reg r1;
+      print_string " <- (mem ";
+      print_reg r2;
+      print_string " ";
+      print_int i;
+      print_string "))";
+   | MemWriteInstr(_,r,i,sv) ->
+      print_string "((mem ";
+      print_reg r;
+      print_string " ";
+      print_int i;
+      print_string ") <- ";
+      print_sval sv;
+      print_string ")";
+   | PlusInstr(_,r,tv) ->
+      print_string "(";
+      print_reg r;
+      print_string " += ";
+      print_tval tv;
+      print_string ")";
+   | MinusInstr(_,r,tv) ->
+      print_string "(";
+      print_reg r;
+      print_string " -= ";
+      print_tval tv;
+      print_string ")";
+   | TimesInstr(_,r,tv) ->
+      print_string "(";
+      print_reg r;
+      print_string " *= ";
+      print_tval tv;
+      print_string ")";
+   | BitAndInstr(_,r,tv) ->
+      print_string "(";
+      print_reg r;
+      print_string " &= ";
+      print_tval tv;
+      print_string ")";
+   | SllInstr(_,r,sr) ->
+      print_string "(";
+      print_reg r;
+      print_string " <<= ";
+      print_sreg sr;
+      print_string ")";
+   | SrlInstr(_,r,sr) ->
+      print_string "(";
+      print_reg r;
+      print_string " >>= ";
+      print_sreg sr;
+      print_string ")";
+   | LtInstr(_,cr,tv1,tv2) ->
+      print_string "(";
+      print_creg cr;
+      print_string " <- ";
+      print_tval tv1;
+      print_string " < ";
+      print_tval tv2;
+      print_string ")";
+   | LeqInstr(_,cr,tv1,tv2) ->
+      print_string "(";
+      print_creg cr;
+      print_string " <- ";
+      print_tval tv1;
+      print_string " <= ";
+      print_tval tv2;
+      print_string ")";
+   | EqInstr(_,cr,tv1,tv2) ->
+      print_string "(";
+      print_creg cr;
+      print_string " <- ";
+      print_tval tv1;
+      print_string " = ";
+      print_tval tv2;
+      print_string ")";
+   | LabelInstr(_,s) ->
+      print_string s;
+   | GotoInstr(_,s) ->
+      print_string "(goto ";
+      print_string s;
+      print_string ")";
+   | LtJumpInstr(_,tv1,tv2,s1,s2) ->
+      print_string "(cjump ";
+      print_tval tv1;
+      print_string " < ";
+      print_tval tv2;
+      print_string " ";
+      print_string s1;
+      print_string " ";
+      print_string s2;
+      print_string ")";
+   | LeqJumpInstr(_,tv1,tv2,s1,s2) ->
+      print_string "(cjump ";
+      print_tval tv1;
+      print_string " <= ";
+      print_tval tv2;
+      print_string " ";
+      print_string s1;
+      print_string " ";
+      print_string s2;
+      print_string ")";
+   | EqJumpInstr(_,tv1,tv2,s1,s2) ->
+      print_string "(cjump ";
+      print_tval tv1;
+      print_string " = ";
+      print_tval tv2;
+      print_string " ";
+      print_string s1;
+      print_string " ";
+      print_string s2;
+      print_string ")";
+   | CallInstr(_, uv) ->
+      print_string "(call ";
+      print_uval uv;
+      print_string ")";
+   | TailCallInstr(_, uv) ->
+      print_string "(tail-call ";
+      print_uval uv;
+      print_string ")";
+   | ReturnInstr(_) ->
+      print_string "(return)";
+   | PrintInstr(_, tv) ->
+      print_string "(eax <- (print ";
+      print_tval tv;
+      print_string "))";
+   | AllocInstr(_, tv1, tv2) ->
+      print_string "(eax <- (allocate ";
+      print_tval tv1;
+      print_string " ";
+      print_tval tv2;
+      print_string "))";
+   | ArrayErrorInstr(_, tv1, tv2) ->
+      print_string "(eax <- (array-error ";
+      print_tval tv1;
+      print_string " ";
+      print_tval tv2;
+      print_string "))";
+and print_reg r = match r with
+   | EsiReg(_) -> print_string "esi"
+   | EdiReg(_) -> print_string "edi"
+   | EbpReg(_) -> print_string "ebp"
+   | EspReg(_) -> print_string "esp"
+   | CallerSaveReg(_, cr) -> print_creg cr
+and print_creg cr = match cr with
+   | EaxReg(_) -> print_string "eax"
+   | EcxReg(_) -> print_string "ecx"
+   | EdxReg(_) -> print_string "edx"
+   | EbxReg(_) -> print_string "ebx"
+and print_sreg sr = match sr with
+   | EcxShReg(_) -> print_string "ecx"
+   | IntShVal(_,i) -> print_int i
+and print_sval s = match s with
+   | RegSVal(_, r) -> print_reg r
+   | IntSVal(_, i) -> print_int i
+   | LabelSVal(_,s) -> print_string s
+and print_uval u = match u with
+   | RegUVal(_,r) -> print_reg r
+   | LabelUVal(_,s) -> print_string s
+and print_tval t = match t with
+   | RegTVal(_,r) -> print_reg r
+   | IntTVal(_,i) -> print_int i
+;;
+
 (* let rec string_explode (s:string) : char list =
    if (String.length s) > 0 then
       (String.get s 0)::(string_explode (String.sub s 1 ((String.length s)-1)))
