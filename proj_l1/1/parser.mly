@@ -59,7 +59,6 @@ instr:
    | LPAREN reg GETS tval LT tval RPAREN                     { LtInstr(get_current_pos (), get_creg $2, $4, $6) }
    | LPAREN reg GETS tval LEQ tval RPAREN                    { LeqInstr(get_current_pos (), get_creg $2, $4, $6) }
    | LPAREN reg GETS tval EQ tval RPAREN                     { EqInstr(get_current_pos (), get_creg $2, $4, $6) }
-
    | LABEL                                                   { LabelInstr(get_current_pos (), $1) }
    | LPAREN GOTO LABEL RPAREN                                { GotoInstr(get_current_pos (), $3) }
    | LPAREN CJUMP tval LT tval LABEL LABEL RPAREN            { LtJumpInstr(get_current_pos (), $3, $5, $6, $7) }
@@ -68,6 +67,7 @@ instr:
    | LPAREN CALL uval RPAREN                                 { CallInstr(get_current_pos (), $3) }
    | LPAREN TAILCALL uval RPAREN                             { TailCallInstr(get_current_pos (), $3) }
    | LPAREN RETURN RPAREN                                    { ReturnInstr(get_current_pos ()) }
+   /* the "reg" in the following three rules gets parsed as eax */
    | LPAREN reg GETS LPAREN PRINT tval RPAREN RPAREN         { let r = $2 in
                                                                (match r with
                                                                 | CallerSaveReg(_,EaxReg(_)) -> ()

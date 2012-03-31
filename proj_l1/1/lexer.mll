@@ -25,7 +25,7 @@ rule token = parse
 | "ecx"                      { ECX }
 | "edx"                      { EDX }
 | "ebx"                      { EBX }
-| '('                        { LPAREN }                          (* parens *)
+| '('                        { LPAREN }                          (* parentheses *)
 | ')'                        { RPAREN }
 | "+="                       { PLUSEQ }                          (* arithmetic operators *)
 | "-="                       { MINUSEQ }
@@ -37,7 +37,7 @@ rule token = parse
 | "<="                       { LEQ }                             (* comparison operators *)
 | "<"                        { LT }
 | "="                        { EQ }
-| ';' ';' [^'\n']*           { token lexbuf }                    (* single-line comment *)
+| ';' [^'\n']*           { token lexbuf }                        (* single-line comment *)
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'
        '0'-'9' '_']*) as s   { LABEL(s) }                        (* label *)
