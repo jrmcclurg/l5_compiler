@@ -58,10 +58,10 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       let il2 = if first then (match so with
       | None -> il
       | Some(l) -> LabelInstr(ps,l)::il) else il in
-      List.fold_left (fun k i ->
+      let _ = List.fold_left (fun k i ->
          compile_instr o i first k;
          k+1
-      ) 1 il2;
+      ) 1 il2 in ();
       (* print some boilerplate if we're processing the "go" function *)
       if first then (
       output_string o "        ##### end function body #####\n" ;
@@ -89,6 +89,30 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       output_string o ",";
       compile_reg o r;
       output_string o "\n";
+   | PlusInstr(ps,r,tv) -> 
+      output_string o "\taddl\t";
+      compile_tval o tv;
+      output_string o ",";
+      compile_reg o r;
+      output_string o "\n";
+   | MinusInstr(ps,r,tv) -> 
+      output_string o "\tsubl\t";
+      compile_tval o tv;
+      output_string o ",";
+      compile_reg o r;
+      output_string o "\n";
+   | TimesInstr(ps,r,tv) -> 
+      output_string o "\timull\t";
+      compile_tval o tv;
+      output_string o ",";
+      compile_reg o r;
+      output_string o "\n";
+   | BitAndInstr(ps,r,tv) -> 
+      output_string o "\tandl\t";
+      compile_tval o tv;
+      output_string o ",";
+      compile_reg o r;
+      output_string o "\n";
    | LabelInstr(ps,l) -> compile_label o l
    | GotoInstr(ps,l) -> output_string o ("\tjmp\t_"^l^"\n")
    | CallInstr(ps, uv) ->
@@ -99,7 +123,11 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       compile_uval o uv; (* TODO XXX - this may be wrong *)
       output_string o "\n";
       output_string o ("r_"^(string_of_int k)^":\n");
-
+   | TailCallInstr(ps, uv) -> (* TODO haven't tested this yet *)
+      output_string o "\tmovl\t%esp,%ebp\n";
+      output_string o "\tjmp\t";
+      compile_uval o uv; (* TODO XXX - this may be wrong *)
+      output_string o "\n";
    | ReturnInstr(ps) ->
       if first then (
          output_string o "        popl   %ebp\n" ;
