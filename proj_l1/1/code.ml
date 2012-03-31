@@ -3,7 +3,7 @@ open Utils;;
 
 let rec compile_program (o : out_channel) (p : program) = match p with
    | Program(ps, fl) ->
-      output_string o ".global go\n";
+      (*output_string o ".global go\n";
       output_string o "go:\n";
       output_string o "# the code goes here\n";
       output_string o "#   movl $5, %edi\n";
@@ -11,7 +11,64 @@ let rec compile_program (o : out_channel) (p : program) = match p with
       output_string o "   call print\n";
       output_string o "   addl $4, %esp\n";
       output_string o "   ret\n";
-      output_string o "# the code goes here\n";
+      output_string o "# the code goes here\n";*)
+      output_string o "	.file	\"prog.c\"\n" ;
+      output_string o "	.text\n" ;
+      output_string o "########## begin code ##########\n";
+      output_string o "go:\n" ;
+      output_string o "\n";
+      let _ = List.fold_left (fun flag f ->
+         compile_function o f flag;
+         output_string o "\n";
+         false
+      ) true fl in ();
+      output_string o "########## end code ##########\n";
+      output_string o "	.ident	\"GCC: (Ubuntu 4.3.2-1ubuntu12) 4.3.2\"\n" ;
+      output_string o "	.section	.note.GNU-stack,\"\",@progbits\n" ;
+
+and compile_function (o : out_channel) (f : func) (first : bool) = match f with
+   | Function(ps, so, il) ->
+      let name = (if first then "go" else (match so with
+        | None -> die_error ps "function must be named"
+        | Some(s) -> ("_"^s))) in
+      output_string o ("	.globl	"^name^"\n") ;
+      output_string o ("	.type	"^name^", @function\n") ;
+      output_string o ("########## begin function \""^name^"\" ##########\n");
+      output_string o (name^":\n") ;
+      (* if the "go" function (i.e. the first one) had a label, just print it *)
+      if first then (match so with
+      | None -> () 
+      | Some(l) -> compile_label o l);
+      output_string o "        # save caller's base pointer\n" ;
+      output_string o "        pushl   %ebp\n" ;
+      output_string o "        movl    %esp, %ebp\n" ;
+      output_string o "\n" ;
+      output_string o "        # save callee-saved registers\n" ;
+      output_string o "        pushl   %ebx\n" ;
+      output_string o "        pushl   %esi\n" ;
+      output_string o "        pushl   %edi\n" ;
+      output_string o "        pushl   %ebp\n" ;
+      output_string o "\n" ;
+      output_string o "        # body begins with base and\n" ;
+      output_string o "        # stack pointers equal\n" ;
+      output_string o "        movl    %esp, %ebp\n" ;
+      output_string o "\n" ;
+      output_string o "        ################ The code goes here\n" ;
+      output_string o "\n" ;
+      output_string o "        # restore callee-saved registers\n" ;
+      output_string o "        popl   %ebp\n" ;
+      output_string o "        popl   %edi\n" ;
+      output_string o "        popl   %esi\n" ;
+      output_string o "        popl   %ebx\n" ;
+      output_string o "\n" ;
+      output_string o "        # restore caller's base pointer\n" ;
+      output_string o "        leave\n" ;
+      output_string o "        ret\n" ;
+      output_string o ("########## end function \""^name^"\" ##########\n");
+      output_string o ("	.size	"^name^", .-"^name^"\n") 
+
+and compile_label (o : out_channel) (l : string) = 
+   output_string o ("_"^l^":\n") ;
 ;;
 
 let compile_assembly () =

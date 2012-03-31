@@ -37,10 +37,10 @@ rule token = parse
 | "<="                       { LEQ }                             (* comparison operators *)
 | "<"                        { LT }
 | "="                        { EQ }
-| ';' [^'\n']*           { token lexbuf }                        (* single-line comment *)
+| ';' [^'\n']*               { token lexbuf }                    (* single-line comment *)
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'
-       '0'-'9' '_']*) as s   { LABEL(s) }                        (* label *)
+       '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
 | "/*"                       { comment 0 lexbuf }                (* multiline comment (not needed) *)
 | eof { EOF }
 | _ { let p = Lexing.lexeme_end_p lexbuf in
