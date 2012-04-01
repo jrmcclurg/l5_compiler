@@ -86,7 +86,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
    | AssignInstr(ps,r,sv) -> 
       output_string o "\tmovl\t";
       compile_sval o sv;
-      output_string o ",";
+      output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | MemReadInstr(ps,r,br,off) ->
@@ -94,13 +94,13 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       output_string o (string_of_int off);
       output_string o "(";
       compile_reg o br;
-      output_string o "),";
+      output_string o "), ";
       compile_reg o r;
       output_string o "\n";
    | MemWriteInstr(ps,br,off,sv) ->
       output_string o "\tmovl\t";
       compile_sval o sv;
-      output_string o ",";
+      output_string o ", ";
       output_string o (string_of_int off);
       output_string o "(";
       compile_reg o br;
@@ -108,25 +108,25 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
    | PlusInstr(ps,r,tv) -> 
       output_string o "\taddl\t";
       compile_tval o tv;
-      output_string o ",";
+      output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | MinusInstr(ps,r,tv) -> 
       output_string o "\tsubl\t";
       compile_tval o tv;
-      output_string o ",";
+      output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | TimesInstr(ps,r,tv) -> 
       output_string o "\timull\t";
       compile_tval o tv;
-      output_string o ",";
+      output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | BitAndInstr(ps,r,tv) -> 
       output_string o "\tandl\t";
       compile_tval o tv;
-      output_string o ",";
+      output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | SllInstr(ps,r,sr) ->
@@ -134,7 +134,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       (match sr with
       | EcxShReg(_) -> output_string o "%cl"
       | IntShVal(_,_) -> compile_sreg o sr);
-      output_string o ",";
+      output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | SrlInstr(ps,r,sr) ->
@@ -142,7 +142,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       (match sr with
       | EcxShReg(_) -> output_string o "%cl"
       | IntShVal(_,_) -> compile_sreg o sr);
-      output_string o ",";
+      output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | LtInstr(ps,cr,tv1,tv2) ->
@@ -155,22 +155,22 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 < i2) in
-         output_string o ("\tmovb\t$"^(if b then "1" else "0")^","^lower^"\n");
+         output_string o ("\tmovb\t$"^(if b then "1" else "0")^", "^lower^"\n");
       | (IntTVal(_,_),_) -> 
          output_string o "\tcmp\t";
          compile_tval o tv1;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
          output_string o ("\tsetg\t"^lower^"\n");
       | _ ->
          output_string o "\tcmp\t";
          compile_tval o tv2;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
          output_string o ("\tsetl\t"^lower^"\n"));
-      output_string o ("\tmovzbl\t"^lower^",");
+      output_string o ("\tmovzbl\t"^lower^", ");
       compile_creg o cr;
       output_string o "\n";
    | LeqInstr(ps,cr,tv1,tv2) ->
@@ -183,22 +183,22 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 <= i2) in
-         output_string o ("\tmovb\t$"^(if b then "1" else "0")^","^lower^"\n");
+         output_string o ("\tmovb\t$"^(if b then "1" else "0")^", "^lower^"\n");
       | (IntTVal(_,_),_) -> 
          output_string o "\tcmp\t";
          compile_tval o tv1;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
          output_string o ("\tsetge\t"^lower^"\n");
       | _ ->
          output_string o "\tcmp\t";
          compile_tval o tv2;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
          output_string o ("\tsetle\t"^lower^"\n"));
-      output_string o ("\tmovzbl\t"^lower^",");
+      output_string o ("\tmovzbl\t"^lower^", ");
       compile_creg o cr;
       output_string o "\n";
    | EqInstr(ps,cr,tv1,tv2) ->
@@ -211,22 +211,22 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 = i2) in
-         output_string o ("\tmovb\t$"^(if b then "1" else "0")^","^lower^"\n");
+         output_string o ("\tmovb\t$"^(if b then "1" else "0")^", "^lower^"\n");
       | (IntTVal(_,_),_) -> 
          output_string o "\tcmp\t";
          compile_tval o tv1;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
          output_string o ("\tsete\t"^lower^"\n");
       | _ ->
          output_string o "\tcmp\t";
          compile_tval o tv2;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
          output_string o ("\tsete\t"^lower^"\n"));
-      output_string o ("\tmovzbl\t"^lower^",");
+      output_string o ("\tmovzbl\t"^lower^", ");
       compile_creg o cr;
       output_string o "\n";
    | LabelInstr(ps,l) -> compile_label o l
@@ -240,7 +240,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       | (IntTVal(_,_),_) -> 
          output_string o "\tcmpl\t";
          compile_tval o tv1;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
          output_string o ("\tjg\t_"^l1^"\n");
@@ -248,7 +248,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       | _ ->
          output_string o "\tcmpl\t";
          compile_tval o tv2;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
          output_string o ("\tjl\t_"^l1^"\n");
@@ -262,7 +262,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       | (IntTVal(_,_),_) -> 
          output_string o "\tcmpl\t";
          compile_tval o tv1;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
          output_string o ("\tjge\t_"^l1^"\n");
@@ -270,7 +270,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       | _ ->
          output_string o "\tcmpl\t";
          compile_tval o tv2;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
          output_string o ("\tjle\t_"^l1^"\n");
@@ -284,7 +284,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       | (IntTVal(_,_),_) -> 
          output_string o "\tcmpl\t";
          compile_tval o tv1;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
          output_string o ("\tje\t_"^l1^"\n");
@@ -292,7 +292,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       | _ ->
          output_string o "\tcmpl\t";
          compile_tval o tv2;
-         output_string o ",";
+         output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
          output_string o ("\tje\t_"^l1^"\n");
@@ -300,13 +300,13 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
    | CallInstr(ps, uv) ->
       output_string o ("\tpushl\t$r_"^(string_of_int k)^"\n");
       output_string o "\tpushl\t%ebp\n";
-      output_string o "\tmovl\t%esp,%ebp\n";
+      output_string o "\tmovl\t%esp, %ebp\n";
       output_string o "\tjmp\t";
       compile_uval o uv; (* TODO XXX - this may be wrong *)
       output_string o "\n";
       output_string o ("r_"^(string_of_int k)^":\n");
    | TailCallInstr(ps, uv) -> (* TODO haven't tested this yet *)
-      output_string o "\tmovl\t%esp,%ebp\n";
+      output_string o "\tmovl\t%esp, %ebp\n";
       output_string o "\tjmp\t";
       compile_uval o uv; (* TODO XXX - this may be wrong *)
       output_string o "\n";
@@ -318,7 +318,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
          output_string o "        popl   %ebx\n" ;
          output_string o "        leave\n" 
       ) else (
-         output_string o "\tmovl\t%ebp,%esp\n" ;
+         output_string o "\tmovl\t%ebp, %esp\n" ;
          output_string o "\tpopl\t%ebp\n" 
       );
       output_string o ("\tret\n")
@@ -327,7 +327,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       compile_tval o tv;
       output_string o "\n";
       output_string o "\tcall\tprint\n";
-      output_string o "\taddl\t$4,%esp\n"
+      output_string o "\taddl\t$4, %esp\n"
    | AllocInstr(ps,tv1,tv2) ->
       output_string o "\tpushl\t";
       compile_tval o tv2;
@@ -336,7 +336,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       compile_tval o tv1;
       output_string o "\n";
       output_string o "\tcall\tallocate\n";
-      output_string o "\taddl\t$8,%esp\n"
+      output_string o "\taddl\t$8, %esp\n"
    | ArrayErrorInstr(ps,tv1,tv2) ->
       output_string o "\tpushl\t";
       compile_tval o tv2;
@@ -345,8 +345,8 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       compile_tval o tv1;
       output_string o "\n";
       output_string o "\tcall\tprint_error\n";
-      output_string o "\taddl\t$8,%esp\n"
-   | _ -> output_string o "\t### TODO XXX - unhandled instruction ###\n"
+      output_string o "\taddl\t$8, %esp\n"
+   (*| _ -> output_string o "\t### TODO XXX - unhandled instruction ###\n"*)
 
 and compile_reg (o : out_channel) (r : reg) = match r with
    | EsiReg(ps) -> output_string o "%esi"
