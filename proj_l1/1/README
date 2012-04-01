@@ -33,10 +33,10 @@ utils.ml   - general utilities
 #  INSTALLATION
 #####################################################################
 
-The project has been built/tested only on 32/64bit Linux.  Thus,
-the included L1c binary should work on Linux systems.
+The project has been built/tested only on 64bit Linux.  Thus,
+the included L1c binary will work only on 64bit systems.
 
-For build the project on other systems, the necessary packages are
+For building the project on other systems, the necessary packages are
 the ocaml package for the OCaml development tools, the gcc package
 for the GNU C compiler development tools, and possibly the
 gcc-multilib package to provide gcc with 32bit support.
@@ -63,4 +63,5 @@ This should generate x86 assembly code (prog.S), and a C runtime
 (runtime.c) which are compiled/linked using gcc/as into a 32bit
 binary (a.out).
 
-This binary is the compiled L1 program.
+If L1c is run with no command-line options, it reads the L1 source
+file from stdin.
