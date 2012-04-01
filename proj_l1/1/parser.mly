@@ -15,7 +15,7 @@
    open Ast;;
    open Utils;;
 %}
-%token <int> INT
+%token <int64> INT
 %token <string> LABEL
 %token ARRAYERR TAILCALL ALLOC RETURN PRINT CJUMP GOTO MEM CALL
 %token ESI EDI EBP ESP
@@ -60,11 +60,11 @@ instr:
    | LPAREN reg GETS sval RPAREN                             { AssignInstr(get_current_pos (), $2, $4) }
    | LPAREN reg GETS LPAREN MEM reg INT RPAREN RPAREN        { let i = $7 in
                                                                check_int_range i;
-                                                               if (i mod 4 <> 0) then
+                                                               if ((Int64.rem i 4L) <> 0L) then
                                                                   parse_error "offset must be divisible by 4";
                                                                MemReadInstr(get_current_pos (), $2, $6, i) }
    | LPAREN LPAREN MEM reg INT RPAREN GETS sval RPAREN       { let i = $5 in
-                                                               if (i mod 4 <> 0) then
+                                                               if ((Int64.rem i 4L) <> 0L) then
                                                                   parse_error "offset must be divisible by 4";
                                                                MemWriteInstr(get_current_pos (), $4, i, $8) }
    | LPAREN reg PLUSEQ tval RPAREN                           { PlusInstr(get_current_pos (), $2, $4) }

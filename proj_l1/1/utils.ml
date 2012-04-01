@@ -17,8 +17,8 @@ open Ast;;
 
 exception Parse_error;;
 
-let max_int = 2147483647 ;;
-let min_int = -2147483648 ;;
+let max_int = 2147483647L ;;
+let min_int = -2147483648L ;;
 
 (* die_error p s
  *
@@ -85,6 +85,6 @@ let get_creg r = match r with
 ;;
 
 (* does an integer range check *)
-let check_int_range i =
+let check_int_range (i : int64) =
    if ((i < min_int) or (i > max_int)) then parse_error "integer out of range"
 ;;

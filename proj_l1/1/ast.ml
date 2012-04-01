@@ -20,8 +20,8 @@ type program = Program of pos * func list
  and func = Function of pos * string option * instr list
  and instr = 
              AssignInstr of pos * reg * sval
-           | MemReadInstr of pos * reg * reg * int
-           | MemWriteInstr of pos * reg * int * sval
+           | MemReadInstr of pos * reg * reg * int64 
+           | MemWriteInstr of pos * reg * int64 * sval
            | PlusInstr of pos * reg * tval
            | MinusInstr of pos * reg * tval
            | TimesInstr of pos * reg * tval
@@ -52,14 +52,14 @@ type program = Program of pos * func list
           | EdxReg of pos
           | EbxReg of pos
  and sreg = EcxShReg of pos
-           | IntShVal of pos * int
+           | IntShVal of pos * int64 
  and sval = RegSVal of pos * reg
-          | IntSVal of pos * int
+          | IntSVal of pos * int64
           | LabelSVal of pos * string
  and uval = RegUVal of pos * reg
           | LabelUVal of pos * string
  and tval = RegTVal of pos * reg
-          | IntTVal of pos * int
+          | IntTVal of pos * int64
 ;;
 
 (* the output_... functions pretty-print L1 constructs to a specified channel *)
@@ -99,13 +99,13 @@ and output_instr out i = match i with
       output_string out " <- (mem ";
       output_reg out r2;
       output_string out " ";
-      output_string out (string_of_int i);
+      output_string out (Int64.to_string i);
       output_string out "))";
    | MemWriteInstr(_,r,i,sv) ->
       output_string out "((mem ";
       output_reg out r;
       output_string out " ";
-      output_string out (string_of_int i);
+      output_string out (Int64.to_string i);
       output_string out ") <- ";
       output_sval out sv;
       output_string out ")";
@@ -244,17 +244,17 @@ and output_creg out cr = match cr with
    | EbxReg(_) -> output_string out "ebx"
 and output_sreg out sr = match sr with
    | EcxShReg(_) -> output_string out "ecx"
-   | IntShVal(_,i) -> output_string out (string_of_int i)
+   | IntShVal(_,i) -> output_string out (Int64.to_string i)
 and output_sval out s = match s with
    | RegSVal(_, r) -> output_reg out r
-   | IntSVal(_, i) -> output_string out (string_of_int i)
+   | IntSVal(_, i) -> output_string out (Int64.to_string i)
    | LabelSVal(_,s) -> output_string out (":"^s)
 and output_uval out u = match u with
    | RegUVal(_,r) -> output_reg out r
    | LabelUVal(_,s) -> output_string out (":"^s)
 and output_tval out t = match t with
    | RegTVal(_,r) -> output_reg out r
-   | IntTVal(_,i) -> output_string out (string_of_int i)
+   | IntTVal(_,i) -> output_string out (Int64.to_string i)
 ;;
 
 (* the print_... functions pretty-print L1 constructs to stdout *)

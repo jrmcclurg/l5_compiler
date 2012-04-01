@@ -136,7 +136,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
    | MemReadInstr(ps,r,br,off) ->
       (* movl off(br), r *)
       output_string o ("\t"^"movl"^"\t");
-      output_string o (string_of_int off);
+      output_string o (Int64.to_string off);
       output_string o "(";
       compile_reg o br;
       output_string o "), ";
@@ -147,7 +147,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       output_string o ("\t"^"movl"^"\t");
       compile_sval o sv;
       output_string o ", ";
-      output_string o (string_of_int off);
+      output_string o (Int64.to_string off);
       output_string o "(";
       compile_reg o br;
       output_string o ")\n";
@@ -508,12 +508,12 @@ and compile_creg (o : out_channel) (cr : creg) : unit = match cr with
 (* compiles an L1 "sx" nonterminal into x86 assembly *)
 and compile_sreg (o : out_channel) (sr : sreg) : unit = match sr with
    | EcxShReg(ps) -> output_string o "%ecx"
-   | IntShVal(ps,i) -> output_string o ("$"^(string_of_int i))
+   | IntShVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
 
 (* compiles an L1 "s" nonterminal into x86 assembly *)
 and compile_sval (o : out_channel) (sv : sval) : unit = match sv with
    | RegSVal(ps,r) -> compile_reg o r;
-   | IntSVal(ps,i) -> output_string o ("$"^(string_of_int i))
+   | IntSVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
    | LabelSVal(ps,l) -> output_string o ("$_"^l)  (* TODO XXX - does this work? *)
 
 (* compiles an L1 "u" nonterminal into x86 assembly *)
@@ -524,7 +524,7 @@ and compile_uval (o : out_channel) (uv : uval) : unit = match uv with
 (* compiles an L1 "t" nonterminal into x86 assembly *)
 and compile_tval (o : out_channel) (t : tval) : unit = match t with
    | RegTVal(ps,r) -> compile_reg o r
-   | IntTVal(ps,i) -> output_string o ("$"^(string_of_int i))
+   | IntTVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
 
 (* compiles an L1 label l into x86 assembly *)
 and compile_label (o : out_channel) (l : string) : unit = 

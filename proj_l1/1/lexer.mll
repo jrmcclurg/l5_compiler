@@ -21,7 +21,7 @@ rule token = parse
   [' ' '\t']                 {token lexbuf }                     (* skip blanks *)
 | ['\r']                     { token lexbuf }                    (* skip blanks *)
 | ['\n']                     { do_newline lexbuf; token lexbuf } (* skip newlines (but count them) *)
-| (['-']? ['0'-'9']+) as s   { INT(int_of_string s) }            (* pos/neg integers *)
+| (['-']? ['0'-'9']+) as s   { INT(Int64.of_string s) }            (* pos/neg integers *)
 | "array-error"              { ARRAYERR }                        (* keywords *)
 | "tail-call"                { TAILCALL }
 | "allocate"                 { ALLOC }
