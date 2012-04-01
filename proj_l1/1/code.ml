@@ -145,6 +145,90 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       output_string o ",";
       compile_reg o r;
       output_string o "\n";
+   | LtInstr(ps,cr,tv1,tv2) ->
+      let lower = (match cr with
+      | EaxReg(_) -> "%al"
+      | EcxReg(_) -> "%cl"
+      | EdxReg(_) -> "%dl"
+      | EbxReg(_) -> "%bl") in
+      (* if tv1 is constant, we must reverse the operation *)
+      (match (tv1,tv2) with
+      | (IntTVal(_,i1),IntTVal(_,i2)) ->
+         let b = (i1 < i2) in
+         output_string o ("\tmovb\t$"^(if b then "1" else "0")^","^lower^"\n");
+      | (IntTVal(_,_),_) -> 
+         output_string o "\tcmp\t";
+         compile_tval o tv1;
+         output_string o ",";
+         compile_tval o tv2;
+         output_string o "\n";
+         output_string o ("\tsetg\t"^lower^"\n");
+      | _ ->
+         output_string o "\tcmp\t";
+         compile_tval o tv2;
+         output_string o ",";
+         compile_tval o tv1;
+         output_string o "\n";
+         output_string o ("\tsetl\t"^lower^"\n"));
+      output_string o ("\tmovzbl\t"^lower^",");
+      compile_creg o cr;
+      output_string o "\n";
+   | LeqInstr(ps,cr,tv1,tv2) ->
+      let lower = (match cr with
+      | EaxReg(_) -> "%al"
+      | EcxReg(_) -> "%cl"
+      | EdxReg(_) -> "%dl"
+      | EbxReg(_) -> "%bl") in
+      (* if tv1 is constant, we must reverse the operation *)
+      (match (tv1,tv2) with
+      | (IntTVal(_,i1),IntTVal(_,i2)) ->
+         let b = (i1 <= i2) in
+         output_string o ("\tmovb\t$"^(if b then "1" else "0")^","^lower^"\n");
+      | (IntTVal(_,_),_) -> 
+         output_string o "\tcmp\t";
+         compile_tval o tv1;
+         output_string o ",";
+         compile_tval o tv2;
+         output_string o "\n";
+         output_string o ("\tsetge\t"^lower^"\n");
+      | _ ->
+         output_string o "\tcmp\t";
+         compile_tval o tv2;
+         output_string o ",";
+         compile_tval o tv1;
+         output_string o "\n";
+         output_string o ("\tsetle\t"^lower^"\n"));
+      output_string o ("\tmovzbl\t"^lower^",");
+      compile_creg o cr;
+      output_string o "\n";
+   | EqInstr(ps,cr,tv1,tv2) ->
+      let lower = (match cr with
+      | EaxReg(_) -> "%al"
+      | EcxReg(_) -> "%cl"
+      | EdxReg(_) -> "%dl"
+      | EbxReg(_) -> "%bl") in
+      (* if tv1 is constant, we must reverse the arguments *)
+      (match (tv1,tv2) with
+      | (IntTVal(_,i1),IntTVal(_,i2)) ->
+         let b = (i1 = i2) in
+         output_string o ("\tmovb\t$"^(if b then "1" else "0")^","^lower^"\n");
+      | (IntTVal(_,_),_) -> 
+         output_string o "\tcmp\t";
+         compile_tval o tv1;
+         output_string o ",";
+         compile_tval o tv2;
+         output_string o "\n";
+         output_string o ("\tsete\t"^lower^"\n");
+      | _ ->
+         output_string o "\tcmp\t";
+         compile_tval o tv2;
+         output_string o ",";
+         compile_tval o tv1;
+         output_string o "\n";
+         output_string o ("\tsete\t"^lower^"\n"));
+      output_string o ("\tmovzbl\t"^lower^",");
+      compile_creg o cr;
+      output_string o "\n";
    | LabelInstr(ps,l) -> compile_label o l
    | GotoInstr(ps,l) -> output_string o ("\tjmp\t_"^l^"\n")
    | CallInstr(ps, uv) ->

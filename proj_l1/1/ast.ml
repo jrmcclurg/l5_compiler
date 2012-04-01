@@ -12,9 +12,9 @@ type program = Program of pos * func list
            | BitAndInstr of pos * reg * tval
            | SllInstr of pos * reg * sreg
            | SrlInstr of pos * reg * sreg
-      (*A*)     | LtInstr of pos * creg * tval * tval
-      (*A*)     | LeqInstr of pos * creg * tval * tval
-      (*A*)     | EqInstr of pos * creg * tval * tval
+           | LtInstr of pos * creg * tval * tval
+           | LeqInstr of pos * creg * tval * tval
+           | EqInstr of pos * creg * tval * tval
            | LabelInstr of pos * string
            | GotoInstr of pos * string
        (*A*)    | LtJumpInstr of pos * tval * tval * string * string
