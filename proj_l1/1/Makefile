@@ -20,7 +20,7 @@
 L1c:	ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 	ocamlopt -o L1c str.cmxa ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 
-main.cmx:	main.ml parser.cmx lexer.cmx 
+main.cmx:	main.ml parser.cmx lexer.cmx code.cmx
 		ocamlopt -c main.ml
 
 parser.cmx:	parser.ml parser.cmi utils.cmx
