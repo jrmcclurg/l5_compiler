@@ -54,4 +54,4 @@ clean:
 		rm -rf *.c *.S *.out *.cm* *.o *.mli parser.ml lexer.ml
 
 wc:		
-		wc -l lexer.mll parser.mly ast.ml utils.ml main.ml 
+		wc -l lexer.mll parser.mly ast.ml utils.ml main.ml code.ml
