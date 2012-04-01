@@ -89,6 +89,22 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       output_string o ",";
       compile_reg o r;
       output_string o "\n";
+   | MemReadInstr(ps,r,br,off) ->
+      output_string o "\tmovl\t";
+      output_string o (string_of_int off);
+      output_string o "(";
+      compile_reg o br;
+      output_string o "),";
+      compile_reg o r;
+      output_string o "\n";
+   | MemWriteInstr(ps,br,off,sv) ->
+      output_string o "\tmovl\t";
+      compile_sval o sv;
+      output_string o ",";
+      output_string o (string_of_int off);
+      output_string o "(";
+      compile_reg o br;
+      output_string o ")\n";
    | PlusInstr(ps,r,tv) -> 
       output_string o "\taddl\t";
       compile_tval o tv;
@@ -110,6 +126,22 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
    | BitAndInstr(ps,r,tv) -> 
       output_string o "\tandl\t";
       compile_tval o tv;
+      output_string o ",";
+      compile_reg o r;
+      output_string o "\n";
+   | SllInstr(ps,r,sr) ->
+      output_string o "\tsall\t";
+      (match sr with
+      | EcxShReg(_) -> output_string o "%cl"
+      | IntShVal(_,_) -> compile_sreg o sr);
+      output_string o ",";
+      compile_reg o r;
+      output_string o "\n";
+   | SrlInstr(ps,r,sr) ->
+      output_string o "\tsarl\t";
+      (match sr with
+      | EcxShReg(_) -> output_string o "%cl"
+      | IntShVal(_,_) -> compile_sreg o sr);
       output_string o ",";
       compile_reg o r;
       output_string o "\n";

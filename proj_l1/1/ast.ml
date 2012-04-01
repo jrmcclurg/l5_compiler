@@ -3,29 +3,29 @@ type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
 type program = Program of pos * func list
  and func = Function of pos * string option * instr list
  and instr = 
-        (**)     AssignInstr of pos * reg * sval
+             AssignInstr of pos * reg * sval
            | MemReadInstr of pos * reg * reg * int
            | MemWriteInstr of pos * reg * int * sval
-       (**)    | PlusInstr of pos * reg * tval
-       (**)    | MinusInstr of pos * reg * tval
-       (**)    | TimesInstr of pos * reg * tval
-       (**)    | BitAndInstr of pos * reg * tval
+           | PlusInstr of pos * reg * tval
+           | MinusInstr of pos * reg * tval
+           | TimesInstr of pos * reg * tval
+           | BitAndInstr of pos * reg * tval
            | SllInstr of pos * reg * sreg
            | SrlInstr of pos * reg * sreg
-           | LtInstr of pos * creg * tval * tval
-           | LeqInstr of pos * creg * tval * tval
-           | EqInstr of pos * creg * tval * tval
-      (**)     | LabelInstr of pos * string
-     (**)      | GotoInstr of pos * string
-           | LtJumpInstr of pos * tval * tval * string * string
-           | LeqJumpInstr of pos * tval * tval * string * string
-           | EqJumpInstr of pos * tval * tval * string * string
-       (**)    | CallInstr of pos * uval
-       (**)    | TailCallInstr of pos * uval
-      (**)     | ReturnInstr of pos
-     (**)      | PrintInstr of pos * tval
-      (**)     | AllocInstr of pos * tval * tval
-      (**)     | ArrayErrorInstr of pos * tval * tval
+      (*A*)     | LtInstr of pos * creg * tval * tval
+      (*A*)     | LeqInstr of pos * creg * tval * tval
+      (*A*)     | EqInstr of pos * creg * tval * tval
+           | LabelInstr of pos * string
+           | GotoInstr of pos * string
+       (*A*)    | LtJumpInstr of pos * tval * tval * string * string
+       (*A*)   | LeqJumpInstr of pos * tval * tval * string * string
+      (*A*)     | EqJumpInstr of pos * tval * tval * string * string
+           | CallInstr of pos * uval
+           | TailCallInstr of pos * uval
+           | ReturnInstr of pos
+           | PrintInstr of pos * tval
+           | AllocInstr of pos * tval * tval
+           | ArrayErrorInstr of pos * tval * tval
  and reg = EsiReg of pos
          | EdiReg of pos
          | EbpReg of pos
