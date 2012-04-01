@@ -16,6 +16,7 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
+# use the "-ccopt -static" ocamlopt switch to statically link
 L1c:	ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 	ocamlopt -o L1c str.cmxa ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 

@@ -544,9 +544,15 @@ and compile_label (o : out_channel) (l : string) : unit =
  *)
 let compile_and_link (filename : string) (use_32bit : bool) : unit =
    let arch = if use_32bit then 32 else 64 in
-   let _ = Sys.command ("as --"^(string_of_int arch)^" -o prog.o prog.S") in
-   let _ = Sys.command ("gcc -m"^(string_of_int arch)^" -c -O2 -w -o runtime.o runtime.c") in
-   let _ = Sys.command ("gcc -m"^(string_of_int arch)^" -o "^filename^" prog.o runtime.o") in
+   let r1c = ("as --"^(string_of_int arch)^" -o prog.o prog.S") in
+   let r2c = ("gcc -m"^(string_of_int arch)^" -c -O2 -o runtime.o runtime.c") in
+   let r3c = ("gcc -m"^(string_of_int arch)^" -o "^filename^" prog.o runtime.o") in
+   let r1 = Sys.command (r1c^" 2> /dev/null")  in
+   let r2 = Sys.command (r2c^" 2> /dev/null") in
+   let r3 = Sys.command (r3c^" 2> /dev/null") in
+   if (r1 <> 0) then die_system_error ("assembler failed: \""^r1c^"\" returned "^(string_of_int r1));
+   if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));
+   if (r3 <> 0) then die_system_error ("compiler/linker failed: \""^r3c^"\" returned "^(string_of_int r3));
    ()
 ;;
 
