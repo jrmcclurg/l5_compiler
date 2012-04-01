@@ -231,6 +231,72 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
       output_string o "\n";
    | LabelInstr(ps,l) -> compile_label o l
    | GotoInstr(ps,l) -> output_string o ("\tjmp\t_"^l^"\n")
+   | LtJumpInstr(ps,tv1,tv2,l1,l2) ->
+      (* if tv1 is constant, we must reverse the operation *)
+      (match (tv1,tv2) with
+      | (IntTVal(_,i1),IntTVal(_,i2)) ->
+         let b = (i1 < i2) in
+         output_string o ("\tjmp\t_"^(if b then l1 else l2)^"\n");
+      | (IntTVal(_,_),_) -> 
+         output_string o "\tcmpl\t";
+         compile_tval o tv1;
+         output_string o ",";
+         compile_tval o tv2;
+         output_string o "\n";
+         output_string o ("\tjg\t_"^l1^"\n");
+         output_string o ("\tjmp\t_"^l2^"\n");
+      | _ ->
+         output_string o "\tcmpl\t";
+         compile_tval o tv2;
+         output_string o ",";
+         compile_tval o tv1;
+         output_string o "\n";
+         output_string o ("\tjl\t_"^l1^"\n");
+         output_string o ("\tjmp\t_"^l2^"\n") );
+   | LeqJumpInstr(ps,tv1,tv2,l1,l2) ->
+      (* if tv1 is constant, we must reverse the operation *)
+      (match (tv1,tv2) with
+      | (IntTVal(_,i1),IntTVal(_,i2)) ->
+         let b = (i1 <= i2) in
+         output_string o ("\tjmp\t_"^(if b then l1 else l2)^"\n");
+      | (IntTVal(_,_),_) -> 
+         output_string o "\tcmpl\t";
+         compile_tval o tv1;
+         output_string o ",";
+         compile_tval o tv2;
+         output_string o "\n";
+         output_string o ("\tjge\t_"^l1^"\n");
+         output_string o ("\tjmp\t_"^l2^"\n");
+      | _ ->
+         output_string o "\tcmpl\t";
+         compile_tval o tv2;
+         output_string o ",";
+         compile_tval o tv1;
+         output_string o "\n";
+         output_string o ("\tjle\t_"^l1^"\n");
+         output_string o ("\tjmp\t_"^l2^"\n") );
+   | EqJumpInstr(ps,tv1,tv2,l1,l2) ->
+      (* if tv1 is constant, we must reverse the operation *)
+      (match (tv1,tv2) with
+      | (IntTVal(_,i1),IntTVal(_,i2)) ->
+         let b = (i1 = i2) in
+         output_string o ("\tjmp\t_"^(if b then l1 else l2)^"\n");
+      | (IntTVal(_,_),_) -> 
+         output_string o "\tcmpl\t";
+         compile_tval o tv1;
+         output_string o ",";
+         compile_tval o tv2;
+         output_string o "\n";
+         output_string o ("\tje\t_"^l1^"\n");
+         output_string o ("\tjmp\t_"^l2^"\n");
+      | _ ->
+         output_string o "\tcmpl\t";
+         compile_tval o tv2;
+         output_string o ",";
+         compile_tval o tv1;
+         output_string o "\n";
+         output_string o ("\tje\t_"^l1^"\n");
+         output_string o ("\tjmp\t_"^l2^"\n") );
    | CallInstr(ps, uv) ->
       output_string o ("\tpushl\t$r_"^(string_of_int k)^"\n");
       output_string o "\tpushl\t%ebp\n";

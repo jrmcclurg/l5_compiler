@@ -17,9 +17,9 @@ type program = Program of pos * func list
            | EqInstr of pos * creg * tval * tval
            | LabelInstr of pos * string
            | GotoInstr of pos * string
-       (*A*)    | LtJumpInstr of pos * tval * tval * string * string
-       (*A*)   | LeqJumpInstr of pos * tval * tval * string * string
-      (*A*)     | EqJumpInstr of pos * tval * tval * string * string
+           | LtJumpInstr of pos * tval * tval * string * string
+           | LeqJumpInstr of pos * tval * tval * string * string
+           | EqJumpInstr of pos * tval * tval * string * string
            | CallInstr of pos * uval
            | TailCallInstr of pos * uval
            | ReturnInstr of pos
