@@ -1,0 +1,66 @@
+#####################################################################
+#  EECS 322 Compiler Construction
+#  Northwestern University
+#  4/3/2012
+#  
+#  L1-to-assembly Compiler
+#  Jedidiah R. McClurg
+#  v. 1.0
+#####################################################################
+
+#####################################################################
+#  DESCRIPTION
+#####################################################################
+
+This is a compiler for a simple parenthesis-based language L1.
+It outputs x86 assembly code and a C runtime, and compiles
+everything into a 32bit binary.
+
+The project is implemented in OCaml and consists of the following
+files:
+
+README     - this file
+L1c        - the L1 compiler binary (32/64bit Linux)
+Makefile   - GNU makefile for the project
+lexer.mll  - ocamllex lexer specification
+parser.mly - ocamlyacc parser specification
+main.ml    - program entry-point
+ast.ml     - abstract data types for the Abstract Syntax Tree
+code.ml    - code-generation and compilation utilities
+utils.ml   - general utilities
+
+#####################################################################
+#  INSTALLATION
+#####################################################################
+
+The project has been built/tested only on 32/64bit Linux.  Thus,
+the included L1c binary should work on Linux systems.
+
+For build the project on other systems, the necessary packages are
+the ocaml package for the OCaml development tools, the gcc package
+for the GNU C compiler development tools, and possibly the
+gcc-multilib package to provide gcc with 32bit support.
+
+To build, simply type
+  make
+
+This should generate the L1 compiler binary, L1c.  After this, typing
+  make clean
+should clear out any intermediate build files.
+
+#####################################################################
+#  USAGE
+#####################################################################
+
+The L1 compiler has several command-line options.  These can be seen
+by issuing the command
+  ./L1 --help
+
+Given an L1 program test.L1, the compiler can be run by typing
+  ./L1 test.L1
+
+This should generate x86 assembly code (prog.S), and a C runtime
+(runtime.c) which are compiled/linked using gcc/as into a 32bit
+binary (a.out).
+
+This binary is the compiled L1 program.

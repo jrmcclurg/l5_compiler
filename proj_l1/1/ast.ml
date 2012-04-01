@@ -1,5 +1,21 @@
+(*
+ * EECS 322 Compiler Construction
+ * Northwestern University
+ * 4/3/2012
+ *
+ * L1-to-assembly Compiler
+ * Jedidiah R. McClurg
+ * v. 1.0
+ *
+ * ast.ml
+ * This has the abstract data types for representing the
+ * Abstract Syntax Tree (AST) for the parsed L1 program.
+ *)
+
+(* data type for file positions *)
 type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
 
+(* data type for L1 programs *)
 type program = Program of pos * func list
  and func = Function of pos * string option * instr list
  and instr = 
@@ -45,6 +61,8 @@ type program = Program of pos * func list
  and tval = RegTVal of pos * reg
           | IntTVal of pos * int
 ;;
+
+(* the output_... functions pretty-print L1 constructs to a specified channel *)
 
 let rec output_program out p = match p with
   | Program(_,fl) ->
@@ -238,6 +256,8 @@ and output_tval out t = match t with
    | RegTVal(_,r) -> output_reg out r
    | IntTVal(_,i) -> output_string out (string_of_int i)
 ;;
+
+(* the print_... functions pretty-print L1 constructs to stdout *)
 
 let rec print_program p = output_program stdout p
 and print_func f = output_func stdout f

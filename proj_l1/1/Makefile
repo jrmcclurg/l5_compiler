@@ -1,3 +1,21 @@
+###########################################################
+# EECS 322 Compiler Construction
+# Northwestern University
+# 4/3/2012
+#
+# L1-to-assembly Compiler
+# Jedidiah R. McClurg
+# v. 1.0
+#
+# Makefile
+# This builds the project using the OCaml native-code
+# compiler.
+#
+# make         - builds the project (L1c binary)
+# make clean   - deletes all intermediate build files
+# make wc      - counts the number of lines of code
+###########################################################
+
 L1c:	ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 	ocamlopt -o L1c str.cmxa ast.cmx utils.cmx code.cmx parser.cmx lexer.cmx main.cmx
 

@@ -1,42 +1,67 @@
+(*
+ * EECS 322 Compiler Construction
+ * Northwestern University
+ * 4/3/2012
+ *
+ * L1-to-assembly Compiler
+ * Jedidiah R. McClurg
+ * v. 1.0
+ *
+ * code.ml
+ * This has all the functionality for generating
+ * the C runtime and assembly code, and utilities
+ * for issuing the compile/link system calls.
+ *)
+
 open Ast;;
 open Utils;;
 
-let rec compile_program (o : out_channel) (p : program) = match p with
+(*
+ * the compile_... functions generate x86 assembly code based on
+ * L1 program constructs and writes the code to the output channel o
+ *)
+
+(* compiles an L1 "p" nonterminal into x86 assembly *)
+let rec compile_program (o : out_channel) (p : program) : unit = match p with
    | Program(ps, fl) ->
-      (*output_string o ".global go\n";
-      output_string o "go:\n";
-      output_string o "# the code goes here\n";
-      output_string o "#   movl $5, %edi\n";
-      output_string o "   pushl $5\n";
-      output_string o "   call print\n";
-      output_string o "   addl $4, %esp\n";
-      output_string o "   ret\n";
-      output_string o "# the code goes here\n";*)
+      (* output some boilerplate for the assembly file *)
       output_string o "	.file	\"prog.c\"\n" ;
       output_string o "	.text\n" ;
       output_string o "########## begin code ##########\n";
+      (* start outputting the functions (the first function will be "go") *)
       output_string o "go:\n" ;
       output_string o "\n";
+      (* iterate through the functions, giving each a unique number k *)
       let _ = List.fold_left (fun k f ->
          compile_function o f (k = 1) k;
          output_string o "\n";
          k+1
       ) 1 fl in ();
       output_string o "########## end code ##########\n";
+      (* output some boilerplate for the assembly file *)
       output_string o "	.ident	\"GCC: (Ubuntu 4.3.2-1ubuntu12) 4.3.2\"\n" ;
       output_string o "	.section	.note.GNU-stack,\"\",@progbits\n" ;
 
-and compile_function (o : out_channel) (f : func) (first : bool) (j : int) = match f with
+(*
+ * compiles an L1 "(i ...)" or "(label i ...)" expression into x86 assembly
+ *
+ * first - should be true if this is the first function in the L1 program
+ * j     - should be a unique integer
+ *)
+and compile_function (o : out_channel) (f : func) (first : bool) (j : int) : unit = match f with
    | Function(ps, so, il) ->
+      (* if it's the first function, then it's name must be "go") *)
       let name = (if first then "go" else (match so with
         | None -> die_error ps "function must be named"
         | Some(s) -> ("_"^s))) in
-      (* print some boilerplate if we're processing the "go" function *)
+      (* output some boilerplate if we're processing the "go" function *)
       if first then (
       output_string o ("	.globl	"^name^"\n") ;
       output_string o ("	.type	"^name^", @function\n")  );
+      (* output the label for the start of the function *)
       output_string o ("########## begin function \""^name^"\" ##########\n");
       output_string o (name^":\n") ;
+      (* output some more boilerplate if we're processing the "go" function *)
       if first then (
       output_string o "        # save caller's base pointer\n" ;
       output_string o "        pushl   %ebp\n" ;
@@ -54,15 +79,18 @@ and compile_function (o : out_channel) (f : func) (first : bool) (j : int) = mat
       output_string o "\n" ;
       output_string o "        ##### begin function body #####\n" );
       (* if the "go" function (i.e. the first one) had a label, we need 
-       * to add it to the instruction list *)
+       * to add it to the instruction list, since we ignored it when
+       * just using the name "go" *)
       let il2 = if first then (match so with
       | None -> il
       | Some(l) -> LabelInstr(ps,l)::il) else il in
+      (* iterate through the instructions, and compile them, giving
+       * each a unique number k *)
       let _ = List.fold_left (fun k i ->
          compile_instr o i first j k;
          k+1
       ) 1 il2 in ();
-      (* print some boilerplate if we're processing the "go" function *)
+      (* output some boilerplate if we're processing the "go" function *)
       if first then (
       output_string o "        ##### end function body #####\n" ;
       output_string o "\n" ;
@@ -75,22 +103,39 @@ and compile_function (o : out_channel) (f : func) (first : bool) (j : int) = mat
       output_string o "        # restore caller's base pointer\n" ;
       output_string o "        leave\n" ;
       output_string o "        ret\n" );
+      (* output the footer comment for the function *)
       output_string o ("########## end function \""^name^"\" ##########\n");
+      (* output some boilerplate if we're processing the "go" function *)
       if first then (output_string o ("	.size	"^name^", .-"^name^"\n") )
 
-and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : int) =
+(*
+ * compiles an L1 instruction expression into x86 assembly
+ * 
+ * first - should be true if this is the first instruction in a L1 function
+ * j     - should correspond to the parent function's unique number
+ * k     - should be a unique number for this instruction
+ *
+ * The j,k numbers are used to generate unique return addresses of the form
+ *    r_j_k
+ * For example, if we look at the 5th instruction in the 1st L1 function,
+ * and we find a call, the return address label will be
+ *    r_1_5:
+ *)
+and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : int) : unit =
    output_string o "\t# ";
    output_instr o i;
    output_string o "\n";
    match i with
    | AssignInstr(ps,r,sv) -> 
-      output_string o "\tmovl\t";
+      (* movl sv, r *)
+      output_string o ("\t"^"movl"^"\t");
       compile_sval o sv;
       output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | MemReadInstr(ps,r,br,off) ->
-      output_string o "\tmovl\t";
+      (* movl off(br), r *)
+      output_string o ("\t"^"movl"^"\t");
       output_string o (string_of_int off);
       output_string o "(";
       compile_reg o br;
@@ -98,7 +143,8 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       compile_reg o r;
       output_string o "\n";
    | MemWriteInstr(ps,br,off,sv) ->
-      output_string o "\tmovl\t";
+      (* movl sv, off(br) *)
+      output_string o ("\t"^"movl"^"\t");
       compile_sval o sv;
       output_string o ", ";
       output_string o (string_of_int off);
@@ -106,41 +152,49 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       compile_reg o br;
       output_string o ")\n";
    | PlusInstr(ps,r,tv) -> 
-      output_string o "\taddl\t";
+      (* addl tv, r *)
+      output_string o ("\t"^"addl"^"\t");
       compile_tval o tv;
       output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | MinusInstr(ps,r,tv) -> 
-      output_string o "\tsubl\t";
+      (* subl tv, r *)
+      output_string o ("\t"^"subl"^"\t");
       compile_tval o tv;
       output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | TimesInstr(ps,r,tv) -> 
-      output_string o "\timull\t";
+      (* imull tv, r *)
+      output_string o ("\t"^"imull"^"\t");
       compile_tval o tv;
       output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | BitAndInstr(ps,r,tv) -> 
-      output_string o "\tandl\t";
+      (* andl tv, r *)
+      output_string o ("\t"^"andl"^"\t");
       compile_tval o tv;
       output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | SllInstr(ps,r,sr) ->
-      output_string o "\tsall\t";
+      (* sall sr_lower, r *)
+      (* (where sr_lower is the lower byte of sr) *)
+      output_string o ("\t"^"sall"^"\t");
       (match sr with
-      | EcxShReg(_) -> output_string o "%cl"
+      | EcxShReg(_) -> output_string o "%cl" (* lower 8 bits of ecx *)
       | IntShVal(_,_) -> compile_sreg o sr);
       output_string o ", ";
       compile_reg o r;
       output_string o "\n";
    | SrlInstr(ps,r,sr) ->
-      output_string o "\tsarl\t";
+      (* sarl sr_lower, r *)
+      (* (where sr_lower is the lower byte of sr) *)
+      output_string o ("\t"^"sarl"^"\t");
       (match sr with
-      | EcxShReg(_) -> output_string o "%cl"
+      | EcxShReg(_) -> output_string o "%cl" (* lower 8 bits of ecx *)
       | IntShVal(_,_) -> compile_sreg o sr);
       output_string o ", ";
       compile_reg o r;
@@ -151,26 +205,35 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       | EcxReg(_) -> "%cl"
       | EdxReg(_) -> "%dl"
       | EbxReg(_) -> "%bl") in
-      (* if tv1 is constant, we must reverse the operation *)
+      (* if tv1 is constant, we must reverse the operation,
+       * since the second operand of cmp must be a register *)
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 < i2) in
-         output_string o ("\tmovb\t$"^(if b then "1" else "0")^", "^lower^"\n");
+         (* movb $v, cr_lower *)
+         (* (where v is 1 if i1 < i2, or 0 otherwise,
+          *  and cr_lower is the lower byte of cr) *)
+         output_string o ("\t"^"movb"^"\t"^"$"^(if b then "1" else "0")^", "^lower^"\n");
       | (IntTVal(_,_),_) -> 
-         output_string o "\tcmp\t";
+         (* cmp tv1, tv2 *)
+         output_string o ("\t"^"cmp"^"\t");
          compile_tval o tv1;
          output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
-         output_string o ("\tsetg\t"^lower^"\n");
+         (* setg cr_lower *)
+         output_string o ("\t"^"setg"^"\t"^lower^"\n");
       | _ ->
-         output_string o "\tcmp\t";
+         (* cmp tv2, tv1 *)
+         output_string o ("\t"^"cmp"^"\t");
          compile_tval o tv2;
          output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
-         output_string o ("\tsetl\t"^lower^"\n"));
-      output_string o ("\tmovzbl\t"^lower^", ");
+         (* setl cr_lower *)
+         output_string o ("\t"^"setl"^"\t"^lower^"\n") );
+      (* movzbl cr_lower, cr *)
+      output_string o ("\t"^"movzbl"^"\t"^lower^", ");
       compile_creg o cr;
       output_string o "\n";
    | LeqInstr(ps,cr,tv1,tv2) ->
@@ -179,26 +242,35 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       | EcxReg(_) -> "%cl"
       | EdxReg(_) -> "%dl"
       | EbxReg(_) -> "%bl") in
-      (* if tv1 is constant, we must reverse the operation *)
+      (* if tv1 is constant, we must reverse the operation,
+       * since the second operand of cmp must be a register *)
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 <= i2) in
-         output_string o ("\tmovb\t$"^(if b then "1" else "0")^", "^lower^"\n");
+         (* movb $v, cr_lower *)
+         (* (where v is 1 if i1 <= i2, or 0 otherwise,
+          *  and cr_lower is the lower byte of cr) *)
+         output_string o ("\t"^"movb"^"\t"^"$"^(if b then "1" else "0")^", "^lower^"\n");
       | (IntTVal(_,_),_) -> 
-         output_string o "\tcmp\t";
+         (* cmp tv1, tv2 *)
+         output_string o ("\t"^"cmp"^"\t");
          compile_tval o tv1;
          output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
-         output_string o ("\tsetge\t"^lower^"\n");
+         (* setge cr_lower *)
+         output_string o ("\t"^"setge"^"\t"^lower^"\n");
       | _ ->
-         output_string o "\tcmp\t";
+         (* cmp tv2, tv1 *)
+         output_string o ("\t"^"cmp"^"\t");
          compile_tval o tv2;
          output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
-         output_string o ("\tsetle\t"^lower^"\n"));
-      output_string o ("\tmovzbl\t"^lower^", ");
+         (* setle cr_lower *)
+         output_string o ("\t"^"setle"^"\t"^lower^"\n") );
+      (* movzbl cr_lower, cr *)
+      output_string o ("\t"^"movzbl"^"\t"^lower^", ");
       compile_creg o cr;
       output_string o "\n";
    | EqInstr(ps,cr,tv1,tv2) ->
@@ -207,189 +279,289 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       | EcxReg(_) -> "%cl"
       | EdxReg(_) -> "%dl"
       | EbxReg(_) -> "%bl") in
-      (* if tv1 is constant, we must reverse the arguments *)
+      (* if tv1 is constant, we must reverse the operation,
+       * since the second operand of cmp must be a register *)
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 = i2) in
-         output_string o ("\tmovb\t$"^(if b then "1" else "0")^", "^lower^"\n");
+         (* movb $v, cr_lower *)
+         (* (where v is 1 if i1 = i2, or 0 otherwise,
+          *  and cr_lower is the lower byte of cr) *)
+         output_string o ("\t"^"movb"^"\t"^"$"^(if b then "1" else "0")^", "^lower^"\n");
       | (IntTVal(_,_),_) -> 
-         output_string o "\tcmp\t";
+         (* cmp tv1, tv2 *)
+         output_string o ("\t"^"cmp"^"\t");
          compile_tval o tv1;
          output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
-         output_string o ("\tsete\t"^lower^"\n");
+         (* sete cr_lower *)
+         output_string o ("\t"^"sete"^"\t"^lower^"\n");
       | _ ->
-         output_string o "\tcmp\t";
+         output_string o ("\t"^"cmp"^"\t");
+         (* cmp tv2, tv1 *)
          compile_tval o tv2;
          output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
-         output_string o ("\tsete\t"^lower^"\n"));
-      output_string o ("\tmovzbl\t"^lower^", ");
+         (* sete cr_lower *)
+         output_string o ("\t"^"sete"^"\t"^lower^"\n") );
+      (* movzbl cr_lower, cr *)
+      output_string o ("\t"^"movzbl"^"\t"^lower^", ");
       compile_creg o cr;
       output_string o "\n";
-   | LabelInstr(ps,l) -> compile_label o l
-   | GotoInstr(ps,l) -> output_string o ("\tjmp\t_"^l^"\n")
+   | LabelInstr(ps,l) ->
+      (* l: *)
+      compile_label o l
+   | GotoInstr(ps,l) ->
+      (* jmp _l *)
+      output_string o ("\t"^"jmp"^"\t"^"_"^l^"\n")
    | LtJumpInstr(ps,tv1,tv2,l1,l2) ->
-      (* if tv1 is constant, we must reverse the operation *)
+      (* if tv1 is constant, we must reverse the operation,
+       * since the second operand of cmpl must be a register *)
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 < i2) in
-         output_string o ("\tjmp\t_"^(if b then l1 else l2)^"\n");
+         (* jmp _l_true *)
+         (* (where l_true is l1 if i1 < i2, or l2 otherwise) *)
+         output_string o ("\t"^"jmp"^"\t"^"_"^(if b then l1 else l2)^"\n");
       | (IntTVal(_,_),_) -> 
-         output_string o "\tcmpl\t";
+         (* cmpl tv1, tv2 *)
+         output_string o ("\t"^"cmpl"^"\t");
          compile_tval o tv1;
          output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
-         output_string o ("\tjg\t_"^l1^"\n");
-         output_string o ("\tjmp\t_"^l2^"\n");
+         (* jg _l1 *)
+         output_string o ("\t"^"jg"^"\t"^"_"^l1^"\n");
+         (* jmp _l2 *)
+         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n");
       | _ ->
          output_string o "\tcmpl\t";
          compile_tval o tv2;
          output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
-         output_string o ("\tjl\t_"^l1^"\n");
-         output_string o ("\tjmp\t_"^l2^"\n") );
+         (* jl _l1 *)
+         output_string o ("\t"^"jl"^"\t"^"_"^l1^"\n");
+         (* jmp _l2 *)
+         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n") );
    | LeqJumpInstr(ps,tv1,tv2,l1,l2) ->
-      (* if tv1 is constant, we must reverse the operation *)
+      (* if tv1 is constant, we must reverse the operation,
+       * since the second operand of cmpl must be a register *)
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 <= i2) in
-         output_string o ("\tjmp\t_"^(if b then l1 else l2)^"\n");
+         (* jmp _l_true *)
+         (* (where l_true is l1 if i1 <= i2, or l2 otherwise) *)
+         output_string o ("\t"^"jmp"^"\t"^"_"^(if b then l1 else l2)^"\n");
       | (IntTVal(_,_),_) -> 
-         output_string o "\tcmpl\t";
+         (* cmpl tv1, tv2 *)
+         output_string o ("\t"^"cmpl"^"\t");
          compile_tval o tv1;
          output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
-         output_string o ("\tjge\t_"^l1^"\n");
-         output_string o ("\tjmp\t_"^l2^"\n");
+         (* jge _l1 *)
+         output_string o ("\t"^"jge"^"\t"^"_"^l1^"\n");
+         (* jmp _l2 *)
+         output_string o ("\t"^"jmp"^"\t_"^l2^"\n");
       | _ ->
-         output_string o "\tcmpl\t";
+         (* cmpl tv2, tv1 *)
+         output_string o ("\t"^"cmpl"^"\t");
          compile_tval o tv2;
          output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
-         output_string o ("\tjle\t_"^l1^"\n");
-         output_string o ("\tjmp\t_"^l2^"\n") );
+         (* jle _l1 *)
+         output_string o ("\t"^"jle"^"\t"^"_"^l1^"\n");
+         (* jmp _l2 *)
+         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n") );
    | EqJumpInstr(ps,tv1,tv2,l1,l2) ->
-      (* if tv1 is constant, we must reverse the operation *)
+      (* if tv1 is constant, we must reverse the operation,
+       * since the second operand of cmpl must be a register *)
       (match (tv1,tv2) with
       | (IntTVal(_,i1),IntTVal(_,i2)) ->
          let b = (i1 = i2) in
-         output_string o ("\tjmp\t_"^(if b then l1 else l2)^"\n");
+         (* jmp _l_true *)
+         (* (where l_true is l1 if i1 = i2, or l2 otherwise) *)
+         output_string o ("\t"^"jmp"^"\t"^"_"^(if b then l1 else l2)^"\n");
       | (IntTVal(_,_),_) -> 
-         output_string o "\tcmpl\t";
+         (* cmpl tv1, tv2 *)
+         output_string o ("\t"^"cmpl"^"\t");
          compile_tval o tv1;
          output_string o ", ";
          compile_tval o tv2;
          output_string o "\n";
-         output_string o ("\tje\t_"^l1^"\n");
-         output_string o ("\tjmp\t_"^l2^"\n");
+         (* je _l1 *)
+         output_string o ("\t"^"je"^"\t"^"_"^l1^"\n");
+         (* jmp _l2 *)
+         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n");
       | _ ->
-         output_string o "\tcmpl\t";
+         (* cmpl tv2, tv1 *)
+         output_string o ("\t"^"cmpl"^"\t");
          compile_tval o tv2;
          output_string o ", ";
          compile_tval o tv1;
          output_string o "\n";
-         output_string o ("\tje\t_"^l1^"\n");
-         output_string o ("\tjmp\t_"^l2^"\n") );
+         (* je _l1 *)
+         output_string o ("\t"^"je"^"\t"^"_"^l1^"\n");
+         (* jmp _l2 *)
+         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n") );
    | CallInstr(ps, uv) ->
-      output_string o ("\tpushl\t$r_"^(string_of_int j)^(string_of_int k)^"\n");
-      output_string o "\tpushl\t%ebp\n";
-      output_string o "\tmovl\t%esp, %ebp\n";
-      output_string o "\tjmp\t";
-      compile_uval o uv; (* TODO XXX - this may be wrong *)
+      (* pushl $r_j_k *)
+      output_string o ("\t"^"pushl"^"\t"^"$r_"^(string_of_int j)^(string_of_int k)^"\n");
+      (* pushl %ebp *)
+      output_string o ("\t"^"pushl"^"\t"^"%ebp"^"\n");
+      (* movl %esp, %ebp *)
+      output_string o ("\t"^"movl"^"\t"^"%esp, %ebp"^"\n");
+      (* jmp uv *)
+      output_string o ("\t"^"jmp"^"\t");
+      compile_uval o uv;
       output_string o "\n";
-      output_string o ("r_"^(string_of_int j)^(string_of_int k)^":\n");
-   | TailCallInstr(ps, uv) -> (* TODO haven't tested this yet *)
-      output_string o "\tmovl\t%ebp, %esp\n";
-      output_string o "\tjmp\t";
-      compile_uval o uv; (* TODO XXX - this may be wrong *)
+      (* r_j_k: *)
+      output_string o ("r_"^(string_of_int j)^(string_of_int k)^":"^"\n");
+   | TailCallInstr(ps, uv) ->
+      (* movl %ebp, %esp *)
+      output_string o ("\t"^"movl"^"\t"^"%ebp, %esp"^"\n");
+      (* jmp uv *)
+      output_string o ("\t"^"jmp"^"\t");
+      compile_uval o uv;
       output_string o "\n";
    | ReturnInstr(ps) ->
+      (* if this is a "return" in the "go" function, we are called
+       * from C, so we need to follow the C-style function convention *)
       if first then (
-         output_string o "        popl   %ebp\n" ;
-         output_string o "        popl   %edi\n" ;
-         output_string o "        popl   %esi\n" ;
-         output_string o "        popl   %ebx\n" ;
-         output_string o "        leave\n" 
-      ) else (
-         output_string o "\tmovl\t%ebp, %esp\n" ;
-         output_string o "\tpopl\t%ebp\n" 
+         (*
+          * popl %ebp
+          * popl %edi
+          * popl %esi
+          * popl %ebx
+          * leave
+          *)
+         output_string o ("\t"^"popl"^"\t"^"%ebp"^"\n") ;
+         output_string o ("\t"^"popl"^"\t"^"%edi"^"\n") ;
+         output_string o ("\t"^"popl"^"\t"^"%esi"^"\n") ;
+         output_string o ("\t"^"popl"^"\t"^"%ebx"^"\n") ;
+         output_string o ("\t"^"leave"^"\n") 
+      ) else ( (* if we're not in the "go" function, follow the L1 convention *)
+         (*
+          * movl %ebp, %esp
+          * popl %ebp
+          *)
+         output_string o ("\t"^"movl"^"\t"^"%ebp, %esp"^"\n") ;
+         output_string o ("\t"^"popl"^"\t"^"%ebp"^"\n")
       );
-      output_string o ("\tret\n")
+      (* ret *)
+      output_string o ("\t"^"ret"^"\n")
    | PrintInstr(ps,tv) ->
-      output_string o "\tpushl\t";
+      (* pushl tv *)
+      output_string o ("\t"^"pushl"^"\t");
       compile_tval o tv;
       output_string o "\n";
-      output_string o "\tcall\tprint\n";
-      output_string o "\taddl\t$4, %esp\n"
+      (* call print *)
+      output_string o ("\t"^"call"^"\t"^"print"^"\n");
+      (* addl $8, %esp *)
+      output_string o ("\t"^"addl"^"\t"^"$4, %esp"^"\n")
    | AllocInstr(ps,tv1,tv2) ->
-      output_string o "\tpushl\t";
+      (* pushl tv2 *)
+      output_string o ("\t"^"pushl"^"\t");
       compile_tval o tv2;
       output_string o "\n";
-      output_string o "\tpushl\t";
+      (* pushl tv1 *)
+      output_string o ("\t"^"pushl"^"\t");
       compile_tval o tv1;
       output_string o "\n";
-      output_string o "\tcall\tallocate\n";
-      output_string o "\taddl\t$8, %esp\n"
+      (* call allocate *)
+      output_string o ("\t"^"call"^"\t"^"allocate"^"\n");
+      (* addl $8, %esp *)
+      output_string o ("\t"^"addl"^"\t"^"$8, %esp"^"\n")
    | ArrayErrorInstr(ps,tv1,tv2) ->
-      output_string o "\tpushl\t";
+      (* pushl tv2 *)
+      output_string o ("\t"^"pushl"^"\t");
       compile_tval o tv2;
       output_string o "\n";
-      output_string o "\tpushl\t";
+      (* pushl tv1 *)
+      output_string o ("\t"^"pushl"^"\t");
       compile_tval o tv1;
       output_string o "\n";
-      output_string o "\tcall\tprint_error\n";
-      output_string o "\taddl\t$8, %esp\n"
-   (*| _ -> output_string o "\t### TODO XXX - unhandled instruction ###\n"*)
+      (* call print_error *)
+      output_string o ("\t"^"call"^"\t"^"print_error"^"\n");
+      (* addl $8, %esp *)
+      output_string o ("\t"^"addl"^"\t"^"$8, %esp"^"\n")
 
-and compile_reg (o : out_channel) (r : reg) = match r with
+(* compiles an L1 "x" nonterminal into x86 assembly *)
+and compile_reg (o : out_channel) (r : reg) : unit = match r with
+   | CallerSaveReg(ps,cr) -> compile_creg o cr
    | EsiReg(ps) -> output_string o "%esi"
    | EdiReg(ps) -> output_string o "%edi"
    | EbpReg(ps) -> output_string o "%ebp"
    | EspReg(ps) -> output_string o "%esp"
-   | CallerSaveReg(ps,cr) -> compile_creg o cr
 
-and compile_creg (o : out_channel) (cr : creg) = match cr with
+(* compiles an L1 "cx" nonterminal into x86 assembly *)
+and compile_creg (o : out_channel) (cr : creg) : unit = match cr with
    | EaxReg(ps) -> output_string o "%eax"
    | EcxReg(ps) -> output_string o "%ecx"
    | EdxReg(ps) -> output_string o "%edx"
    | EbxReg(ps) -> output_string o "%ebx"
 
-and compile_sreg (o : out_channel) (sr : sreg) = match sr with
+(* compiles an L1 "sx" nonterminal into x86 assembly *)
+and compile_sreg (o : out_channel) (sr : sreg) : unit = match sr with
    | EcxShReg(ps) -> output_string o "%ecx"
    | IntShVal(ps,i) -> output_string o ("$"^(string_of_int i))
 
-and compile_sval (o : out_channel) (sv : sval) = match sv with
+(* compiles an L1 "s" nonterminal into x86 assembly *)
+and compile_sval (o : out_channel) (sv : sval) : unit = match sv with
    | RegSVal(ps,r) -> compile_reg o r;
    | IntSVal(ps,i) -> output_string o ("$"^(string_of_int i))
    | LabelSVal(ps,l) -> output_string o ("$_"^l)  (* TODO XXX - does this work? *)
 
-and compile_uval (o : out_channel) (uv : uval) = match uv with
+(* compiles an L1 "u" nonterminal into x86 assembly *)
+and compile_uval (o : out_channel) (uv : uval) : unit = match uv with
    | RegUVal(ps,r) -> output_string o "*"; compile_reg o r
    | LabelUVal(ps,l) -> output_string o ("_"^l)  (* TODO XXX - does this work? *)
 
-and compile_tval (o : out_channel) (t : tval) = match t with
+(* compiles an L1 "t" nonterminal into x86 assembly *)
+and compile_tval (o : out_channel) (t : tval) : unit = match t with
    | RegTVal(ps,r) -> compile_reg o r
    | IntTVal(ps,i) -> output_string o ("$"^(string_of_int i))
 
-and compile_label (o : out_channel) (l : string) = 
+(* compiles an L1 label l into x86 assembly *)
+and compile_label (o : out_channel) (l : string) : unit = 
    output_string o ("_"^l^":\n") ;
 ;;
 
-let compile_assembly () =
-   let _ = Sys.command "as --32 -o prog.o prog.S" in
-   let _ = Sys.command "gcc -m32 -c -O2 -w -o runtime.o runtime.c" in
-   let _ = Sys.command "gcc -m32 -o a.out prog.o runtime.o" in
+(*
+ * compile_and_link filename use_32bit
+ *
+ * Issues the system calls for compile/link of the generated
+ * C and assembly code.
+ *
+ * filename  - the filename of the output binary
+ * use_32bit - whether to generate a 32bit binary (rather than 64bit)
+ *
+ * returns unit
+ *)
+let compile_and_link (filename : string) (use_32bit : bool) : unit =
+   let arch = if use_32bit then 32 else 64 in
+   let _ = Sys.command ("as --"^(string_of_int arch)^" -o prog.o prog.S") in
+   let _ = Sys.command ("gcc -m"^(string_of_int arch)^" -c -O2 -w -o runtime.o runtime.c") in
+   let _ = Sys.command ("gcc -m"^(string_of_int arch)^" -o "^filename^" prog.o runtime.o") in
    ()
 ;;
 
-let generate_runtime (o : out_channel) =
+(*
+ * generate_runtime o
+ *
+ * Generates the C runtime code on the specified output channel.
+ * The runtime has the implementations of the "print", "allocate",
+ * and "array-error" L1 functions.
+ *
+ * o - the output channel where the code gets written
+ *
+ * returns unit
+ *)
+let generate_runtime (o : out_channel) : unit =
    output_string o "void print_content(void** in, int depth) {\n";
    output_string o "  if (depth >= 4) {\n";
    output_string o "    printf(\"...\");\n";
@@ -473,3 +645,6 @@ let generate_runtime (o : out_channel) =
    output_string o " return 0;\n";
    output_string o "}\n";
 ;;
+
+
+

@@ -1,4 +1,16 @@
-/* File parser.mly */
+/*
+ * EECS 322 Compiler Construction
+ * Northwestern University
+ * 4/3/2012
+ *
+ * L1-to-assembly Compiler
+ * Jedidiah R. McClurg
+ * v. 1.0
+ *
+ * parser.mly
+ * This is the specification for the L1 parser, to be
+ * used with ocamlyacc.
+ */
 %{
    open Ast;;
    open Utils;;
@@ -48,10 +60,12 @@ instr:
    | LPAREN reg GETS sval RPAREN                             { AssignInstr(get_current_pos (), $2, $4) }
    | LPAREN reg GETS LPAREN MEM reg INT RPAREN RPAREN        { let i = $7 in
                                                                check_int_range i;
-                                                               if (i mod 4 <> 0) then parse_error "offset must be divisible by 4";
+                                                               if (i mod 4 <> 0) then
+                                                                  parse_error "offset must be divisible by 4";
                                                                MemReadInstr(get_current_pos (), $2, $6, i) }
    | LPAREN LPAREN MEM reg INT RPAREN GETS sval RPAREN       { let i = $5 in
-                                                               if (i mod 4 <> 0) then parse_error "offset must be divisible by 4";
+                                                               if (i mod 4 <> 0) then
+                                                                  parse_error "offset must be divisible by 4";
                                                                MemWriteInstr(get_current_pos (), $4, i, $8) }
    | LPAREN reg PLUSEQ tval RPAREN                           { PlusInstr(get_current_pos (), $2, $4) }
    | LPAREN reg MINUSEQ tval RPAREN                          { MinusInstr(get_current_pos (), $2, $4) }
@@ -90,7 +104,7 @@ instr:
 ;
 
 instr_list:
-                   { [] }
+                     { [] }
   | instr instr_list { $1::$2 }
 ;
 

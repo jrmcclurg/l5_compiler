@@ -1,3 +1,17 @@
+(*
+ * EECS 322 Compiler Construction 
+ * Northwestern University
+ * 4/3/2012
+ *
+ * L1-to-assembly Compiler
+ * Jedidiah R. McClurg
+ * v. 1.0
+ *
+ * lexer.mll
+ * This is the lexer specification for the L1 language,
+ * to be used with ocamllex.
+ *)
+
 {
    open Parser;; (* The type token is defined in parser.mli *)
    open Ast;;
@@ -41,7 +55,6 @@ rule token = parse
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'
        '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
-| "/*"                       { comment 0 lexbuf }                (* multiline comment (not needed) *)
 | eof { EOF }
 | _ { let p = Lexing.lexeme_end_p lexbuf in
       let file_name = p.Lexing.pos_fname in
@@ -50,9 +63,3 @@ rule token = parse
       print_string ("Lexical error in '"^file_name^
    "' on line "^(string_of_int line_num)^" col "^(string_of_int
    col_num)^"!\n"); raise Lexing_error }
-
-and comment n = parse
-| "/*" { comment (n+1) lexbuf }
-| "*/" { if (n=0) then token lexbuf else comment (n-1) lexbuf }
-| _ as c { if c='\n' then do_newline lexbuf;
-           comment n lexbuf }
