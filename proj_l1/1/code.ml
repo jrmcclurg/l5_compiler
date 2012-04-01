@@ -17,16 +17,16 @@ let rec compile_program (o : out_channel) (p : program) = match p with
       output_string o "########## begin code ##########\n";
       output_string o "go:\n" ;
       output_string o "\n";
-      let _ = List.fold_left (fun flag f ->
-         compile_function o f flag;
+      let _ = List.fold_left (fun k f ->
+         compile_function o f (k = 1) k;
          output_string o "\n";
-         false
-      ) true fl in ();
+         k+1
+      ) 1 fl in ();
       output_string o "########## end code ##########\n";
       output_string o "	.ident	\"GCC: (Ubuntu 4.3.2-1ubuntu12) 4.3.2\"\n" ;
       output_string o "	.section	.note.GNU-stack,\"\",@progbits\n" ;
 
-and compile_function (o : out_channel) (f : func) (first : bool) = match f with
+and compile_function (o : out_channel) (f : func) (first : bool) (j : int) = match f with
    | Function(ps, so, il) ->
       let name = (if first then "go" else (match so with
         | None -> die_error ps "function must be named"
@@ -59,7 +59,7 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       | None -> il
       | Some(l) -> LabelInstr(ps,l)::il) else il in
       let _ = List.fold_left (fun k i ->
-         compile_instr o i first k;
+         compile_instr o i first j k;
          k+1
       ) 1 il2 in ();
       (* print some boilerplate if we're processing the "go" function *)
@@ -78,7 +78,7 @@ and compile_function (o : out_channel) (f : func) (first : bool) = match f with
       output_string o ("########## end function \""^name^"\" ##########\n");
       if first then (output_string o ("	.size	"^name^", .-"^name^"\n") )
 
-and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
+and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : int) =
    output_string o "\t# ";
    output_instr o i;
    output_string o "\n";
@@ -298,15 +298,15 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (k : int) =
          output_string o ("\tje\t_"^l1^"\n");
          output_string o ("\tjmp\t_"^l2^"\n") );
    | CallInstr(ps, uv) ->
-      output_string o ("\tpushl\t$r_"^(string_of_int k)^"\n");
+      output_string o ("\tpushl\t$r_"^(string_of_int j)^(string_of_int k)^"\n");
       output_string o "\tpushl\t%ebp\n";
       output_string o "\tmovl\t%esp, %ebp\n";
       output_string o "\tjmp\t";
       compile_uval o uv; (* TODO XXX - this may be wrong *)
       output_string o "\n";
-      output_string o ("r_"^(string_of_int k)^":\n");
+      output_string o ("r_"^(string_of_int j)^(string_of_int k)^":\n");
    | TailCallInstr(ps, uv) -> (* TODO haven't tested this yet *)
-      output_string o "\tmovl\t%esp, %ebp\n";
+      output_string o "\tmovl\t%ebp, %esp\n";
       output_string o "\tjmp\t";
       compile_uval o uv; (* TODO XXX - this may be wrong *)
       output_string o "\n";
