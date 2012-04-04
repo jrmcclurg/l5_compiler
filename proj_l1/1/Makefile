@@ -51,7 +51,10 @@ lexer.ml:	lexer.mll
 		ocamllex lexer.mll
 
 clean:		
-		rm -rf *.c *.S *.out *.cm* *.o *.mli parser.ml lexer.ml
+		rm -rf *.c *.S *.s *.out *.cm* *.o *.mli parser.ml lexer.ml
+
+tarball:
+		tar -cvzf mcclurg.1.tar.gz ast.ml code.ml L1c lexer.mll main.ml Makefile parser.mly README utils.ml
 
 wc:		
 		wc -l lexer.mll parser.mly ast.ml utils.ml main.ml code.ml
