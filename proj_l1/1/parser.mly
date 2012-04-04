@@ -36,16 +36,16 @@ main:
 ;
 
 func:
-   | LPAREN instr instr_list RPAREN {
+   | LPAREN instr_list RPAREN {
       (* we need to see if this function has a name *)
       (* (using a separate rule for the labeled functions
        *  causes a shift/reduce conflict in the parser) *)
-      let il = $2::$3 in
-      let a = List.hd il in
-      let ax = List.tl il in
+      let il = $2 in
+      let (a,ax) = if ((List.length il) > 0) then
+         (Some(List.hd il),List.tl il) else (None,[]) in
       let (name,l) =
       (match a with
-      | LabelInstr(_,s) -> (Some(s),ax)
+      | Some(LabelInstr(_,s)) -> (Some(s),ax)
       | _ -> (None,il)) in
       Function(get_current_pos (), name, l)
    }

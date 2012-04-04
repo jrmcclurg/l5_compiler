@@ -514,12 +514,12 @@ and compile_sreg (o : out_channel) (sr : sreg) : unit = match sr with
 and compile_sval (o : out_channel) (sv : sval) : unit = match sv with
    | RegSVal(ps,r) -> compile_reg o r;
    | IntSVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
-   | LabelSVal(ps,l) -> output_string o ("$_"^l)  (* TODO XXX - does this work? *)
+   | LabelSVal(ps,l) -> output_string o ("$_"^l)
 
 (* compiles an L1 "u" nonterminal into x86 assembly *)
 and compile_uval (o : out_channel) (uv : uval) : unit = match uv with
    | RegUVal(ps,r) -> output_string o "*"; compile_reg o r
-   | LabelUVal(ps,l) -> output_string o ("_"^l)  (* TODO XXX - does this work? *)
+   | LabelUVal(ps,l) -> output_string o ("_"^l)
 
 (* compiles an L1 "t" nonterminal into x86 assembly *)
 and compile_tval (o : out_channel) (t : tval) : unit = match t with
@@ -651,6 +651,3 @@ let generate_runtime (o : out_channel) : unit =
    output_string o " return 0;\n";
    output_string o "}\n";
 ;;
-
-
-
