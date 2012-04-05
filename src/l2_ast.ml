@@ -61,6 +61,32 @@ type program = Program of pos * func list
            | ShVar of pos * var
 ;;
 
+let rec get_pos_instr (i : instr) : pos = match i with
+   | AssignInstr(p,_,_) -> p
+   | MemReadInstr(p, _, _, _) -> p
+   | MemWriteInstr(p, _, _, _) -> p
+   | PlusInstr(p, _, _) -> p
+   | MinusInstr(p, _, _) -> p
+   | TimesInstr(p, _, _) -> p
+   | BitAndInstr(p, _, _) -> p
+   | SllInstr(p, _, _) -> p
+   | SrlInstr(p, _, _) -> p
+   | LtInstr(p, _, _, _) -> p
+   | LeqInstr(p, _, _, _) -> p
+   | EqInstr(p, _, _, _) -> p
+   | LabelInstr(p, _) -> p
+   | GotoInstr(p, _) -> p
+   | LtJumpInstr(p, _, _, _, _) -> p
+   | LeqJumpInstr(p, _, _, _, _) -> p
+   | EqJumpInstr(p, _, _, _, _) -> p
+   | CallInstr(p, _) -> p
+   | TailCallInstr(p, _) -> p
+   | ReturnInstr(p) -> p
+   | PrintInstr(p, _) -> p
+   | AllocInstr(p, _, _) -> p
+   | ArrayErrorInstr(p, _, _) -> p
+;; 
+
 (* the output_... functions pretty-print L1 constructs to a specified channel *)
 
 let rec output_program out p = match p with
