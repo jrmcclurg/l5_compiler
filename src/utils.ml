@@ -13,12 +13,11 @@
 
 open Lexing;;
 open Parsing;;
-open Ast;;
+
+(* data type for file positions *)
+type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
 
 exception Parse_error;;
-
-let max_int = 2147483647L ;;
-let min_int = -2147483648L ;;
 
 (* die_error p s
  *
@@ -51,13 +50,6 @@ let parse_error (s : string) =
    die_error ps s
 ;;
 
-(* dies with a system error s *)
-let die_system_error (s : string) =
-   print_string s;
-   print_string "\n";
-   exit 1
-;;
-
 (* gets a pos data structure using the current lexing pos *)
 let get_current_pos () =
    let p         = symbol_start_pos () in
@@ -85,13 +77,9 @@ let do_newline lb =
    Lexing.new_line lb
 ;;
 
-(* "casts" a reg to a creg *)
-let get_creg r = match r with
-   | CallerSaveReg(_,c) -> c
-   | _ -> parse_error "destination must be one of eax, ecx, edx, ebx"
-;;
-
-(* does an integer range check *)
-let check_int_range (i : int64) =
-   if ((i < min_int) or (i > max_int)) then parse_error "integer out of range"
+(* dies with a system error s *)
+let die_system_error (s : string) =
+   print_string s;
+   print_string "\n";
+   exit 1
 ;;

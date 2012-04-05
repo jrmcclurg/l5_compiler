@@ -12,9 +12,6 @@
  * Abstract Syntax Tree (AST) for the parsed L1 program.
  *)
 
-(* data type for file positions *)
-type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
-
 (* data type for L1 programs *)
 type program = Program of pos * func list
  and func = Function of pos * string option * instr list

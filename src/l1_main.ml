@@ -14,6 +14,8 @@
  * compiles/links everything via gcc/as.
  *)
 
+open L1_ast;;
+open L1_code;;
 open Utils;;
 
 (* flags and defaults for command-line args *)
@@ -21,7 +23,7 @@ let assembly_file_name = ref "prog.S";;
 let runtime_file_name  = ref "runtime.c";;
 let output_file_name   = ref "a.out";;
 let use_32bit_arch     = ref true;;
-let do_print_only      = ref true;;
+let do_print_only      = ref false;;
 let verbose_mode       = ref false;;
 
 (* program banner text *)
@@ -45,10 +47,10 @@ let in_stream = if (!filename="") then stdin else (
       (Sys.getcwd ())^"/"^(!filename))
 ) in
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
-let result = L1parser.main L1lexer.token lexbuf in (* run the parser, producing AST *)
+let result = L1_parser.main L1_lexer.token lexbuf in (* run the parser, producing AST *)
 (* if we only need to print the parsed L1 code, do so *)
 if !do_print_only then (
-   Ast.print_program result;
+   print_program result;
    print_newline()
 ) else ( (* if we need to actually compile to assembly, do so *)
    (* generate the C runtime *)
@@ -56,17 +58,17 @@ if !do_print_only then (
       with _ -> die_system_error ("can't write to file: "^
          (Sys.getcwd ())^"/"^(!runtime_file_name))
    ) in
-   Code.generate_runtime out1;
+   generate_runtime out1;
    close_out out1;
    (* generate the assembly code *)
    let out2 = (try (open_out !assembly_file_name)
       with _ -> die_system_error ("can't write to file: "^
       (Sys.getcwd ())^"/"^(!assembly_file_name))
    ) in
-   Code.compile_program out2 result;
+   compile_program out2 result;
    close_out out2;
    (* compile and link everything *)
-   Code.compile_and_link !output_file_name !use_32bit_arch;
+   compile_and_link !output_file_name !use_32bit_arch;
    (* if verbose mode is enabled, print a summary *)
    if !verbose_mode then (
       print_string (banner_text^"\n");

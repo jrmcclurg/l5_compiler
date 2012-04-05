@@ -17,44 +17,44 @@
 ###########################################################
 
 # use the "-ccopt -static" ocamlopt switch to statically link
-L1c:	ast.cmx utils.cmx code.cmx l1parser.cmx l1lexer.cmx l1c.cmx
-	ocamlopt -o L1c str.cmxa ast.cmx utils.cmx code.cmx l1parser.cmx l1lexer.cmx l1c.cmx
+L1c:	utils.cmx l1_ast.cmx l1_code.cmx l1_parser.cmx l1_lexer.cmx l1_main.cmx
+	ocamlopt -o L1c str.cmxa utils.cmx l1_ast.cmx l1_code.cmx l1_parser.cmx l1_lexer.cmx l1_main.cmx
 
-l1c.cmx:	l1c.ml l1parser.cmx l1lexer.cmx code.cmx
-		ocamlopt -c l1c.ml
+l1_main.cmx:	l1_main.ml l1_parser.cmx l1_lexer.cmx l1_code.cmx l1_ast.cmx utils.cmx
+		ocamlopt -c l1_main.ml
 
-l1parser.cmx:	l1parser.ml l1parser.cmi utils.cmx
-		ocamlopt -c l1parser.ml
+l1_parser.cmx:	l1_parser.ml l1_parser.cmi utils.cmx
+		ocamlopt -c l1_parser.ml
 
-l1lexer.cmx:	l1lexer.ml l1parser.cmi utils.cmx
-		ocamlopt -c l1lexer.ml
+l1_lexer.cmx:	l1_lexer.ml l1_parser.cmi l1_ast.cmx utils.cmx
+		ocamlopt -c l1_lexer.ml
 
-code.cmx:	code.ml utils.cmx ast.cmx
-		ocamlopt -c code.ml
+l1_code.cmx:	l1_code.ml l1_ast.cmx utils.cmx
+		ocamlopt -c l1_code.ml
 
-utils.cmx:	utils.ml ast.cmx
+l1_parser.cmi:	l1_parser.mli l1_ast.cmx utils.cmx
+		ocamlopt -c l1_parser.mli
+
+l1_ast.cmx:	l1_ast.ml utils.ml
+		ocamlopt -c l1_ast.ml
+
+utils.cmx:	utils.ml
 		ocamlopt -c utils.ml
 
-l1parser.cmi:	l1parser.mli ast.cmx
-		ocamlopt -c l1parser.mli
+l1_parser.ml:	l1_parser.mly
+		ocamlyacc l1_parser.mly
 
-ast.cmx:	ast.ml
-		ocamlopt -c ast.ml
+l1_parser.mli:	l1_parser.mly
+		ocamlyacc l1_parser.mly
 
-l1parser.ml:	l1parser.mly
-		ocamlyacc l1parser.mly
-
-l1parser.mli:	l1parser.mly
-		ocamlyacc l1parser.mly
-
-l1lexer.ml:	l1lexer.mll
-		ocamllex l1lexer.mll
+l1_lexer.ml:	l1_lexer.mll
+		ocamllex l1_lexer.mll
 
 clean:		
-		rm -rf *.c *.S *.s *.out *.cm* *.o *.mli l1parser.ml l1lexer.ml
+		rm -rf *.c *.S *.s *.out *.cm* *.o *.mli l1_parser.ml l1_lexer.ml
 
 tarball:
-		tar -cvzf mcclurg.1.tar.gz ast.ml code.ml L1c l1lexer.mll l1c.ml Makefile l1parser.mly README utils.ml
+		tar -cvzf mcclurg.1.tar.gz ast.ml code.ml L1c l1_lexer.mll l1_main.ml Makefile l1_parser.mly README utils.ml
 
 wc:		
-		wc -l l1lexer.mll l1parser.mly ast.ml utils.ml l1c.ml code.ml
+		wc -l l1_lexer.mll l1_parser.mly ast.ml utils.ml l1_main.ml code.ml

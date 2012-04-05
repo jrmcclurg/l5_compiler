@@ -13,7 +13,7 @@
  * for issuing the compile/link system calls.
  *)
 
-open Ast;;
+open L1_ast;;
 open Utils;;
 
 (*

@@ -12,7 +12,7 @@
  * used with ocamlyacc.
  */
 %{
-   open Ast;;
+   open L1_ast;;
    open Utils;;
 %}
 %token <int64> INT
@@ -28,7 +28,7 @@
 %token EOF
 /* last tokens have highest precedence */
 %start main /* the entry point */
-%type <Ast.program> main
+%type <L1_ast.program> main
 %%
 main:
    LPAREN func func_list RPAREN { Program(get_current_pos (), $2::$3) }

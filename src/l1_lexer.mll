@@ -13,8 +13,8 @@
  *)
 
 {
-   open L1parser;; (* The type token is defined in parser.mli *)
-   open Ast;;
+   open L1_parser;; (* The type token is defined in parser.mli *)
+   open L1_ast;;
    open Utils;;
 }
 rule token = parse
