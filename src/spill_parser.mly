@@ -29,10 +29,10 @@
 %token EOF
 /* last tokens have highest precedence */
 %start main /* the entry point */
-%type <L2_ast.instr list * L2_ast.var * int64 * L2_ast.var> main
+%type <L2_ast.instr list * string * int64 * string> main
 %%
 main:
-   LPAREN instr_list RPAREN var INT var EOF { let i = $5 in
+   LPAREN instr_list RPAREN IDENT INT IDENT EOF { let i = $5 in
                                               check_int_alignment i;
                                               ($2,$4,$5,$6) }
 ;

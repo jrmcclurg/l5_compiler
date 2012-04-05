@@ -12,6 +12,7 @@
  *)
 
 open L2_ast;;
+open L2_code;;
 open Utils;;
 
 (* flags and defaults for command-line args *)
@@ -36,6 +37,12 @@ Arg.parse [
                     "Location of the compiled result (default: a.out)")
 ] (fun x -> filename := x) banner_text;;
 
+let print_instr_list il =
+   print_string "(";
+   List.iter (fun i -> print_instr i; print_string "\n") il;
+   print_string ")\n"
+;;
+
 (* use the command-line filename if one exists, otherwise use stdin *)
 let in_stream = if (!filename="") then stdin else (
    try (open_in !filename)
@@ -46,15 +53,9 @@ let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let (il,v,off,prefix) = Spill_parser.main Spill_lexer.token lexbuf in (* run the parser, producing AST *)
 (* if we only need to print the parsed L1 code, do so *)
 if !do_print_only then (
-   List.iter (fun i -> print_instr i; print_string "\n") il;
-   print_newline();
-   print_string "var = ";
-   print_var v;
-   print_newline();
-   print_string ("offset = "^(Int64.to_string off)^"\n");
-   print_string "prefix = ";
-   print_var prefix;
-   print_newline()
-   
+   print_instr_list il;
+   print_newline ();
+   let il2 = spill il v off prefix in 
+   print_instr_list il2
 );
 exit 0

@@ -179,9 +179,9 @@ and output_instr out i = match i with
       output_tval out tv1;
       output_string out " < ";
       output_tval out tv2;
-      output_string out " ";
+      output_string out " :";
       output_string out s1;
-      output_string out " ";
+      output_string out " :";
       output_string out s2;
       output_string out ")";
    | LeqJumpInstr(_,tv1,tv2,s1,s2) ->
@@ -189,9 +189,9 @@ and output_instr out i = match i with
       output_tval out tv1;
       output_string out " <= ";
       output_tval out tv2;
-      output_string out " ";
+      output_string out " :";
       output_string out s1;
-      output_string out " ";
+      output_string out " :";
       output_string out s2;
       output_string out ")";
    | EqJumpInstr(_,tv1,tv2,s1,s2) ->
@@ -199,9 +199,9 @@ and output_instr out i = match i with
       output_tval out tv1;
       output_string out " = ";
       output_tval out tv2;
-      output_string out " ";
+      output_string out " :";
       output_string out s1;
-      output_string out " ";
+      output_string out " :";
       output_string out s2;
       output_string out ")";
    | CallInstr(_, uv) ->

@@ -19,10 +19,10 @@
 
 ### spill test ###
 
-spill:			utils.cmx l2_ast.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
-			ocamlopt -o spill str.cmxa utils.cmx l2_ast.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
+spill:			utils.cmx l2_ast.cmx l2_code.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
+			ocamlopt -o spill str.cmxa utils.cmx l2_ast.cmx l2_code.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
 
-spill_main.cmx:		spill_main.ml spill_parser.cmx spill_lexer.cmx l2_ast.cmx utils.cmx
+spill_main.cmx:		spill_main.ml spill_parser.cmx spill_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
 			ocamlopt -c spill_main.ml
 
 spill_parser.cmx:	spill_parser.ml spill_parser.cmi utils.cmx
@@ -56,6 +56,9 @@ l2_parser.cmx:	l2_parser.ml l2_parser.cmi utils.cmx
 
 l2_lexer.cmx:	l2_lexer.ml l2_parser.cmi l2_ast.cmx utils.cmx
 		ocamlopt -c l2_lexer.ml
+
+l2_code.cmx:	l2_code.ml l2_ast.cmx utils.cmx
+		ocamlopt -c l2_code.ml
 
 l2_parser.cmi:	l2_parser.mli l2_ast.cmx utils.cmx
 		ocamlopt -c l2_parser.mli
