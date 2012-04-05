@@ -53,8 +53,6 @@ let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let (il,v,off,prefix) = Spill_parser.main Spill_lexer.token lexbuf in (* run the parser, producing AST *)
 (* if we only need to print the parsed L1 code, do so *)
 if !do_print_only then (
-   print_instr_list il;
-   print_newline ();
    let il2 = spill il v off prefix in 
    print_instr_list il2
 );

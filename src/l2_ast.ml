@@ -32,12 +32,15 @@ type program = Program of pos * func list
            | EqInstr of pos * var * tval * tval
            | LabelInstr of pos * string
            | GotoInstr of pos * string
+
            | LtJumpInstr of pos * tval * tval * string * string
            | LeqJumpInstr of pos * tval * tval * string * string
            | EqJumpInstr of pos * tval * tval * string * string
            | CallInstr of pos * uval
            | TailCallInstr of pos * uval
+
            | ReturnInstr of pos
+
            | PrintInstr of pos * tval
            | AllocInstr of pos * tval * tval
            | ArrayErrorInstr of pos * tval * tval
@@ -197,7 +200,7 @@ and output_instr out i = match i with
    | LabelInstr(_,s) ->
       output_string out (":"^s);
    | GotoInstr(_,s) ->
-      output_string out "(goto ";
+      output_string out "(goto :";
       output_string out s;
       output_string out ")";
    | LtJumpInstr(_,tv1,tv2,s1,s2) ->
