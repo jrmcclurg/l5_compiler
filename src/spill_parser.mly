@@ -32,9 +32,9 @@
 %type <L2_ast.instr list * string * int64 * string> main
 %%
 main:
-   LPAREN instr_list RPAREN IDENT INT IDENT EOF { let i = $5 in
+   LPAREN instr_list RPAREN var INT var EOF { let i = $5 in
                                               check_int_alignment i;
-                                              ($2,$4,$5,$6) }
+                                              ($2,get_var_name $4,$5,get_var_name $6) } /* TODO XXX - these will be var ids */
 ;
 
 instr:
@@ -110,10 +110,12 @@ sval:
 
 uval:
    | var  { VarUVal(get_current_pos(), $1) }
+   | INT   { IntUVal(get_current_pos(), $1) }
    | LABEL { LabelUVal(get_current_pos(), $1) }
 ;
 
 tval:
    | var  { VarTVal(get_current_pos(), $1) }
    | INT   { IntTVal(get_current_pos(), $1) }
+   | LABEL { LabelTVal(get_current_pos(), $1) }
 ;

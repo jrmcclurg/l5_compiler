@@ -48,9 +48,11 @@ type program = Program of pos * func list
           | IntSVal of pos * int64
           | LabelSVal of pos * string
  and uval = VarUVal of pos * var
+          | IntUVal of pos * int64
           | LabelUVal of pos * string
  and tval = VarTVal of pos * var
           | IntTVal of pos * int64
+          | LabelTVal of pos * string
  and var = EsiReg of pos
          | EdiReg of pos
          | EbpReg of pos
@@ -62,6 +64,18 @@ type program = Program of pos * func list
          | Var of pos * string (* TODO XXX - eventually we need a symbol table *)
  and svar = IntShVal of pos * int64 
            | ShVar of pos * var
+;;
+
+let rec get_var_name (v : var) = match v with
+   | EsiReg(_) -> "esi"
+   | EdiReg(_) -> "edi"
+   | EbpReg(_) -> "ebp"
+   | EspReg(_) -> "esp"
+   | EaxReg(_) -> "eax"
+   | EcxReg(_) -> "ecx"
+   | EdxReg(_) -> "edx"
+   | EbxReg(_) -> "ebx"
+   | Var(_,s) -> s
 ;;
 
 let rec get_pos_instr (i : instr) : pos = match i with
@@ -278,10 +292,12 @@ and output_sval out s = match s with
    | LabelSVal(_,s) -> output_string out (":"^s)
 and output_uval out u = match u with
    | VarUVal(_,r) -> output_var out r
+   | IntUVal(_, i) -> output_string out (Int64.to_string i)
    | LabelUVal(_,s) -> output_string out (":"^s)
 and output_tval out t = match t with
    | VarTVal(_,r) -> output_var out r
    | IntTVal(_,i) -> output_string out (Int64.to_string i)
+   | LabelTVal(_,s) -> output_string out (":"^s)
 ;;
 
 (* the print_... functions pretty-print L1 constructs to stdout *)
