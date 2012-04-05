@@ -21,7 +21,7 @@ let assembly_file_name = ref "prog.S";;
 let runtime_file_name  = ref "runtime.c";;
 let output_file_name   = ref "a.out";;
 let use_32bit_arch     = ref true;;
-let do_print_only      = ref false;;
+let do_print_only      = ref true;;
 let verbose_mode       = ref false;;
 
 (* program banner text *)
@@ -45,7 +45,7 @@ let in_stream = if (!filename="") then stdin else (
       (Sys.getcwd ())^"/"^(!filename))
 ) in
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
-let result = Parser.main Lexer.token lexbuf in (* run the parser, producing AST *)
+let result = L1parser.main L1lexer.token lexbuf in (* run the parser, producing AST *)
 (* if we only need to print the parsed L1 code, do so *)
 if !do_print_only then (
    Ast.print_program result;

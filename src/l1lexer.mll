@@ -13,7 +13,7 @@
  *)
 
 {
-   open Parser;; (* The type token is defined in parser.mli *)
+   open L1parser;; (* The type token is defined in parser.mli *)
    open Ast;;
    open Utils;;
 }
