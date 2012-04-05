@@ -1,0 +1,9 @@
+(:the_beginning_123
+(call :_long_function_name)
+(goto :the_beginning_123)
+(_f2 <- _f2)
+(f2 <- f2)
+:_long_function_name
+((mem ebp -40) <- f1)
+(return)
+)

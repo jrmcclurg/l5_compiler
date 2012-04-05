@@ -1,0 +1,12 @@
+(
+  (cjump a < b :one :two)
+  (cjump b <= c :one :two)
+  (cjump c = d :one :two)
+  :one
+  (eax <- (print test1))
+  :two
+  (eax <- (print test2))
+  :three
+  (eax <- (print test2))
+  (return)
+) b -4 one

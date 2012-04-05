@@ -1,0 +1,9 @@
+(
+   (num <- 13)
+   (pad <- 1)
+   (eax <- (allocate num pad))
+   (t <- eax)
+   (num += 2)
+   (eax <- (array-error t num))
+   (eax <- (print none))
+) t -16 _hello_

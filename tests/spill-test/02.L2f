@@ -1,0 +1,6 @@
+((x <- 13)
+ (eax <- (print 13))
+ (eax <- (print x))
+ (x <- x)
+ (eax += x)
+) x -8 test_

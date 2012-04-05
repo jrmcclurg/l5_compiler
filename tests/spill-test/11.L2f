@@ -1,0 +1,11 @@
+(
+  (eax <- 13)
+  (eax <<= 2)
+  (eax >>= 2)
+  (test123abc <- eax)
+  (test123abc <<= 3)
+  (test123abc <<= 4)
+  (test123abc >>= 2)
+  (eax <- (array-error test123abc test123abc))
+  (return)
+) test123abc -4 test123abc

@@ -1,0 +1,13 @@
+(
+  :start
+  (goto :other)
+  :beginning
+  (goto :end)
+  :other
+  (t <- 13)
+  (eax <- (allocate t t))
+  (eax <- (array-error t t))
+  (goto :beginning)
+  :end
+  (return)
+) t -4 var

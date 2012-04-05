@@ -1,0 +1,9 @@
+(
+  (t <- t < t)
+  (t <- t <= t)
+  (t <- t = t)
+  (t <- t < t1)
+  (t <- t1 <= t)
+  (t1 <- t = t)
+  (return)
+) t -4 var

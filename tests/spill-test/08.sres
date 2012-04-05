@@ -1,0 +1,14 @@
+(:start
+(goto :other)
+:beginning
+(goto :end)
+:other
+((mem ebp -4) <- 13)
+(var0 <- (mem ebp -4))
+(eax <- (allocate var0 var0))
+(var1 <- (mem ebp -4))
+(eax <- (array-error var1 var1))
+(goto :beginning)
+:end
+(return)
+)

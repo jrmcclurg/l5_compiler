@@ -1,0 +1,7 @@
+(((mem ebp -8) <- 13)
+(eax <- (print 13))
+(test_0 <- (mem ebp -8))
+(eax <- (print test_0))
+(test_1 <- (mem ebp -8))
+(eax += test_1)
+)

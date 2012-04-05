@@ -1,0 +1,13 @@
+((one0 <- (mem ebp -4))
+(cjump a < one0 :one :two)
+(one1 <- (mem ebp -4))
+(cjump one1 <= c :one :two)
+(cjump c = d :one :two)
+:one
+(eax <- (print test1))
+:two
+(eax <- (print test2))
+:three
+(eax <- (print test2))
+(return)
+)

@@ -1,0 +1,7 @@
+((eax <- 13)
+(tail-call :foo)
+:foo
+(eax += value)
+(eax <- (print eax))
+(return)
+)

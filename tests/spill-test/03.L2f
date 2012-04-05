@@ -1,0 +1,9 @@
+((foobar <- 13)
+ :start
+ (eax <- (print 13))
+ (foobar <- foobar)
+ (foobar += 1)
+ (cjump foobar < 20 :start :end)
+ (eax <- (print foobar))
+ (eax += foobar)
+) foobar -24 test_

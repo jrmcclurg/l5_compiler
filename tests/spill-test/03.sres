@@ -1,0 +1,13 @@
+(((mem ebp -24) <- 13)
+:start
+(eax <- (print 13))
+(test_0 <- (mem ebp -24))
+(test_0 += 1)
+((mem ebp -24) <- test_0)
+(test_1 <- (mem ebp -24))
+(cjump test_1 < 20 :start :end)
+(test_2 <- (mem ebp -24))
+(eax <- (print test_2))
+(test_3 <- (mem ebp -24))
+(eax += test_3)
+)
