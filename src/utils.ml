@@ -83,3 +83,16 @@ let die_system_error (s : string) =
    print_string "\n";
    exit 1
 ;;
+
+let max_int = 2147483647L ;;
+let min_int = -2147483648L ;;
+
+(* does an integer range check *)
+let check_int_range (i : int64) =
+   if ((i < min_int) or (i > max_int)) then parse_error "integer out of range"
+;;
+
+(* does a check to see if integer is divisible by 4 *)
+let check_int_alignment (i : int64) =
+   if ((Int64.rem i 4L) <> 0L) then parse_error "offset must be divisible by 4"
+;;

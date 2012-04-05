@@ -3,7 +3,7 @@
  * Northwestern University
  * 4/3/2012
  *
- * L1-to-assembly Compiler
+ * L2-to-assembly Compiler
  * Jedidiah R. McClurg
  * v. 1.0
  *
@@ -12,11 +12,12 @@
  * used with ocamlyacc.
  */
 %{
-   open L1_ast;;
+   open L2_ast;;
    open Utils;;
 %}
 %token <int64> INT
 %token <string> LABEL
+%token <string> IDENT 
 %token ARRAYERR TAILCALL ALLOC RETURN PRINT CJUMP GOTO MEM CALL
 %token ESI EDI EBP ESP
 %token EAX ECX EDX EBX
@@ -28,11 +29,10 @@
 %token EOF
 /* last tokens have highest precedence */
 %start main /* the entry point */
-%type <L1_ast.program> main
+%type <L2_ast.program> main
 %%
 main:
-   LPAREN func func_list RPAREN { Program(get_current_pos (), $2::$3) }
-   /* NOTE XXX - at some point, add EOF here */
+   LPAREN func func_list RPAREN EOF { Program(get_current_pos (), $2::$3) }
 ;
 
 func:
@@ -57,23 +57,22 @@ func_list:
 ;
 
 instr:
-   | LPAREN reg GETS sval RPAREN                             { AssignInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg GETS LPAREN MEM reg INT RPAREN RPAREN        { let i = $7 in
+   | LPAREN var GETS sval RPAREN                             { AssignInstr(get_current_pos (), $2, $4) }
+   | LPAREN var GETS LPAREN MEM var INT RPAREN RPAREN        { let i = $7 in
                                                                check_int_alignment i;
                                                                MemReadInstr(get_current_pos (), $2, $6, i) }
-   | LPAREN LPAREN MEM reg INT RPAREN GETS sval RPAREN       { let i = $5 in
+   | LPAREN LPAREN MEM var INT RPAREN GETS sval RPAREN       { let i = $5 in
                                                                check_int_alignment i;
                                                                MemWriteInstr(get_current_pos (), $4, i, $8) }
-   | LPAREN reg PLUSEQ tval RPAREN                           { PlusInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg MINUSEQ tval RPAREN                          { MinusInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg TIMESEQ tval RPAREN                          { TimesInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg BITANDEQ tval RPAREN                         { BitAndInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg SLLEQ sreg RPAREN                            { SllInstr(get_current_pos (), $2, $4) }
-   | LPAREN reg SRLEQ sreg RPAREN                            { SrlInstr(get_current_pos (), $2, $4) }
-   /* the "reg" in the following three lines gets parsed as creg */
-   | LPAREN reg GETS tval LT tval RPAREN                     { LtInstr(get_current_pos (), get_creg $2, $4, $6) }
-   | LPAREN reg GETS tval LEQ tval RPAREN                    { LeqInstr(get_current_pos (), get_creg $2, $4, $6) }
-   | LPAREN reg GETS tval EQ tval RPAREN                     { EqInstr(get_current_pos (), get_creg $2, $4, $6) }
+   | LPAREN var PLUSEQ tval RPAREN                           { PlusInstr(get_current_pos (), $2, $4) }
+   | LPAREN var MINUSEQ tval RPAREN                          { MinusInstr(get_current_pos (), $2, $4) }
+   | LPAREN var TIMESEQ tval RPAREN                          { TimesInstr(get_current_pos (), $2, $4) }
+   | LPAREN var BITANDEQ tval RPAREN                         { BitAndInstr(get_current_pos (), $2, $4) }
+   | LPAREN var SLLEQ svar RPAREN                            { SllInstr(get_current_pos (), $2, $4) }
+   | LPAREN var SRLEQ svar RPAREN                            { SrlInstr(get_current_pos (), $2, $4) }
+   | LPAREN var GETS tval LT tval RPAREN                     { LtInstr(get_current_pos (), $2, $4, $6) }
+   | LPAREN var GETS tval LEQ tval RPAREN                    { LeqInstr(get_current_pos (), $2, $4, $6) }
+   | LPAREN var GETS tval EQ tval RPAREN                     { EqInstr(get_current_pos (), $2, $4, $6) }
    | LABEL                                                   { LabelInstr(get_current_pos (), $1) }
    | LPAREN GOTO LABEL RPAREN                                { GotoInstr(get_current_pos (), $3) }
    | LPAREN CJUMP tval LT tval LABEL LABEL RPAREN            { LtJumpInstr(get_current_pos (), $3, $5, $6, $7) }
@@ -82,20 +81,20 @@ instr:
    | LPAREN CALL uval RPAREN                                 { CallInstr(get_current_pos (), $3) }
    | LPAREN TAILCALL uval RPAREN                             { TailCallInstr(get_current_pos (), $3) }
    | LPAREN RETURN RPAREN                                    { ReturnInstr(get_current_pos ()) }
-   /* the "reg" in the following three rules gets parsed as eax */
-   | LPAREN reg GETS LPAREN PRINT tval RPAREN RPAREN         { let r = $2 in
+   /* the "var" in the following three rules gets parsed as eax */
+   | LPAREN var GETS LPAREN PRINT tval RPAREN RPAREN         { let r = $2 in
                                                                (match r with
-                                                                | CallerSaveReg(_,EaxReg(_)) -> ()
+                                                                | EaxReg(_) -> ()
                                                                 | _ -> parse_error "destination must be eax");
                                                                PrintInstr(get_current_pos (), $6) }
-   | LPAREN reg GETS LPAREN ALLOC tval tval RPAREN RPAREN    { let r = $2 in
+   | LPAREN var GETS LPAREN ALLOC tval tval RPAREN RPAREN    { let r = $2 in
                                                                (match r with
-                                                                | CallerSaveReg(_,EaxReg(_)) -> ()
+                                                                | EaxReg(_) -> ()
                                                                 | _ -> parse_error "destination must be eax");
                                                                AllocInstr(get_current_pos (), $6, $7) }
-   | LPAREN reg GETS LPAREN ARRAYERR tval tval RPAREN RPAREN { let r = $2 in
+   | LPAREN var GETS LPAREN ARRAYERR tval tval RPAREN RPAREN { let r = $2 in
                                                                (match r with
-                                                                | CallerSaveReg(_,EaxReg(_)) -> ()
+                                                                | EaxReg(_) -> ()
                                                                 | _ -> parse_error "destination must be eax");
                                                                ArrayErrorInstr(get_current_pos (), $6, $7) }
 ;
@@ -105,34 +104,35 @@ instr_list:
   | instr instr_list { $1::$2 }
 ;
 
-reg:
+var:
    | ESI { EsiReg(get_current_pos ()) }
    | EDI { EdiReg(get_current_pos ()) }
    | EBP { EbpReg(get_current_pos ()) }
    | ESP { EspReg(get_current_pos ()) }
-   | EAX { CallerSaveReg(get_current_pos (), EaxReg(get_current_pos ())) }
-   | ECX { CallerSaveReg(get_current_pos (), EcxReg(get_current_pos ())) }
-   | EDX { CallerSaveReg(get_current_pos (), EdxReg(get_current_pos ())) }
-   | EBX { CallerSaveReg(get_current_pos (), EbxReg(get_current_pos ())) }
+   | EAX { EaxReg(get_current_pos ()) }
+   | ECX { EcxReg(get_current_pos ()) }
+   | EDX { EdxReg(get_current_pos ()) }
+   | EBX { EbxReg(get_current_pos ()) }
+   | IDENT { Var(get_current_pos (), $1)}
 ;
 
-sreg:
-   | ECX { EcxShReg(get_current_pos ()) }
+svar:
    | INT { IntShVal(get_current_pos (), $1) }
+   | var { ShVar(get_current_pos (), $1) }
 ;
 
 sval:
-   | reg  { RegSVal(get_current_pos(), $1) }
+   | var  { VarSVal(get_current_pos(), $1) }
    | INT   { IntSVal(get_current_pos(), $1) }
    | LABEL { LabelSVal(get_current_pos(), $1) }
 ;
 
 uval:
-   | reg  { RegUVal(get_current_pos(), $1) }
+   | var  { VarUVal(get_current_pos(), $1) }
    | LABEL { LabelUVal(get_current_pos(), $1) }
 ;
 
 tval:
-   | reg  { RegTVal(get_current_pos(), $1) }
+   | var  { VarTVal(get_current_pos(), $1) }
    | INT   { IntTVal(get_current_pos(), $1) }
 ;

@@ -13,8 +13,8 @@
  *)
 
 {
-   open L1_parser;; (* The type token is defined in parser.mli *)
-   open L1_ast;;
+   open Spill_parser;; (* The type token is defined in spill_parser.mli *)
+   open L2_ast;;
    open Utils;;
 }
 rule token = parse
@@ -23,7 +23,7 @@ rule token = parse
 | ['\n']                     { do_newline lexbuf; token lexbuf } (* skip newlines (but count them) *)
 | (['-']? ['0'-'9']+) as s   { let i = Int64.of_string s in
                                check_int_range i;
-                               INT(Int64.of_string s) }            (* pos/neg integers *)
+                               INT(Int64.of_string s) }          (* pos/neg integers *)
 | "array-error"              { ARRAYERR }                        (* keywords *)
 | "tail-call"                { TAILCALL }
 | "allocate"                 { ALLOC }
@@ -57,6 +57,9 @@ rule token = parse
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'
        '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
+| ['a'-'z' 'A'-'Z' '_']
+  ['a'-'z' 'A'-'Z'
+   '0'-'9' '_']* as s        { IDENT(s) }                        (* variable *) (* TODO XXX - what is the syntax for vars? *)
 | eof { EOF }
 | _ { let p = Lexing.lexeme_end_p lexbuf in
       let file_name = p.Lexing.pos_fname in
