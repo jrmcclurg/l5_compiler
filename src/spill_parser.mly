@@ -1,14 +1,14 @@
 /*
  * EECS 322 Compiler Construction
  * Northwestern University
- * 4/3/2012
+ * 4/9/2012
  *
- * Spill test script
+ * Spill Test
  * Jedidiah R. McClurg
  * v. 1.0
  *
  * spill_parser.mly
- * This is the specification for the spill parser, to be
+ * This is the specification for the Spill Test parser, to be
  * used with ocamlyacc.
  */
 %{
@@ -34,7 +34,8 @@
 main:
    LPAREN instr_list RPAREN var INT var EOF { let i = $5 in
                                               check_int_alignment i;
-                                              ($2,get_var_name $4,$5,get_var_name $6) } /* TODO XXX - these will be var ids */
+                                              ($2,get_var_name $4,$5,get_var_name $6) }
+                                             /* TODO XXX - these will be var ids */
 ;
 
 instr:
@@ -55,10 +56,10 @@ instr:
    | LPAREN var GETS tval LEQ tval RPAREN                    { LeqInstr(get_current_pos (), $2, $4, $6) }
    | LPAREN var GETS tval EQ tval RPAREN                     { EqInstr(get_current_pos (), $2, $4, $6) }
    | LABEL                                                   { LabelInstr(get_current_pos (), $1) }
-   | LPAREN GOTO LABEL RPAREN                                { GotoInstr(get_current_pos (), $3) }
-   | LPAREN CJUMP tval LT tval LABEL LABEL RPAREN            { LtJumpInstr(get_current_pos (), $3, $5, $6, $7) }
-   | LPAREN CJUMP tval LEQ tval LABEL LABEL RPAREN           { LeqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
-   | LPAREN CJUMP tval EQ tval LABEL LABEL RPAREN            { EqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN GOTO uval RPAREN                                 { GotoInstr(get_current_pos (), $3) }
+   | LPAREN CJUMP tval LT tval uval uval RPAREN              { LtJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN CJUMP tval LEQ tval uval uval RPAREN             { LeqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN CJUMP tval EQ tval uval uval RPAREN              { EqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
    | LPAREN CALL uval RPAREN                                 { CallInstr(get_current_pos (), $3) }
    | LPAREN TAILCALL uval RPAREN                             { TailCallInstr(get_current_pos (), $3) }
    | LPAREN RETURN RPAREN                                    { ReturnInstr(get_current_pos ()) }

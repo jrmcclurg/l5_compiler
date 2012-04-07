@@ -1,14 +1,14 @@
 (*
  * EECS 322 Compiler Construction 
  * Northwestern University
- * 4/3/2012
+ * 4/9/2012
  *
- * L1-to-assembly Compiler
+ * L2-to-L1 Compiler
  * Jedidiah R. McClurg
  * v. 1.0
  *
- * lexer.mll
- * This is the lexer specification for the L1 language,
+ * l2_lexer.mll
+ * This is the lexer specification for the L2 language,
  * to be used with ocamllex.
  *)
 
@@ -59,7 +59,7 @@ rule token = parse
        '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
 | ['a'-'z' 'A'-'Z' '_']
   ['a'-'z' 'A'-'Z'
-   '0'-'9' '_']* as s        { IDENT(s) }                        (* variable *) (* TODO XXX - what is the syntax for vars? *)
+   '0'-'9' '_']* as s        { IDENT(s) }                        (* variable *)
 | eof { EOF }
 | _ { let p = Lexing.lexeme_end_p lexbuf in
       let file_name = p.Lexing.pos_fname in

@@ -1,14 +1,14 @@
 (*
  * EECS 322 Compiler Construction 
  * Northwestern University
- * 4/3/2012
+ * 4/9/2012
  *
- * L1-to-assembly Compiler
+ * Spill Test
  * Jedidiah R. McClurg
  * v. 1.0
  *
- * lexer.mll
- * This is the lexer specification for the L1 language,
+ * spill_lexer.mll
+ * This is the lexer specification for the Spill Test,
  * to be used with ocamllex.
  *)
 

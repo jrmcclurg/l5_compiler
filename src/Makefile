@@ -4,6 +4,7 @@
 # 4/3/2012
 #
 # L1-to-assembly Compiler
+# Spill Test
 # Jedidiah R. McClurg
 # v. 1.0
 #
@@ -11,12 +12,12 @@
 # This builds the project using the OCaml native-code
 # compiler.
 #
-# make         - builds the project (L1c binary)
+# make         - builds the project (L1c, spill binary)
 # make clean   - deletes all intermediate build files
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			spill L2c L1c
+all:			L1c spill L2c
 
 ### spill test ###
 

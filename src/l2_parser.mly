@@ -1,14 +1,14 @@
 /*
  * EECS 322 Compiler Construction
  * Northwestern University
- * 4/3/2012
+ * 4/9/2012
  *
- * L2-to-assembly Compiler
+ * L2-to-L1 Compiler
  * Jedidiah R. McClurg
  * v. 1.0
  *
- * parser.mly
- * This is the specification for the L1 parser, to be
+ * l2_parser.mly
+ * This is the specification for the L2 parser, to be
  * used with ocamlyacc.
  */
 %{
@@ -74,10 +74,10 @@ instr:
    | LPAREN var GETS tval LEQ tval RPAREN                    { LeqInstr(get_current_pos (), $2, $4, $6) }
    | LPAREN var GETS tval EQ tval RPAREN                     { EqInstr(get_current_pos (), $2, $4, $6) }
    | LABEL                                                   { LabelInstr(get_current_pos (), $1) }
-   | LPAREN GOTO LABEL RPAREN                                { GotoInstr(get_current_pos (), $3) }
-   | LPAREN CJUMP tval LT tval LABEL LABEL RPAREN            { LtJumpInstr(get_current_pos (), $3, $5, $6, $7) }
-   | LPAREN CJUMP tval LEQ tval LABEL LABEL RPAREN           { LeqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
-   | LPAREN CJUMP tval EQ tval LABEL LABEL RPAREN            { EqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN GOTO uval RPAREN                                 { GotoInstr(get_current_pos (), $3) }
+   | LPAREN CJUMP tval LT tval uval uval RPAREN              { LtJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN CJUMP tval LEQ tval uval uval RPAREN             { LeqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
+   | LPAREN CJUMP tval EQ tval uval uval RPAREN              { EqJumpInstr(get_current_pos (), $3, $5, $6, $7) }
    | LPAREN CALL uval RPAREN                                 { CallInstr(get_current_pos (), $3) }
    | LPAREN TAILCALL uval RPAREN                             { TailCallInstr(get_current_pos (), $3) }
    | LPAREN RETURN RPAREN                                    { ReturnInstr(get_current_pos ()) }
@@ -129,10 +129,12 @@ sval:
 
 uval:
    | var  { VarUVal(get_current_pos(), $1) }
+   | INT   { IntUVal(get_current_pos(), $1) }
    | LABEL { LabelUVal(get_current_pos(), $1) }
 ;
 
 tval:
    | var  { VarTVal(get_current_pos(), $1) }
    | INT   { IntTVal(get_current_pos(), $1) }
+   | LABEL { LabelTVal(get_current_pos(), $1) }
 ;

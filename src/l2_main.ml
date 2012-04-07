@@ -1,14 +1,14 @@
 (*
  * EECS 322 Compiler Construction
  * Northwestern University
- * 4/3/2012
+ * 4/9/2012
  *
- * L2-to-assembly Compiler
+ * L2-to-L1 Compiler
  * Jedidiah R. McClurg
  * v. 1.0
  *
  * l2_main.ml
- * In progress
+ * In progress!!!! Currently just prints the parsed L2 program.
  *)
 
 open L2_ast;;
@@ -42,6 +42,5 @@ let result = L2_parser.main L2_lexer.token lexbuf in (* run the parser, producin
 if !do_print_only then (
    print_program result;
    print_newline()
-) else ( (* if we need to actually compile to assembly, do so *)
 );
 exit 0

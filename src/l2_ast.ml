@@ -1,20 +1,20 @@
 (*
  * EECS 322 Compiler Construction
  * Northwestern University
- * 4/3/2012
+ * 4/9/2012
  *
- * L1-to-assembly Compiler
+ * L2-to-L1 Compiler
  * Jedidiah R. McClurg
  * v. 1.0
  *
  * l2_ast.ml
  * This has the abstract data types for representing the
- * Abstract Syntax Tree (AST) for the parsed L1 program.
+ * Abstract Syntax Tree (AST) for the parsed L2 program.
  *)
 
 open Utils;;
 
-(* data type for L1 programs *)
+(* data type for L2 programs *)
 type program = Program of pos * func list
  and func = Function of pos * string option * instr list
  and instr = 
@@ -31,16 +31,13 @@ type program = Program of pos * func list
            | LeqInstr of pos * var * tval * tval
            | EqInstr of pos * var * tval * tval
            | LabelInstr of pos * string
-           | GotoInstr of pos * string
-
-           | LtJumpInstr of pos * tval * tval * string * string
-           | LeqJumpInstr of pos * tval * tval * string * string
-           | EqJumpInstr of pos * tval * tval * string * string
+           | GotoInstr of pos * uval 
+           | LtJumpInstr of pos * tval * tval * uval * uval
+           | LeqJumpInstr of pos * tval * tval * uval * uval
+           | EqJumpInstr of pos * tval * tval * uval * uval
            | CallInstr of pos * uval
            | TailCallInstr of pos * uval
-
            | ReturnInstr of pos
-
            | PrintInstr of pos * tval
            | AllocInstr of pos * tval * tval
            | ArrayErrorInstr of pos * tval * tval
@@ -104,7 +101,7 @@ let rec get_pos_instr (i : instr) : pos = match i with
    | ArrayErrorInstr(p, _, _) -> p
 ;; 
 
-(* the output_... functions pretty-print L1 constructs to a specified channel *)
+(* the output_... functions pretty-print L2 constructs to a specified channel *)
 
 let rec output_program out p = match p with
   | Program(_,fl) ->
@@ -213,39 +210,39 @@ and output_instr out i = match i with
       output_string out ")";
    | LabelInstr(_,s) ->
       output_string out (":"^s);
-   | GotoInstr(_,s) ->
-      output_string out "(goto :";
-      output_string out s;
+   | GotoInstr(_,uv) ->
+      output_string out "(goto ";
+      output_uval out uv;
       output_string out ")";
-   | LtJumpInstr(_,tv1,tv2,s1,s2) ->
+   | LtJumpInstr(_,tv1,tv2,uv1,uv2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " < ";
       output_tval out tv2;
-      output_string out " :";
-      output_string out s1;
-      output_string out " :";
-      output_string out s2;
+      output_string out " ";
+      output_uval out uv1;
+      output_string out " ";
+      output_uval out uv2;
       output_string out ")";
-   | LeqJumpInstr(_,tv1,tv2,s1,s2) ->
+   | LeqJumpInstr(_,tv1,tv2,uv1,uv2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " <= ";
       output_tval out tv2;
-      output_string out " :";
-      output_string out s1;
-      output_string out " :";
-      output_string out s2;
+      output_string out " ";
+      output_uval out uv1;
+      output_string out " ";
+      output_uval out uv2;
       output_string out ")";
-   | EqJumpInstr(_,tv1,tv2,s1,s2) ->
+   | EqJumpInstr(_,tv1,tv2,uv1,uv2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " = ";
       output_tval out tv2;
-      output_string out " :";
-      output_string out s1;
-      output_string out " :";
-      output_string out s2;
+      output_string out " ";
+      output_uval out uv1;
+      output_string out " ";
+      output_uval out uv2;
       output_string out ")";
    | CallInstr(_, uv) ->
       output_string out "(call ";
@@ -300,7 +297,7 @@ and output_tval out t = match t with
    | LabelTVal(_,s) -> output_string out (":"^s)
 ;;
 
-(* the print_... functions pretty-print L1 constructs to stdout *)
+(* the print_... functions pretty-print L2 constructs to stdout *)
 
 let rec print_program p = output_program stdout p
 and print_func f = output_func stdout f

@@ -1,14 +1,14 @@
 (*
  * EECS 322 Compiler Construction
  * Northwestern University
- * 4/3/2012
+ * 4/9/2012
  *
  * L2-to-L1 Compiler
  * Jedidiah R. McClurg
  * v. 1.0
  *
  * l2_code.ml
- * In progress
+ * In progress. Currently only has the "spill" function.
  *)
 
 open L2_ast;;
