@@ -200,214 +200,229 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       compile_reg o r;
       output_string o "\n";
    | LtInstr(ps,cr,tv1,tv2) ->
-      let lower = (match cr with
-      | EaxReg(_) -> "%al"
-      | EcxReg(_) -> "%cl"
-      | EdxReg(_) -> "%dl"
-      | EbxReg(_) -> "%bl") in
+      let lower = (get_lower_creg cr) in
       (* if tv1 is constant, we must reverse the operation,
-       * since the second operand of cmp must be a register *)
-      (match (tv1,tv2) with
-      | (IntTVal(_,i1),IntTVal(_,i2)) ->
-         let b = (i1 < i2) in
-         (* movb $v, cr_lower *)
-         (* (where v is 1 if i1 < i2, or 0 otherwise,
-          *  and cr_lower is the lower byte of cr) *)
-         output_string o ("\t"^"movb"^"\t"^"$"^(if b then "1" else "0")^", "^lower^"\n");
-      | (IntTVal(_,_),_) -> 
-         (* cmp tv1, tv2 *)
-         output_string o ("\t"^"cmp"^"\t");
+       * since the second operand of cmp must be a register.
+       * if both tv1,tv2 are constants, we use cr as a temp
+       * for tv1 *)
+      let c1 = (is_tval_const tv1) in (* whether tv1 is a constant *)
+      let c2 = (is_tval_const tv2) in (* whether tv2 is a constant *)
+      let (r1,r2,create,reverse) = if (c1 && c2) then (RegTVal(ps,CallerSaveReg(ps,cr)),tv2,true,false)
+                                   else if c1 then (tv2,tv1,false,true) else (tv1,tv2,false,false) in
+      if create then (
+         (* movl tv1, r1 *)
+         output_string o ("\t"^"movl"^"\t");
          compile_tval o tv1;
          output_string o ", ";
-         compile_tval o tv2;
-         output_string o "\n";
-         (* setg cr_lower *)
-         output_string o ("\t"^"setg"^"\t"^lower^"\n");
-      | _ ->
-         (* cmp tv2, tv1 *)
-         output_string o ("\t"^"cmp"^"\t");
-         compile_tval o tv2;
-         output_string o ", ";
-         compile_tval o tv1;
-         output_string o "\n";
-         (* setl cr_lower *)
-         output_string o ("\t"^"setl"^"\t"^lower^"\n") );
+         compile_tval o r1;
+         output_string o "\n"
+      );
+      (* cmp tv2, r1 *)
+      output_string o ("\t"^"cmp"^"\t");
+      compile_tval o r2;
+      output_string o ", ";
+      compile_tval o r1;
+      output_string o "\n";
+      (* setl cr_lower (or setg cr_lower if reverse) *)
+      output_string o ("\t"^"set"^(if reverse then "g" else "l")^"\t"^lower^"\n");
       (* movzbl cr_lower, cr *)
       output_string o ("\t"^"movzbl"^"\t"^lower^", ");
       compile_creg o cr;
-      output_string o "\n";
+      output_string o "\n"
    | LeqInstr(ps,cr,tv1,tv2) ->
-      let lower = (match cr with
-      | EaxReg(_) -> "%al"
-      | EcxReg(_) -> "%cl"
-      | EdxReg(_) -> "%dl"
-      | EbxReg(_) -> "%bl") in
+      let lower = (get_lower_creg cr) in
       (* if tv1 is constant, we must reverse the operation,
-       * since the second operand of cmp must be a register *)
-      (match (tv1,tv2) with
-      | (IntTVal(_,i1),IntTVal(_,i2)) ->
-         let b = (i1 <= i2) in
-         (* movb $v, cr_lower *)
-         (* (where v is 1 if i1 <= i2, or 0 otherwise,
-          *  and cr_lower is the lower byte of cr) *)
-         output_string o ("\t"^"movb"^"\t"^"$"^(if b then "1" else "0")^", "^lower^"\n");
-      | (IntTVal(_,_),_) -> 
-         (* cmp tv1, tv2 *)
-         output_string o ("\t"^"cmp"^"\t");
+       * since the second operand of cmp must be a register.
+       * if both tv1,tv2 are constants, we use cr as a temp
+       * for tv1 *)
+      let c1 = (is_tval_const tv1) in (* whether tv1 is a constant *)
+      let c2 = (is_tval_const tv2) in (* whether tv2 is a constant *)
+      let (r1,r2,create,reverse) = if (c1 && c2) then (RegTVal(ps,CallerSaveReg(ps,cr)),tv2,true,false)
+                                   else if c1 then (tv2,tv1,false,true) else (tv1,tv2,false,false) in
+      if create then (
+         (* movl tv1, r1 *)
+         output_string o ("\t"^"movl"^"\t");
          compile_tval o tv1;
          output_string o ", ";
-         compile_tval o tv2;
-         output_string o "\n";
-         (* setge cr_lower *)
-         output_string o ("\t"^"setge"^"\t"^lower^"\n");
-      | _ ->
-         (* cmp tv2, tv1 *)
-         output_string o ("\t"^"cmp"^"\t");
-         compile_tval o tv2;
-         output_string o ", ";
-         compile_tval o tv1;
-         output_string o "\n";
-         (* setle cr_lower *)
-         output_string o ("\t"^"setle"^"\t"^lower^"\n") );
+         compile_tval o r1;
+         output_string o "\n"
+      );
+      (* cmp tv2, r1 *)
+      output_string o ("\t"^"cmp"^"\t");
+      compile_tval o r2;
+      output_string o ", ";
+      compile_tval o r1;
+      output_string o "\n";
+      (* setle cr_lower (or setge cr_lower if reverse) *)
+      output_string o ("\t"^"set"^(if reverse then "g" else "l")^"e"^"\t"^lower^"\n");
       (* movzbl cr_lower, cr *)
       output_string o ("\t"^"movzbl"^"\t"^lower^", ");
       compile_creg o cr;
-      output_string o "\n";
+      output_string o "\n"
    | EqInstr(ps,cr,tv1,tv2) ->
-      let lower = (match cr with
-      | EaxReg(_) -> "%al"
-      | EcxReg(_) -> "%cl"
-      | EdxReg(_) -> "%dl"
-      | EbxReg(_) -> "%bl") in
+      let lower = (get_lower_creg cr) in
       (* if tv1 is constant, we must reverse the operation,
-       * since the second operand of cmp must be a register *)
-      (match (tv1,tv2) with
-      | (IntTVal(_,i1),IntTVal(_,i2)) ->
-         let b = (i1 = i2) in
-         (* movb $v, cr_lower *)
-         (* (where v is 1 if i1 = i2, or 0 otherwise,
-          *  and cr_lower is the lower byte of cr) *)
-         output_string o ("\t"^"movb"^"\t"^"$"^(if b then "1" else "0")^", "^lower^"\n");
-      | (IntTVal(_,_),_) -> 
-         (* cmp tv1, tv2 *)
-         output_string o ("\t"^"cmp"^"\t");
+       * since the second operand of cmp must be a register.
+       * if both tv1,tv2 are constants, we use cr as a temp
+       * for tv1 *)
+      let c1 = (is_tval_const tv1) in (* whether tv1 is a constant *)
+      let c2 = (is_tval_const tv2) in (* whether tv2 is a constant *)
+      let (r1,r2,create) = if (c1 && c2) then (RegTVal(ps,CallerSaveReg(ps,cr)),tv2,true)
+                                   else if c1 then (tv2,tv1,false) else (tv1,tv2,false) in
+      if create then (
+         (* movl tv1, r1 *)
+         output_string o ("\t"^"movl"^"\t");
          compile_tval o tv1;
          output_string o ", ";
-         compile_tval o tv2;
-         output_string o "\n";
-         (* sete cr_lower *)
-         output_string o ("\t"^"sete"^"\t"^lower^"\n");
-      | _ ->
-         output_string o ("\t"^"cmp"^"\t");
-         (* cmp tv2, tv1 *)
-         compile_tval o tv2;
-         output_string o ", ";
-         compile_tval o tv1;
-         output_string o "\n";
-         (* sete cr_lower *)
-         output_string o ("\t"^"sete"^"\t"^lower^"\n") );
+         compile_tval o r1;
+         output_string o "\n"
+      );
+      (* cmp tv2, r1 *)
+      output_string o ("\t"^"cmp"^"\t");
+      compile_tval o r2;
+      output_string o ", ";
+      compile_tval o r1;
+      output_string o "\n";
+      (* sete cr_lower *)
+      output_string o ("\t"^"sete"^"\t"^lower^"\n");
       (* movzbl cr_lower, cr *)
       output_string o ("\t"^"movzbl"^"\t"^lower^", ");
       compile_creg o cr;
-      output_string o "\n";
+      output_string o "\n"
    | LabelInstr(ps,l) ->
       (* l: *)
       compile_label o l
-   | GotoInstr(ps,l) ->
+   | GotoInstr(ps,uv) ->
       (* jmp _l *)
-      output_string o ("\t"^"jmp"^"\t"^"_"^l^"\n")
-   | LtJumpInstr(ps,tv1,tv2,l1,l2) ->
+      output_string o ("\t"^"jmp"^"\t");
+      compile_uval o uv;
+      output_string o "\n"
+   | LtJumpInstr(ps,tv1,tv2,uv1,uv2) ->
       (* if tv1 is constant, we must reverse the operation,
-       * since the second operand of cmpl must be a register *)
-      (match (tv1,tv2) with
-      | (IntTVal(_,i1),IntTVal(_,i2)) ->
-         let b = (i1 < i2) in
-         (* jmp _l_true *)
-         (* (where l_true is l1 if i1 < i2, or l2 otherwise) *)
-         output_string o ("\t"^"jmp"^"\t"^"_"^(if b then l1 else l2)^"\n");
-      | (IntTVal(_,_),_) -> 
-         (* cmpl tv1, tv2 *)
-         output_string o ("\t"^"cmpl"^"\t");
-         compile_tval o tv1;
+       * since the second operand of cmp must be a register.
+       * if both are constants, record eax on the stack,
+       * use it as a temp, then restore it *)
+         let c1 = (is_tval_const tv1) in (* whether tv1 is a constant *)
+         let c2 = (is_tval_const tv2) in (* whether tv2 is a constant *)
+         let (r1,r2,create,reverse) = if (c1 && c2) then (RegTVal(ps,CallerSaveReg(ps,EaxReg(ps))),tv2,true,false)
+                                      else if c1 then (tv2,tv1,false,true) else (tv1,tv2,false,false) in
+         (* movl tv1, r1 (or nothing if reverse) *)
+         if create then (
+            (* push r1 *)
+            output_string o ("\t"^"push"^"\t"^"%");
+            output_tval o r1;
+            output_string o "\n";
+            (* movl tv1, r1 *)
+            output_string o ("\t"^"movl"^"\t");
+            compile_tval o tv1;
+            output_string o ", ";
+            compile_tval o r1;
+            output_string o "\n"
+         );
+         (* cmp tv2, r1 *)
+         output_string o ("\t"^"cmp"^"\t");
+         compile_tval o r2;
          output_string o ", ";
-         compile_tval o tv2;
+         compile_tval o r1;
          output_string o "\n";
-         (* jg _l1 *)
-         output_string o ("\t"^"jg"^"\t"^"_"^l1^"\n");
-         (* jmp _l2 *)
-         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n");
-      | _ ->
-         output_string o "\tcmpl\t";
-         compile_tval o tv2;
-         output_string o ", ";
-         compile_tval o tv1;
+         if create then (
+            (* pop r1 *)
+            output_string o ("\t"^"pop"^"\t"^"%");
+            output_tval o r1;
+            output_string o "\n"
+         );
+         (* jl uv1 (or jg uv1 if reverse) *)
+         output_string o ("\t"^"j"^(if reverse then "g" else "l")^"\t");
+         compile_uval o uv1;
          output_string o "\n";
-         (* jl _l1 *)
-         output_string o ("\t"^"jl"^"\t"^"_"^l1^"\n");
-         (* jmp _l2 *)
-         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n") );
-   | LeqJumpInstr(ps,tv1,tv2,l1,l2) ->
+         (* jmp uv2 *)
+         output_string o ("\t"^"jmp"^"\t");
+         compile_uval o uv2;
+         output_string o "\n" 
+   | LeqJumpInstr(ps,tv1,tv2,uv1,uv2) ->
       (* if tv1 is constant, we must reverse the operation,
-       * since the second operand of cmpl must be a register *)
-      (match (tv1,tv2) with
-      | (IntTVal(_,i1),IntTVal(_,i2)) ->
-         let b = (i1 <= i2) in
-         (* jmp _l_true *)
-         (* (where l_true is l1 if i1 <= i2, or l2 otherwise) *)
-         output_string o ("\t"^"jmp"^"\t"^"_"^(if b then l1 else l2)^"\n");
-      | (IntTVal(_,_),_) -> 
-         (* cmpl tv1, tv2 *)
-         output_string o ("\t"^"cmpl"^"\t");
-         compile_tval o tv1;
+       * since the second operand of cmp must be a register.
+       * if both are constants, record eax on the stack,
+       * use it as a temp, then restore it *)
+         let c1 = (is_tval_const tv1) in (* whether tv1 is a constant *)
+         let c2 = (is_tval_const tv2) in (* whether tv2 is a constant *)
+         let (r1,r2,create,reverse) = if (c1 && c2) then (RegTVal(ps,CallerSaveReg(ps,EaxReg(ps))),tv2,true,false)
+                                      else if c1 then (tv2,tv1,false,true) else (tv1,tv2,false,false) in
+         (* movl tv1, r1 (or nothing if reverse) *)
+         if create then (
+            (* push r1 *)
+            output_string o ("\t"^"push"^"\t"^"%");
+            output_tval o r1;
+            output_string o "\n";
+            (* movl tv1, r1 *)
+            output_string o ("\t"^"movl"^"\t");
+            compile_tval o tv1;
+            output_string o ", ";
+            compile_tval o r1;
+            output_string o "\n"
+         );
+         (* cmp tv2, r1 *)
+         output_string o ("\t"^"cmp"^"\t");
+         compile_tval o r2;
          output_string o ", ";
-         compile_tval o tv2;
+         compile_tval o r1;
          output_string o "\n";
-         (* jge _l1 *)
-         output_string o ("\t"^"jge"^"\t"^"_"^l1^"\n");
-         (* jmp _l2 *)
-         output_string o ("\t"^"jmp"^"\t_"^l2^"\n");
-      | _ ->
-         (* cmpl tv2, tv1 *)
-         output_string o ("\t"^"cmpl"^"\t");
-         compile_tval o tv2;
-         output_string o ", ";
-         compile_tval o tv1;
+         if create then (
+            (* pop r1 *)
+            output_string o ("\t"^"pop"^"\t"^"%");
+            output_tval o r1;
+            output_string o "\n"
+         );
+         (* jle uv1 (or jge uv1 if reverse) *)
+         output_string o ("\t"^"j"^(if reverse then "g" else "l")^"e"^"\t");
+         compile_uval o uv1;
          output_string o "\n";
-         (* jle _l1 *)
-         output_string o ("\t"^"jle"^"\t"^"_"^l1^"\n");
-         (* jmp _l2 *)
-         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n") );
-   | EqJumpInstr(ps,tv1,tv2,l1,l2) ->
+         (* jmp uv2 *)
+         output_string o ("\t"^"jmp"^"\t");
+         compile_uval o uv2;
+         output_string o "\n" 
+   | EqJumpInstr(ps,tv1,tv2,uv1,uv2) ->
       (* if tv1 is constant, we must reverse the operation,
-       * since the second operand of cmpl must be a register *)
-      (match (tv1,tv2) with
-      | (IntTVal(_,i1),IntTVal(_,i2)) ->
-         let b = (i1 = i2) in
-         (* jmp _l_true *)
-         (* (where l_true is l1 if i1 = i2, or l2 otherwise) *)
-         output_string o ("\t"^"jmp"^"\t"^"_"^(if b then l1 else l2)^"\n");
-      | (IntTVal(_,_),_) -> 
-         (* cmpl tv1, tv2 *)
-         output_string o ("\t"^"cmpl"^"\t");
-         compile_tval o tv1;
+       * since the second operand of cmp must be a register.
+       * if both are constants, record eax on the stack,
+       * use it as a temp, then restore it *)
+         let c1 = (is_tval_const tv1) in (* whether tv1 is a constant *)
+         let c2 = (is_tval_const tv2) in (* whether tv2 is a constant *)
+         let (r1,r2,create,reverse) = if (c1 && c2) then (RegTVal(ps,CallerSaveReg(ps,EaxReg(ps))),tv2,true,false)
+                                      else if c1 then (tv2,tv1,false,true) else (tv1,tv2,false,false) in
+         (* movl tv1, r1 (or nothing if reverse) *)
+         if create then (
+            (* push r1 *)
+            output_string o ("\t"^"push"^"\t"^"%");
+            output_tval o r1;
+            output_string o "\n";
+            (* movl tv1, r1 *)
+            output_string o ("\t"^"movl"^"\t");
+            compile_tval o tv1;
+            output_string o ", ";
+            compile_tval o r1;
+            output_string o "\n"
+         );
+         (* cmp tv2, r1 *)
+         output_string o ("\t"^"cmp"^"\t");
+         compile_tval o r2;
          output_string o ", ";
-         compile_tval o tv2;
+         compile_tval o r1;
          output_string o "\n";
-         (* je _l1 *)
-         output_string o ("\t"^"je"^"\t"^"_"^l1^"\n");
-         (* jmp _l2 *)
-         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n");
-      | _ ->
-         (* cmpl tv2, tv1 *)
-         output_string o ("\t"^"cmpl"^"\t");
-         compile_tval o tv2;
-         output_string o ", ";
-         compile_tval o tv1;
+         if create then (
+            (* pop r1 *)
+            output_string o ("\t"^"pop"^"\t"^"%");
+            output_tval o r1;
+            output_string o "\n"
+         );
+         (* je uv1 *)
+         output_string o ("\t"^"je"^"\t");
+         compile_uval o uv1;
          output_string o "\n";
-         (* je _l1 *)
-         output_string o ("\t"^"je"^"\t"^"_"^l1^"\n");
-         (* jmp _l2 *)
-         output_string o ("\t"^"jmp"^"\t"^"_"^l2^"\n") );
+         (* jmp uv2 *)
+         output_string o ("\t"^"jmp"^"\t");
+         compile_uval o uv2;
+         output_string o "\n" 
    | CallInstr(ps, uv) ->
       (* pushl $r_j_k *)
       output_string o ("\t"^"pushl"^"\t"^"$r_"^(string_of_int j)^(string_of_int k)^"\n");
@@ -519,12 +534,14 @@ and compile_sval (o : out_channel) (sv : sval) : unit = match sv with
 (* compiles an L1 "u" nonterminal into x86 assembly *)
 and compile_uval (o : out_channel) (uv : uval) : unit = match uv with
    | RegUVal(ps,r) -> output_string o "*"; compile_reg o r
+   | IntUVal(ps,i) -> output_string o (Int64.to_string i)
    | LabelUVal(ps,l) -> output_string o ("_"^l)
 
 (* compiles an L1 "t" nonterminal into x86 assembly *)
 and compile_tval (o : out_channel) (t : tval) : unit = match t with
    | RegTVal(ps,r) -> compile_reg o r
    | IntTVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
+   | LabelTVal(ps,l) -> output_string o ("$_"^l)
 
 (* compiles an L1 label l into x86 assembly *)
 and compile_label (o : out_channel) (l : string) : unit = 

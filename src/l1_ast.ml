@@ -31,10 +31,10 @@ type program = Program of pos * func list
            | LeqInstr of pos * creg * tval * tval
            | EqInstr of pos * creg * tval * tval
            | LabelInstr of pos * string
-           | GotoInstr of pos * string
-           | LtJumpInstr of pos * tval * tval * string * string
-           | LeqJumpInstr of pos * tval * tval * string * string
-           | EqJumpInstr of pos * tval * tval * string * string
+           | GotoInstr of pos * uval
+           | LtJumpInstr of pos * tval * tval * uval * uval
+           | LeqJumpInstr of pos * tval * tval * uval * uval
+           | EqJumpInstr of pos * tval * tval * uval * uval
            | CallInstr of pos * uval
            | TailCallInstr of pos * uval
            | ReturnInstr of pos
@@ -56,9 +56,11 @@ type program = Program of pos * func list
           | IntSVal of pos * int64
           | LabelSVal of pos * string
  and uval = RegUVal of pos * reg
+          | IntUVal of pos * int64
           | LabelUVal of pos * string
  and tval = RegTVal of pos * reg
           | IntTVal of pos * int64
+          | LabelTVal of pos * string
 ;;
 
 (* the output_... functions pretty-print L1 constructs to a specified channel *)
@@ -170,39 +172,39 @@ and output_instr out i = match i with
       output_string out ")";
    | LabelInstr(_,s) ->
       output_string out (":"^s);
-   | GotoInstr(_,s) ->
+   | GotoInstr(_,uv) ->
       output_string out "(goto ";
-      output_string out s;
+      output_uval out uv;
       output_string out ")";
-   | LtJumpInstr(_,tv1,tv2,s1,s2) ->
+   | LtJumpInstr(_,tv1,tv2,uv1,uv2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " < ";
       output_tval out tv2;
-      output_string out " :";
-      output_string out s1;
-      output_string out " :";
-      output_string out s2;
+      output_string out " ";
+      output_uval out uv1;
+      output_string out " ";
+      output_uval out uv2;
       output_string out ")";
-   | LeqJumpInstr(_,tv1,tv2,s1,s2) ->
+   | LeqJumpInstr(_,tv1,tv2,uv1,uv2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " <= ";
       output_tval out tv2;
-      output_string out " :";
-      output_string out s1;
-      output_string out " :";
-      output_string out s2;
+      output_string out " ";
+      output_uval out uv1;
+      output_string out " ";
+      output_uval out uv2;
       output_string out ")";
-   | EqJumpInstr(_,tv1,tv2,s1,s2) ->
+   | EqJumpInstr(_,tv1,tv2,uv1,uv2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " = ";
       output_tval out tv2;
-      output_string out " :";
-      output_string out s1;
-      output_string out " :";
-      output_string out s2;
+      output_string out " ";
+      output_uval out uv1;
+      output_string out " ";
+      output_uval out uv2;
       output_string out ")";
    | CallInstr(_, uv) ->
       output_string out "(call ";
@@ -250,10 +252,12 @@ and output_sval out s = match s with
    | LabelSVal(_,s) -> output_string out (":"^s)
 and output_uval out u = match u with
    | RegUVal(_,r) -> output_reg out r
+   | IntUVal(_, i) -> output_string out (Int64.to_string i)
    | LabelUVal(_,s) -> output_string out (":"^s)
 and output_tval out t = match t with
    | RegTVal(_,r) -> output_reg out r
    | IntTVal(_,i) -> output_string out (Int64.to_string i)
+   | LabelTVal(_,s) -> output_string out (":"^s)
 ;;
 
 (* the print_... functions pretty-print L1 constructs to stdout *)
@@ -273,4 +277,18 @@ and print_tval t = output_tval stdout t
 let get_creg r = match r with
    | CallerSaveReg(_,c) -> c
    | _ -> parse_error "destination must be one of eax, ecx, edx, ebx"
+;;
+
+let is_tval_const (tv : tval) : bool =
+   match tv with
+   | RegTVal(_,_) -> false
+   | _ -> true
+;;
+
+let get_lower_creg (cr : creg) : string =
+   match cr with
+   | EaxReg(_) -> "%al"
+   | EcxReg(_) -> "%cl"
+   | EdxReg(_) -> "%dl"
+   | EbxReg(_) -> "%bl"
 ;;

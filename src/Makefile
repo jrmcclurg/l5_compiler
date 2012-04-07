@@ -16,6 +16,7 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
+all:			spill L2c L1c
 
 ### spill test ###
 
@@ -111,6 +112,11 @@ utils.cmx:	utils.ml
 
 clean:		
 		rm -rf *.c *.S *.s *.out *.cm* *.o *.mli *_parser.ml *_lexer.ml
+
+binary:		
+		as --32 -o prog.o prog.S
+		gcc -m32 -c -O2 -o runtime.o runtime.c
+		gcc -m32 -o a.out prog.o runtime.o
 
 tarball:
 		tar -cvzf mcclurg.1.tar.gz *
