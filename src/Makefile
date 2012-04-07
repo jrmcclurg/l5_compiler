@@ -17,7 +17,7 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L1c
+all:			L1c spill L2c
 
 ### spill test ###
 
