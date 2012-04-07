@@ -19,15 +19,15 @@ everything into a 32bit binary.
 The project is implemented in OCaml and consists of the following
 files:
 
-README     - this file
-L1c        - the L1 compiler binary (32/64bit Linux)
-Makefile   - GNU makefile for the project
-lexer.mll  - ocamllex lexer specification
-parser.mly - ocamlyacc parser specification
-main.ml    - program entry-point
-ast.ml     - abstract data types for the Abstract Syntax Tree
-code.ml    - code-generation and compilation utilities
-utils.ml   - general utilities
+L1_README     - this file
+L1c           - the L1 compiler binary (64bit Linux)
+Makefile      - GNU makefile for the project
+l1_lexer.mll  - ocamllex lexer specification
+l1_parser.mly - ocamlyacc parser specification
+l1_main.ml    - program entry-point
+l1_ast.ml     - abstract data types for the Abstract Syntax Tree
+l1_code.ml    - code-generation and compilation utilities
+utils.ml      - general utilities
 
 #####################################################################
 #  INSTALLATION

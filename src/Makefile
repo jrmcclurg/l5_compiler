@@ -17,7 +17,7 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L1c spill L2c
+all:			L1c
 
 ### spill test ###
 
@@ -119,8 +119,11 @@ binary:
 		gcc -m32 -c -O2 -o runtime.o runtime.c
 		gcc -m32 -o a.out prog.o runtime.o
 
-tarball:
-		tar -cvzf mcclurg.1.tar.gz *
+l1_tarball:	L1c clean
+		tar -cvzf mcclurg.1.tar.gz L1* l1* Makefile utils.ml
+
+spill_tarball:	spill clean
+		tar -cvzf mcclurg.spill.tar.gz SPILL* spill* Makefile l2_ast.ml l2_code.ml utils.ml
 
 wc:		
 		wc -l *.m*

@@ -1,0 +1,73 @@
+#####################################################################
+#  EECS 322 Compiler Construction
+#  Northwestern University
+#  4/9/2012
+#  
+#  Spill Test
+#  Jedidiah R. McClurg
+#  v. 1.0
+#####################################################################
+
+#####################################################################
+#  DESCRIPTION
+#####################################################################
+
+This is a test for the L2 "spill" function.  It takes a file having
+the following format, and prints a resulting instruction list:
+
+(i ...) x offset prefix
+
+Where
+(i ...) is a list of L2 instructions,
+x is an L2 var signifying the variable in the instructions to spill,
+offset is an L2 integer (multiple of 4) which corresponds to the spill
+   location in memory, and
+prefix is an L2 var signifying the prefix for each unique variable name
+   generated.
+
+The resulting instruction list will have all occurrences of the
+specified variable spilled to memory appropriately.
+
+The project is implemented in OCaml and consists of the following
+files:
+
+SPILL_README     - this file
+spill            - the spill test binary (64bit Linux)
+Makefile         - GNU makefile for the project
+spill_lexer.mll  - ocamllex lexer specification
+spill_parser.mly - ocamlyacc parser specification
+spill_main.ml    - program entry-point
+l2_ast.ml        - abstract data types for the Abstract Syntax Tree
+l2_code.ml       - code-generation and compilation utilities
+utils.ml         - general utilities
+
+#####################################################################
+#  INSTALLATION
+#####################################################################
+
+The project has been built/tested only on 64bit Linux.  Thus,
+the included spill binary will work only on 64bit systems.
+
+For building the project on other systems, the necessary packages are
+the ocaml package for the OCaml development tools, the gcc package
+for the GNU C compiler development tools, and possibly the
+gcc-multilib package to provide gcc with 32bit support.
+
+To build, simply type
+  make
+
+This should generate the Spill Test binary, spill.  After this, typing
+  make clean
+should clear out any intermediate build files.
+
+#####################################################################
+#  USAGE
+#####################################################################
+
+Given an spill test case test.L2f, the test can be run by typing
+  ./spill test.L2f
+
+This should output the test results.
+
+If spill is run with no command-line options, it reads the test case
+file from stdin.
