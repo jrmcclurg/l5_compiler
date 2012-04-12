@@ -14,6 +14,18 @@
 open L2_ast;;
 open Utils;;
 
+(* given instruction i, returns (gens, kills) *)
+let gen_kill (i : instr) : (var list * var list) =
+   match i with
+   | AssignInstr(_,v,VarSVal(_,v2)) -> ([v2], [v])
+   | AssignInstr(_,v,_) -> ([], [v])
+   (* TODO XXX *)
+;;
+
+let rec liveness (il : instr list) : ((var list) list * (var list) list) =
+   ([[]],[[]])
+;;
+
 let rec spill (il : instr list) (v : string) (off : int64) (prefix : string) : instr list =
    (* go through the list of instructions... *)
    let (result,_) = List.fold_left (fun (l,k) i -> (* l is the cumulative list, k is the unique number,

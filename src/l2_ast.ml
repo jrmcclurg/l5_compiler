@@ -31,10 +31,10 @@ type program = Program of pos * func list
            | LeqInstr of pos * var * tval * tval
            | EqInstr of pos * var * tval * tval
            | LabelInstr of pos * string
-           | GotoInstr of pos * uval 
-           | LtJumpInstr of pos * tval * tval * uval * uval
-           | LeqJumpInstr of pos * tval * tval * uval * uval
-           | EqJumpInstr of pos * tval * tval * uval * uval
+           | GotoInstr of pos * string
+           | LtJumpInstr of pos * tval * tval * string * string
+           | LeqJumpInstr of pos * tval * tval * string * string
+           | EqJumpInstr of pos * tval * tval * string * string
            | CallInstr of pos * uval
            | TailCallInstr of pos * uval
            | ReturnInstr of pos
@@ -210,39 +210,39 @@ and output_instr out i = match i with
       output_string out ")";
    | LabelInstr(_,s) ->
       output_string out (":"^s);
-   | GotoInstr(_,uv) ->
-      output_string out "(goto ";
-      output_uval out uv;
+   | GotoInstr(_,s) ->
+      output_string out "(goto :";
+      output_string out s;
       output_string out ")";
-   | LtJumpInstr(_,tv1,tv2,uv1,uv2) ->
+   | LtJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " < ";
       output_tval out tv2;
-      output_string out " ";
-      output_uval out uv1;
-      output_string out " ";
-      output_uval out uv2;
+      output_string out " :";
+      output_string out s1;
+      output_string out " :";
+      output_string out s2;
       output_string out ")";
-   | LeqJumpInstr(_,tv1,tv2,uv1,uv2) ->
+   | LeqJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " <= ";
       output_tval out tv2;
-      output_string out " ";
-      output_uval out uv1;
-      output_string out " ";
-      output_uval out uv2;
+      output_string out " :";
+      output_string out s1;
+      output_string out " :";
+      output_string out s2;
       output_string out ")";
-   | EqJumpInstr(_,tv1,tv2,uv1,uv2) ->
+   | EqJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
       output_tval out tv1;
       output_string out " = ";
       output_tval out tv2;
-      output_string out " ";
-      output_uval out uv1;
-      output_string out " ";
-      output_uval out uv2;
+      output_string out " :";
+      output_string out s1;
+      output_string out " :";
+      output_string out s2;
       output_string out ")";
    | CallInstr(_, uv) ->
       output_string out "(call ";

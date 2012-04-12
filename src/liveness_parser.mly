@@ -1,14 +1,14 @@
 /*
  * EECS 322 Compiler Construction
  * Northwestern University
- * 4/9/2012
+ * 4/16/2012
  *
- * Spill Test
+ * Liveness Test
  * Jedidiah R. McClurg
  * v. 1.0
  *
- * spill_parser.mly
- * This is the specification for the Spill Test parser, to be
+ * liveness_parser.mly
+ * This is the specification for the Liveness Test parser, to be
  * used with ocamlyacc.
  */
 %{
@@ -29,13 +29,11 @@
 %token EOF
 /* last tokens have highest precedence */
 %start main /* the entry point */
-%type <L2_ast.instr list * string * int64 * string> main
+%type <L2_ast.instr list> main
 %%
 main:
-   LPAREN instr_list RPAREN var INT var { let i = $5 in
-                                          check_int_alignment i;
-                                          ($2,get_var_name $4,$5,get_var_name $6) }
-                                          /* TODO XXX - these will be var ids */
+   LPAREN instr_list RPAREN { $2 }
+                              /* TODO XXX - these will be var ids (use symbol table) */
    /* TODO XXX - add the EOF at some point */
 ;
 

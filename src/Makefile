@@ -5,6 +5,7 @@
 #
 # L1-to-assembly Compiler
 # Spill Test
+# Liveness Test
 # Jedidiah R. McClurg
 # v. 1.0
 #
@@ -12,12 +13,38 @@
 # This builds the project using the OCaml native-code
 # compiler.
 #
-# make         - builds the project (L1c, spill binary)
+# make         - builds the project (L1c, spill, liveness binary)
 # make clean   - deletes all intermediate build files
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L1c spill L2c
+all:			L1c spill liveness L2c
+
+### liveness test ###
+
+liveness:		utils.cmx l2_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
+			ocamlopt -o liveness str.cmxa utils.cmx l2_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
+
+liveness_main.cmx:	liveness_main.ml liveness_parser.cmx liveness_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
+			ocamlopt -c liveness_main.ml
+
+liveness_parser.cmx:	liveness_parser.ml liveness_parser.cmi utils.cmx
+			ocamlopt -c liveness_parser.ml
+
+liveness_lexer.cmx:	liveness_lexer.ml liveness_parser.cmi l2_ast.cmx utils.cmx
+			ocamlopt -c liveness_lexer.ml
+
+liveness_parser.cmi:	liveness_parser.mli l2_ast.cmx utils.cmx
+			ocamlopt -c liveness_parser.mli
+
+liveness_parser.ml:	liveness_parser.mly
+			ocamlyacc liveness_parser.mly
+
+liveness_parser.mli:	liveness_parser.mly
+			ocamlyacc liveness_parser.mly
+
+liveness_lexer.ml:	liveness_lexer.mll
+			ocamllex liveness_lexer.mll
 
 ### spill test ###
 

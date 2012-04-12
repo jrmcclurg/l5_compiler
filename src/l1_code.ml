@@ -292,12 +292,12 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
    | LabelInstr(ps,l) ->
       (* l: *)
       compile_label o l
-   | GotoInstr(ps,uv) ->
+   | GotoInstr(ps,s) ->
       (* jmp _l *)
-      output_string o ("\t"^"jmp"^"\t");
-      compile_uval o uv;
+      output_string o ("\t"^"jmp"^"\t"^"_");
+      output_string o s;
       output_string o "\n"
-   | LtJumpInstr(ps,tv1,tv2,uv1,uv2) ->
+   | LtJumpInstr(ps,tv1,tv2,s1,s2) ->
       (* if tv1 is constant, we must reverse the operation,
        * since the second operand of cmp must be a register.
        * if both are constants, record eax on the stack,
@@ -331,15 +331,15 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
             output_tval o r1;
             output_string o "\n"
          );
-         (* jl uv1 (or jg uv1 if reverse) *)
-         output_string o ("\t"^"j"^(if reverse then "g" else "l")^"\t");
-         compile_uval o uv1;
+         (* jl s1 (or jg s1 if reverse) *)
+         output_string o ("\t"^"j"^(if reverse then "g" else "l")^"\t"^"_");
+         output_string o s1;
          output_string o "\n";
-         (* jmp uv2 *)
-         output_string o ("\t"^"jmp"^"\t");
-         compile_uval o uv2;
+         (* jmp s2 *)
+         output_string o ("\t"^"jmp"^"\t"^"_");
+         output_string o s2;
          output_string o "\n" 
-   | LeqJumpInstr(ps,tv1,tv2,uv1,uv2) ->
+   | LeqJumpInstr(ps,tv1,tv2,s1,s2) ->
       (* if tv1 is constant, we must reverse the operation,
        * since the second operand of cmp must be a register.
        * if both are constants, record eax on the stack,
@@ -373,15 +373,15 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
             output_tval o r1;
             output_string o "\n"
          );
-         (* jle uv1 (or jge uv1 if reverse) *)
-         output_string o ("\t"^"j"^(if reverse then "g" else "l")^"e"^"\t");
-         compile_uval o uv1;
+         (* jle s1 (or jge s1 if reverse) *)
+         output_string o ("\t"^"j"^(if reverse then "g" else "l")^"e"^"\t"^"_");
+         output_string o s1;
          output_string o "\n";
-         (* jmp uv2 *)
-         output_string o ("\t"^"jmp"^"\t");
-         compile_uval o uv2;
+         (* jmp s2 *)
+         output_string o ("\t"^"jmp"^"\t"^"_");
+         output_string o s2;
          output_string o "\n" 
-   | EqJumpInstr(ps,tv1,tv2,uv1,uv2) ->
+   | EqJumpInstr(ps,tv1,tv2,s1,s2) ->
       (* if tv1 is constant, we must reverse the operation,
        * since the second operand of cmp must be a register.
        * if both are constants, record eax on the stack,
@@ -415,13 +415,13 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
             output_tval o r1;
             output_string o "\n"
          );
-         (* je uv1 *)
-         output_string o ("\t"^"je"^"\t");
-         compile_uval o uv1;
+         (* je s1 *)
+         output_string o ("\t"^"je"^"\t"^"_");
+         output_string o s1;
          output_string o "\n";
-         (* jmp uv2 *)
-         output_string o ("\t"^"jmp"^"\t");
-         compile_uval o uv2;
+         (* jmp s2 *)
+         output_string o ("\t"^"jmp"^"\t"^"_");
+         output_string o s2;
          output_string o "\n" 
    | CallInstr(ps, uv) ->
       (* pushl $r_j_k *)
