@@ -53,7 +53,7 @@ let print_var_list (vl : var list) =
          print_var v;
          print_string ", "
       ) vl;
-      print_string ")\n";
+      print_string ")";
       ;;
 
 let rec find_target_ins_helper (il : (instr * var list * var list) list) (s1 : string) (s2o : string option) : (var list) =
@@ -130,18 +130,18 @@ let get_gens_kills (i : instr) : (var list * var list) =
       (l,[])
    | TailCallInstr(p,_) -> ([EaxReg(p);EcxReg(p);EdiReg(p);EdxReg(p);EsiReg(p)],[])
    | ReturnInstr(p) -> ([EaxReg(p);EdiReg(p);EsiReg(p)],[])
-   | PrintInstr(p,VarTVal(_,v)) -> ([v],[EaxReg(p)])
-   | PrintInstr(p,_) -> ([],[EaxReg(p)])
-   | AllocInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p)])
-   | AllocInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p)])
-   | AllocInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p)])
-   | ArrayErrorInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p)]) (* TODO XXX - something wrong *)
-   | ArrayErrorInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p)])
-   | ArrayErrorInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p)])
+   | PrintInstr(p,VarTVal(_,v)) -> ([v],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
+   | AllocInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
+   | AllocInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
+   | AllocInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
+   | ArrayErrorInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[]) (* TODO XXX - something wrong *)
+   | ArrayErrorInstr(p,_,VarTVal(_,v3)) -> ([v3],[])
+   | ArrayErrorInstr(p,VarTVal(_,v2),_) -> ([v2],[])
    | _ -> ([],[])
 ;;
 
 let rec liveness_helper (il : (instr * var list * var list) list) : ((instr * var list * var list) list) =
+   (*print_string "liveness_helper:\n";*)
    let (_,result,change) = List.fold_right (fun (i,ins,outs) (prev_ins,res,flag) -> 
       let (gens,kills) = get_gens_kills i in
       let new_ins = compute_ins gens kills outs in
@@ -150,15 +150,21 @@ let rec liveness_helper (il : (instr * var list * var list) list) : ((instr * va
       | LtJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
       | LeqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
       | EqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
+      | ReturnInstr(_) -> []
+      | TailCallInstr(_,_) -> []
+      | ArrayErrorInstr(_,_,_) -> []
       | _ -> prev_ins) in
-      (*print_string "Comparing:\n";
-      print_var_list ins;
-      print_var_list new_ins;
-      print_string "Also:\n";
-      print_var_list outs;
-      print_var_list new_outs;*)
       (ins,(i,new_ins,new_outs)::res,flag || (not (compare_vars ins new_ins)) || (not (compare_vars outs new_outs)))
    ) il ([],[],false) in
+   (*List.iter (fun (i,ins,outs) ->
+      print_instr i;
+      print_string "\t\t";
+      print_var_list ins;
+      print_string "\t\t";
+      print_var_list outs;
+      print_string "\n";
+   ) result;
+   print_string "\n";*)
    if change then liveness_helper result else result
 ;;
 
