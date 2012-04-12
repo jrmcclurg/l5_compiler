@@ -1,0 +1,2 @@
+((in () () (ecx ) (eax ecx ) (eax ecx edx ) (ebx ) () (edi edx esi ) (edi edx esi ) (eax edi esi ) () )
+(out () (ecx ) (eax ecx ) (eax ecx edx ) (ebx ) () () (edi edx esi ) (eax edi esi ) () () ))
