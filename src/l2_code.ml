@@ -14,16 +14,100 @@
 open L2_ast;;
 open Utils;;
 
+
+let rec find_target_ins (il : (instr * var list * var list) list) (s1 : string) (s2o : string option) : (var list) =
+   match il with
+   | [] -> []
+   | (i,ins,_)::is ->
+      match (i,s2o) with
+      | (LabelInstr(_,s),None) -> if (s1 == s) then ins else find_target_ins is s1 s2o
+      | (LabelInstr(_,s),Some(s2)) -> if ((s1 == s) || (s2 == s)) then ins else find_target_ins is s1 s2o
+;;
+
+let compare_var (v1 : var) (v2 : var) : int =
+     match (v1,v2) with
+     | (EsiReg(_),EsiReg(_)) -> 0
+     | (EdiReg(_),EdiReg(_)) -> 0
+     | (EbpReg(_),EbpReg(_)) -> 0
+     | (EspReg(_),EspReg(_)) -> 0
+     | (EaxReg(_),EaxReg(_)) -> 0
+     | (EcxReg(_),EcxReg(_)) -> 0
+     | (EdxReg(_),EdxReg(_)) -> 0
+     | (EbxReg(_),EbxReg(_)) -> 0
+     | (Var(_,s1),Var(_,s2)) -> String.compare s1 s2
+     | _ -> -1
+;;
+
+let rec list_contains (vl : var list) (v : var) =
+   match vl with
+   | [] -> false
+   | t::ts ->
+      if (compare_var t v) == 0 then true else list_contains ts v
+;;
+
+
+let sort_vars (vl : var list) : var list =
+  List.sort compare_var vl
+;;
+      
+(* TODO this is SLOW *)
+let compute_ins (gens : var list) (kills : var list) (outs : var list) =
+   let result = List.fold_right (fun o l ->
+      if ((not (list_contains kills o)) && (not (list_contains l o))) then o::l else l
+   ) outs gens in
+   sort_vars result
+;;
+
+let rec compare_vars (vl1 : var list) (vl2 : var list) =
+   match (vl1,vl2) with
+   | ([],[]) -> true
+   | ([],_) -> false
+   | (_,[]) -> false
+   | (a::ax,b::bx) -> ((compare_var a b) == 0) && (compare_vars ax bx)
+;;
+
+let print_var_list (vl : var list) =
+  print_string "(";
+      List.iter (fun v -> 
+         print_var v;
+         print_string ", "
+      ) vl;
+      print_string ")\n";
+      ;;
+
 (* given instruction i, returns (gens, kills) *)
-let gen_kill (i : instr) : (var list * var list) =
+let get_gens_kills (i : instr) : (var list * var list) =
    match i with
    | AssignInstr(_,v,VarSVal(_,v2)) -> ([v2], [v])
    | AssignInstr(_,v,_) -> ([], [v])
+   | PlusInstr(_,v,VarTVal(_,v2)) -> ([v;v2],[v])
+   | PlusInstr(_,v,_) -> ([v], [v])
    (* TODO XXX *)
 ;;
 
-let rec liveness (il : instr list) : ((var list) list * (var list) list) =
-   ([[]],[[]])
+let rec liveness_helper (il : (instr * var list * var list) list) : ((instr * var list * var list) list) =
+   let (_,result,change) = List.fold_right (fun (i,ins,outs) (prev_ins,res,flag) -> 
+      let (gens,kills) = get_gens_kills i in
+      let new_ins = compute_ins gens kills outs in
+      let new_outs = (match i with
+      | GotoInstr(_,s) -> find_target_ins il s None
+      (* TODO XXX - the conditional jumps *)
+      | _ -> prev_ins) in
+      (*print_string "Comparing:\n";
+      print_var_list ins;
+      print_var_list new_ins;
+      print_string "Also:\n";
+      print_var_list outs;
+      print_var_list new_outs;*)
+      (ins,(i,new_ins,new_outs)::res,flag || (not (compare_vars ins new_ins)) || (not (compare_vars outs new_outs)))
+   ) il ([],[],false) in
+   if change then liveness_helper result else result
+;;
+
+let liveness (il : instr list) : ((var list) list * (var list) list) = 
+   let nl = List.map (fun i -> (i,[],[])) il in
+   let l = liveness_helper nl in
+   List.fold_right (fun (i,ins,outs) (inl,outl) -> (ins::inl,outs::outl)) l ([],[])
 ;;
 
 let rec spill (il : instr list) (v : string) (off : int64) (prefix : string) : instr list =

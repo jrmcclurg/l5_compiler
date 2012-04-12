@@ -23,10 +23,15 @@ let filename = ref "";;
 Arg.parse [
 ] (fun x -> filename := x) banner_text;;
 
-let print_instr_list il =
-   print_string "(";
-   List.iter (fun i -> print_instr i; print_string "\n") il;
-   print_string ")\n"
+let print_vars_list vls =
+   List.iter (fun vl ->
+      print_string "(";
+      List.iter (fun v -> 
+         print_var v;
+         print_string " "
+      ) vl;
+      print_string ") ";
+   ) vls
 ;;
 
 (* use the command-line filename if one exists, otherwise use stdin *)
@@ -38,5 +43,9 @@ let in_stream = if (!filename="") then stdin else (
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let il = Liveness_parser.main Liveness_lexer.token lexbuf in (* run the parser, producing AST *)
 let (il2,ol2) = liveness il in 
-(*print_instr_list il2; *)
+print_string "((in ";
+print_vars_list il2;
+print_string ")\n(out ";
+print_vars_list ol2;
+print_string "))\n";
 exit 0
