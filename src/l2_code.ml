@@ -15,34 +15,15 @@ open L2_ast;;
 open Utils;;
 
 
-let rec find_target_ins (il : (instr * var list * var list) list) (s1 : string) (s2o : string option) : (var list) =
-   match il with
-   | [] -> []
-   | (i,ins,_)::is ->
-      match (i,s2o) with
-      | (LabelInstr(_,s),None) -> if (s1 == s) then ins else find_target_ins is s1 s2o
-      | (LabelInstr(_,s),Some(s2)) -> if ((s1 == s) || (s2 == s)) then ins else find_target_ins is s1 s2o
-;;
-
 let compare_var (v1 : var) (v2 : var) : int =
-     match (v1,v2) with
-     | (EsiReg(_),EsiReg(_)) -> 0
-     | (EdiReg(_),EdiReg(_)) -> 0
-     | (EbpReg(_),EbpReg(_)) -> 0
-     | (EspReg(_),EspReg(_)) -> 0
-     | (EaxReg(_),EaxReg(_)) -> 0
-     | (EcxReg(_),EcxReg(_)) -> 0
-     | (EdxReg(_),EdxReg(_)) -> 0
-     | (EbxReg(_),EbxReg(_)) -> 0
-     | (Var(_,s1),Var(_,s2)) -> String.compare s1 s2
-     | _ -> -1
+  String.compare (get_var_name v1) (get_var_name v2)
 ;;
 
 let rec list_contains (vl : var list) (v : var) =
    match vl with
    | [] -> false
    | t::ts ->
-      if (compare_var t v) == 0 then true else list_contains ts v
+      if (compare_var t v) = 0 then true else list_contains ts v
 ;;
 
 
@@ -63,7 +44,7 @@ let rec compare_vars (vl1 : var list) (vl2 : var list) =
    | ([],[]) -> true
    | ([],_) -> false
    | (_,[]) -> false
-   | (a::ax,b::bx) -> ((compare_var a b) == 0) && (compare_vars ax bx)
+   | (a::ax,b::bx) -> ((compare_var a b) = 0) && (compare_vars ax bx)
 ;;
 
 let print_var_list (vl : var list) =
@@ -75,14 +56,89 @@ let print_var_list (vl : var list) =
       print_string ")\n";
       ;;
 
+let rec find_target_ins_helper (il : (instr * var list * var list) list) (s1 : string) (s2o : string option) : (var list) =
+   match il with
+   | [] -> []
+   | (i,ins,_)::is ->
+      let l = (match (i,s2o) with
+      | (LabelInstr(_,s),None) -> (*print_string ("checking: "^s^"\n");*) if (s1 = s) then ins else []
+      | (LabelInstr(_,s),Some(s2)) -> (*print_string ("checking: "^s^" with "^s1^", "^s2^"\n");*) if ((s1 = s) || (s2 = s)) then ins else []
+      | _ -> []) in
+      List.fold_right (fun i res -> 
+         if (not (list_contains res i)) then i::res else res
+      ) l (find_target_ins_helper is s1 s2o)
+
+and find_target_ins (il : (instr * var list * var list) list) (s1 : string) (s2o : string option) : (var list) =
+   let l = find_target_ins_helper il s1 s2o in
+   sort_vars l
+;;
+
+let add_and_sort (vl : var list) (v : var) = 
+   let r = if (not (list_contains vl v)) then v::vl else vl in
+   sort_vars r
+;;
+
 (* given instruction i, returns (gens, kills) *)
 let get_gens_kills (i : instr) : (var list * var list) =
    match i with
    | AssignInstr(_,v,VarSVal(_,v2)) -> ([v2], [v])
    | AssignInstr(_,v,_) -> ([], [v])
-   | PlusInstr(_,v,VarTVal(_,v2)) -> ([v;v2],[v])
+   | MemReadInstr(_,v1,v2,_) -> ([v2],[v1])
+   | MemWriteInstr(_,v1,_,VarSVal(_,v2)) -> (add_and_sort [v1] v2,[])
+   | MemWriteInstr(_,v1,_,_) -> ([v1],[])
+   | PlusInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
    | PlusInstr(_,v,_) -> ([v], [v])
-   (* TODO XXX *)
+   | MinusInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
+   | MinusInstr(_,v,_) -> ([v], [v])
+   | TimesInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
+   | TimesInstr(_,v,_) -> ([v], [v])
+   | BitAndInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
+   | BitAndInstr(_,v,_) -> ([v], [v])
+   | SllInstr(_,v,ShVar(_,v2)) -> (add_and_sort [v] v2,[v])
+   | SllInstr(_,v,_) -> ([v], [v])
+   | SrlInstr(_,v,ShVar(_,v2)) -> (add_and_sort [v] v2,[v])
+   | SrlInstr(_,v,_) -> ([v], [v])
+   | LtInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
+   | LtInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
+   | LtInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
+   | LtInstr(_,v,_,_) -> ([], [v])
+   | LeqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
+   | LeqInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
+   | LeqInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
+   | LeqInstr(_,v,_,_) -> ([], [v])
+   | EqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
+   | EqInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
+   | EqInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
+   | EqInstr(_,v,_,_) -> ([], [v])
+   | LabelInstr(_,_) -> ([],[])
+   | GotoInstr(_,_) -> ([],[])
+   | LtJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
+   | LtJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
+   | LtJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   | LeqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
+   | LeqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
+   | LeqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   | EqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
+   | EqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
+   | EqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   | CallInstr(_,VarUVal(p,v)) ->
+      let l = add_and_sort [EaxReg(p);EdxReg(p);EcxReg(p)] v in
+      (l,[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
+   | CallInstr(p,_) -> ([EaxReg(p);EcxReg(p);EdxReg(p)],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
+   | TailCallInstr(_,VarUVal(p,v)) -> (* TODO XXX - something is wrong here! *)
+      let l = add_and_sort [EaxReg(p);EdxReg(p);EcxReg(p);EdiReg(p);EsiReg(p)] v in
+      (l,[])
+   | TailCallInstr(p,_) -> ([EaxReg(p);EcxReg(p);EdiReg(p);EdxReg(p);EsiReg(p)],[])
+   | ReturnInstr(p) -> ([EaxReg(p);EdiReg(p);EsiReg(p)],[])
+   | PrintInstr(p,VarTVal(_,v)) -> ([v],[EaxReg(p)])
+   | PrintInstr(p,_) -> ([],[EaxReg(p)])
+   | AllocInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p)])
+   | AllocInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p)])
+   | AllocInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p)])
+   | ArrayErrorInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p)]) (* TODO XXX - something wrong *)
+   | ArrayErrorInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p)])
+   | ArrayErrorInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p)])
+   | _ -> ([],[])
 ;;
 
 let rec liveness_helper (il : (instr * var list * var list) list) : ((instr * var list * var list) list) =
@@ -91,7 +147,9 @@ let rec liveness_helper (il : (instr * var list * var list) list) : ((instr * va
       let new_ins = compute_ins gens kills outs in
       let new_outs = (match i with
       | GotoInstr(_,s) -> find_target_ins il s None
-      (* TODO XXX - the conditional jumps *)
+      | LtJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
+      | LeqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
+      | EqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
       | _ -> prev_ins) in
       (*print_string "Comparing:\n";
       print_var_list ins;
