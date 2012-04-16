@@ -1,0 +1,73 @@
+#####################################################################
+#  EECS 322 Compiler Construction
+#  Northwestern University
+#  4/16/2012
+#  
+#  Liveness Test
+#  Jedidiah R. McClurg
+#  v. 1.0
+#####################################################################
+
+#####################################################################
+#  DESCRIPTION
+#####################################################################
+
+This is a test for the L2 "liveness" function.  It takes a file having
+the following format
+
+(i ...)
+
+Where
+(i ...) is a list of L2 instructions.  The result is in the following
+form, where the "var" are variable names
+
+((in (var ...) ...)
+(out (var ...) ...))
+
+The list labeled "in" corresponds to the in lists for the instructions,
+and the list labeled "out" corresponds to the out lists.
+
+The project is implemented in OCaml and consists of the following
+files:
+
+LIVENESS_README     - this file
+liveness            - the liveness test binary (64bit Linux)
+Makefile            - GNU makefile for the project
+liveness_lexer.mll  - ocamllex lexer specification
+liveness_parser.mly - ocamlyacc parser specification
+liveness_main.ml    - program entry-point
+l2_ast.ml           - abstract data types for the Abstract Syntax Tree
+l2_code.ml          - code-generation and compilation utilities
+utils.ml            - general utilities
+
+#####################################################################
+#  INSTALLATION
+#####################################################################
+
+The project has been built/tested only on 64bit Linux.  Thus,
+the included liveness binary will work only on 64bit systems.
+
+For building the project on other systems, the necessary packages are
+the ocaml package for the OCaml development tools, the gcc package
+for the GNU C compiler development tools, and possibly the
+gcc-multilib package to provide gcc with 32bit support.
+
+To build, simply type
+  make
+
+This should generate the Liveness Test binary, liveness.  After this,
+typing
+  make clean
+should clear out any intermediate build files.
+
+#####################################################################
+#  USAGE
+#####################################################################
+
+Given a liveness test case test.L2f, the test can be run by typing
+  ./liveness test.L2f
+
+This should output the test results.
+
+If liveness is run with no command-line options, it reads the test case
+file from stdin.

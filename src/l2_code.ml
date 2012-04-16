@@ -8,71 +8,72 @@
  * v. 1.0
  *
  * l2_code.ml
- * In progress. Currently only has the "spill" function.
+ * In progress. Currently only has the "spill" and "liveness" functions.
  *)
 
 open L2_ast;;
 open Utils;;
 
-
+(* compares two variables (returns 0 iff they are equal) *)
 let compare_var (v1 : var) (v2 : var) : int =
   String.compare (get_var_name v1) (get_var_name v2)
 ;;
 
-let rec list_contains (vl : var list) (v : var) =
+(* searches a list for a given var *)
+let rec list_contains (vl : var list) (v : var) : bool =
    match vl with
    | [] -> false
    | t::ts ->
       if (compare_var t v) = 0 then true else list_contains ts v
 ;;
 
-
+(* sorts a var list *)
 let sort_vars (vl : var list) : var list =
   List.sort compare_var vl
 ;;
       
-(* TODO this is SLOW *)
-let compute_ins (gens : var list) (kills : var list) (outs : var list) =
-   let result = List.fold_right (fun o l ->
-      if ((not (list_contains kills o)) && (not (list_contains l o))) then o::l else l
-   ) outs gens in
-   sort_vars result
-;;
-
-let rec compare_vars (vl1 : var list) (vl2 : var list) =
+(* compares two var lists (returns true iff equal) *)
+let rec compare_lists (vl1 : var list) (vl2 : var list) : bool =
    match (vl1,vl2) with
    | ([],[]) -> true
    | ([],_) -> false
    | (_,[]) -> false
-   | (a::ax,b::bx) -> ((compare_var a b) = 0) && (compare_vars ax bx)
+   | (a::ax,b::bx) -> ((compare_var a b) = 0) && (compare_lists ax bx)
 ;;
 
-let print_var_list (vl : var list) =
-  print_string "(";
-      List.iter (fun v -> 
-         print_var v;
-         print_string ", "
-      ) vl;
-      print_string ")";
-      ;;
-
+(*
+ * find_target_ins_helper il s1 s2o
+ *
+ * Gets a list of all "ins" for a given label instruction
+ *
+ * il   - the instruction list
+ * s1   - the label to search for
+ * s2o  - an optional second label to search for
+ *
+ * returns a var list of all the "ins" (no duplicates, list not sorted)
+ *)
 let rec find_target_ins_helper (il : (instr * var list * var list) list) (s1 : string) (s2o : string option) : (var list) =
    match il with
    | [] -> []
-   | (i,ins,_)::is ->
-      let l = (match (i,s2o) with
-      | (LabelInstr(_,s),None) -> (*print_string ("checking: "^s^"\n");*) if (s1 = s) then ins else []
-      | (LabelInstr(_,s),Some(s2)) -> (*print_string ("checking: "^s^" with "^s1^", "^s2^"\n");*) if ((s1 = s) || (s2 = s)) then ins else []
+   | (i1,ins,_)::is ->
+      let l = (match (i1,s2o) with
+      | (LabelInstr(_,s),None) -> if (s1 = s) then ins else []
+      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then ins else []
       | _ -> []) in
+      (* go through the ins for the first instruction *)
       List.fold_right (fun i res -> 
+         (* if the var i is not in the result list, add it *)
          if (not (list_contains res i)) then i::res else res
       ) l (find_target_ins_helper is s1 s2o)
 
+(* gets the "ins" for a specified target label (see the find_target_ins_helper function)
+ * (resulting list is SORTED) *)
 and find_target_ins (il : (instr * var list * var list) list) (s1 : string) (s2o : string option) : (var list) =
    let l = find_target_ins_helper il s1 s2o in
    sort_vars l
 ;;
 
+(* adds a var to the list, and sorts the resulting list *)
 let add_and_sort (vl : var list) (v : var) = 
    let r = if (not (list_contains vl v)) then v::vl else vl in
    sort_vars r
@@ -81,71 +82,132 @@ let add_and_sort (vl : var list) (v : var) =
 (* given instruction i, returns (gens, kills) *)
 let get_gens_kills (i : instr) : (var list * var list) =
    match i with
+   (* assignment *)
    | AssignInstr(_,v,VarSVal(_,v2)) -> ([v2], [v])
    | AssignInstr(_,v,_) -> ([], [v])
+   (* mem read *)
    | MemReadInstr(_,v1,v2,_) -> ([v2],[v1])
+   (* mem write *)
    | MemWriteInstr(_,v1,_,VarSVal(_,v2)) -> (add_and_sort [v1] v2,[])
    | MemWriteInstr(_,v1,_,_) -> ([v1],[])
+   (* plus *)
    | PlusInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
    | PlusInstr(_,v,_) -> ([v], [v])
+   (* minus *)
    | MinusInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
    | MinusInstr(_,v,_) -> ([v], [v])
+   (* times *)
    | TimesInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
    | TimesInstr(_,v,_) -> ([v], [v])
+   (* bitwise and *)
    | BitAndInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
    | BitAndInstr(_,v,_) -> ([v], [v])
+   (* shift left *)
    | SllInstr(_,v,ShVar(_,v2)) -> (add_and_sort [v] v2,[v])
    | SllInstr(_,v,_) -> ([v], [v])
+   (* shift right *)
    | SrlInstr(_,v,ShVar(_,v2)) -> (add_and_sort [v] v2,[v])
    | SrlInstr(_,v,_) -> ([v], [v])
+   (* less-than comparison *)
    | LtInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
    | LtInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
    | LtInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
    | LtInstr(_,v,_,_) -> ([], [v])
+   (* less-than-or-equal-to comparison *)
    | LeqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
    | LeqInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
    | LeqInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
    | LeqInstr(_,v,_,_) -> ([], [v])
+   (* equal-to comparison *)
    | EqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
    | EqInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
    | EqInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
    | EqInstr(_,v,_,_) -> ([], [v])
+   (* label *)
    | LabelInstr(_,_) -> ([],[])
+   (* goto *)
    | GotoInstr(_,_) -> ([],[])
+   (* less-than jump *)
    | LtJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
    | LtJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
    | LtJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   (* less-than-or-equal-to jump *)
    | LeqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
    | LeqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
    | LeqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   (* equal-to jump *)
    | EqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
    | EqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
    | EqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   (* call *)
    | CallInstr(_,VarUVal(p,v)) ->
       let l = add_and_sort [EaxReg(p);EdxReg(p);EcxReg(p)] v in
       (l,[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
    | CallInstr(p,_) -> ([EaxReg(p);EcxReg(p);EdxReg(p)],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
-   | TailCallInstr(_,VarUVal(p,v)) -> (* TODO XXX - something is wrong here! *)
+   (* tail-call *)
+   | TailCallInstr(_,VarUVal(p,v)) ->
       let l = add_and_sort [EaxReg(p);EdxReg(p);EcxReg(p);EdiReg(p);EsiReg(p)] v in
       (l,[])
    | TailCallInstr(p,_) -> ([EaxReg(p);EcxReg(p);EdiReg(p);EdxReg(p);EsiReg(p)],[])
+   (* return *)
    | ReturnInstr(p) -> ([EaxReg(p);EdiReg(p);EsiReg(p)],[])
-   | PrintInstr(p,VarTVal(_,v)) -> ([v],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
-   | AllocInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
-   | AllocInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
-   | AllocInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
-   | ArrayErrorInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[]) (* TODO XXX - something wrong *)
-   | ArrayErrorInstr(p,_,VarTVal(_,v3)) -> ([v3],[])
-   | ArrayErrorInstr(p,VarTVal(_,v2),_) -> ([v2],[])
+   (* print *)
+   | PrintInstr(p,VarTVal(_,v)) -> ([v],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | PrintInstr(p,_) -> ([],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   (* allocate *)
+   | AllocInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | AllocInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | AllocInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | AllocInstr(p,_,_) -> ([],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   (* array-error *)
+   | ArrayErrorInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | ArrayErrorInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | ArrayErrorInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | ArrayErrorInstr(p,_,_) -> ([],[EaxReg(p);EcxReg(p);EdxReg(p)])
    | _ -> ([],[])
 ;;
 
-let rec liveness_helper (il : (instr * var list * var list) list) : ((instr * var list * var list) list) =
-   (*print_string "liveness_helper:\n";*)
+(*
+ * compute_ins gens kills outs
+ *
+ * Computes the "ins" using the formula
+ * ins = gens U (outs - kills)
+ * (where "U" is set union)
+ * The result is sorted
+ *)
+let compute_ins (gens : var list) (kills : var list) (outs : var list) : var list =
+   let result = List.fold_right (fun o l ->
+      (* find the ones that are in "outs", but not in "kills" *)
+      if ((not (list_contains kills o)) && (not (list_contains l o))) then o::l else l
+   ) outs gens in (* the initial value "gens" here gets added to (outs - kills),
+                   * which is computed during the fold operation *)
+   sort_vars result (* sort the result *)
+;;
+
+(*
+ * liveness_helper il
+ * 
+ * A fixpoint operator which iteratively updates the "ins" and "outs" for
+ * each instruction until no change is seen
+ * 
+ * il - the list of tuples (i, ins, outs) where i is an instruction
+ *                                              ins is the current in list
+ *                                              outs is the current out list
+ * 
+ * returns a list of tuples (i, ins, outs) having the final results
+ *)
+let rec liveness_helper (il : (instr * var list * var list) list) :
+                                        ((instr * var list * var list) list) =
+   (* go through the instructions *)
    let (_,result,change) = List.fold_right (fun (i,ins,outs) (prev_ins,res,flag) -> 
+      (* get the gens and kills for this instruction *)
       let (gens,kills) = get_gens_kills i in
+      (* compute the new "ins" list *)
       let new_ins = compute_ins gens kills outs in
+      (* compute the new "outs" list as the union of the "ins" of
+       * the successor instruction(s) *)
       let new_outs = (match i with
+      (* if we're looking at a branch instruction, find the ins for the target *)
       | GotoInstr(_,s) -> find_target_ins il s None
       | LtJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
       | LeqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
@@ -153,27 +215,49 @@ let rec liveness_helper (il : (instr * var list * var list) list) : ((instr * va
       | ReturnInstr(_) -> []
       | TailCallInstr(_,_) -> []
       | ArrayErrorInstr(_,_,_) -> []
+      (* prev_ins is maintained as the successor instrution's "ins" list *)
       | _ -> prev_ins) in
-      (ins,(i,new_ins,new_outs)::res,flag || (not (compare_vars ins new_ins)) || (not (compare_vars outs new_outs)))
+      (* compare new_ins with ins and new_outs with outs to determine if anything changed *)
+      (ins,(i,new_ins,new_outs)::res,flag || (not (compare_lists ins new_ins))
+                                          || (not (compare_lists outs new_outs)))
    ) il ([],[],false) in
-   (*List.iter (fun (i,ins,outs) ->
-      print_instr i;
-      print_string "\t\t";
-      print_var_list ins;
-      print_string "\t\t";
-      print_var_list outs;
-      print_string "\n";
-   ) result;
-   print_string "\n";*)
+   (* if the "ins" or "outs" changed, process again, otherwise we're done *)
    if change then liveness_helper result else result
 ;;
 
+(*
+ * liveness il
+ * 
+ * Given a list of instructions, returns the "in" and "out" lists
+ * (liveness analysis).
+ *
+ * il - the (instr list) containing the instructions
+ *
+ * returns (l1, l2) where l1 is a (var list) of the ins and
+ *                        l2 is a (var list) of the outs
+ *)
 let liveness (il : instr list) : ((var list) list * (var list) list) = 
+   (* add an empty "in" and "out" list for each instruction *)
    let nl = List.map (fun i -> (i,[],[])) il in
+   (* get the ins and outs (this is a fixpoint operator *)
    let l = liveness_helper nl in
+   (* return the ins and outs in the appropriate format *)
    List.fold_right (fun (i,ins,outs) (inl,outl) -> (ins::inl,outs::outl)) l ([],[])
 ;;
 
+(*
+ * spill il v off prefix
+ * 
+ * Given a list of instructions, returns a new list of instructions
+ * with the specified variable spilled to memory.
+ *
+ * il     - the (instr list) containing the instructions
+ * v      - the variable to spill
+ * off    - the offset in memory to spill to
+ * prefix - the prefix for any temporary variables generated
+ *
+ * returns l1, an (instr list) with the variabled spilled properly
+ *)
 let rec spill (il : instr list) (v : string) (off : int64) (prefix : string) : instr list =
    (* go through the list of instructions... *)
    let (result,_) = List.fold_left (fun (l,k) i -> (* l is the cumulative list, k is the unique number,

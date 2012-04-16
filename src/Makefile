@@ -152,6 +152,9 @@ l1_tarball:	L1c clean
 spill_tarball:	spill clean
 		tar -cvzf mcclurg.spill.tar.gz SPILL* spill* Makefile l2_ast.ml l2_code.ml utils.ml
 
+liveness_tarball:	liveness clean
+			tar -cvzf mcclurg.liveness.tar.gz LIVENESS* liveness* Makefile l2_ast.ml l2_code.ml utils.ml
+
 wc:		
 		wc -l *.m*
 
