@@ -245,40 +245,93 @@ let liveness (il : instr list) : ((var list) list * (var list) list) =
    List.fold_right (fun (i,ins,outs) (inl,outl) -> (ins::inl,outs::outl)) l ([],[])
 ;;
 
-let rec compute_adjacency_graph (vll : (var list) list)
-                                (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
-   match vll with
+let add_edge (v1 : var) (v2 : var)
+                  (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
+   let name = (get_var_name v1) in
+   let (_,t) = (
+      try Hashtbl.find h name
+      with _ ->
+         let t2 = ((Hashtbl.create 10) : (string,var) Hashtbl.t) in
+         Hashtbl.replace h name (v1,t2);
+         (v1,t2)
+   ) in
+   let name2 = (get_var_name v2) in
+   if (name <> name2) then Hashtbl.replace t (get_var_name v2) v2
+;;
+
+let add_all_edges (vl1 : var list) (vl2 : var list) (so : (string * string) option)
+                  (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
+   List.iter (fun v1 ->
+      List.iter (fun v2 ->
+         let s1 = get_var_name v1 in
+         let s2 = get_var_name v2 in
+         (match so with
+         | Some(s1t,s2t) -> if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then ()
+                            else (
+                              add_edge v1 v2 h;
+                              add_edge v2 v1 h )
+         | _ -> add_edge v1 v2 h; add_edge v2 v1 h )
+      ) vl2
+   ) vl1
+;;
+
+let print_var_list (vl : var list) = 
+      List.iter (fun v -> print_var v; print_string " ") vl;
+      print_string "\n"
+;;
+
+let rec compute_adjacency_graph (il : (instr * var list * var list) list)
+                                (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t)
+                                (first : bool) : unit =
+   match (il) with
    | [] -> ()
-   | vl::more -> 
-      List.iter (fun v ->
-         let name = (get_var_name v) in
-         let (_,t) = (
-            try Hashtbl.find h name
-            with _ ->
-               let t2 = ((Hashtbl.create 10) : (string,var) Hashtbl.t) in
-               Hashtbl.replace h name (v,t2);
-               (v,t2)
-         ) in
-         List.iter (fun v2 ->
-            let name2 = (get_var_name v2) in
-            if (name <> name2) then Hashtbl.replace t (get_var_name v2) v2
-         ) vl
-      ) vl;
-      compute_adjacency_graph more h
+   | (i,ins,outs)::more -> 
+      (*print_string "processing ";
+      if first then print_string "(first)";
+      print_string ": ";
+      print_instr i;
+      print_string "\n";
+      List.iter (fun v -> print_var v; print_string " ") ins;
+      print_string "\n";
+      List.iter (fun v -> print_var v; print_string " ") outs;
+      print_string "\n";*)
+
+      (* add edges variables that are live at the same time *)
+      if first then add_all_edges ins ins None h;
+      add_all_edges outs outs None h;
+      (* add edges between the kills and the out set *)
+      (* if this instruction is a <- b, then a,b don't conflict *)
+      let (gens,kills) = get_gens_kills i in
+      (match i with
+      | AssignInstr(_,Var(_,s1),VarSVal(_,Var(_,s2))) -> add_all_edges kills outs (Some((s1,s2))) h
+      | _ -> add_all_edges kills outs None h );
+      (* handle the special instructions *)
+      let l1 = [EaxReg(NoPos);EbxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
+      let l2 = [EdiReg(NoPos);EsiReg(NoPos)] in
+      (match i with
+      | SllInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges [v] l1 None h
+      | SrlInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges [v] l1 None h
+      | LtInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
+      | LeqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
+      | EqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
+      | _ -> ());
+      compute_adjacency_graph more h false
 ;;
 
 let graph_test (il : instr list) : ((var list) list * (var * var) list * bool) =
-   let (il2,ol2) = liveness il in
+   let nl = List.map (fun i -> (i,[],[])) il in
+   let il2 = liveness_helper nl in
    (* make sure all of the registers are connected *)
    let l1 = [EaxReg(NoPos);EbxReg(NoPos);EcxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
-   let l = (try l1::(List.hd il2)::ol2 with _ -> l1::ol2) in
-   let h = ((Hashtbl.create (List.length l)) : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) in
-   compute_adjacency_graph l h;
+   let h = ((Hashtbl.create (List.length l1)) : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) in
+   add_all_edges l1 l1 None h;
+   compute_adjacency_graph il2 h true;
    let keys = Hashtbl.fold (fun k (v,_) res -> 
       k::res
    ) h [] in
    let keys2 = List.sort String.compare keys in
-   let (ag,colors,ret,_) = List.fold_right (fun x (r2,r3,flag,l1t) -> 
+   (* do heuristic graph coloring *)
+   let (ag,colors,ret,_) = List.fold_left (fun (r2,r3,flag,l1t) x -> 
       let (v,tb) = Hashtbl.find h x in
       let tbl = Hashtbl.fold (fun _ vr res2 ->
          vr::res2
@@ -287,11 +340,14 @@ let graph_test (il : instr list) : ((var list) list * (var * var) list * bool) =
          try (let _ = Hashtbl.find tb (get_var_name l3) in (r,l1r@[l3])) with _ -> (l3::r, l1r)
       ) ([],[]) l1t in
       let choices = (sort_vars l2) in
-      let (newl,f) = (match v with
-      | Var(_,_) -> (try ((v,(List.hd choices))::r3,true) with _ -> (r3,false))
-      | _ -> (r3,true)) in
-      ((v::(sort_vars tbl))::r2,newl,f && flag,l1_new)
-   ) keys2 ([],[],true,l1) in
+      (*print_string ("processing: "^x^"\n");
+      print_var_list l1t;
+      print_var_list choices; *)
+      let (newl,f,l1_new2) = (match v with
+      | Var(_,_) -> (try (r3@[(v,(List.hd choices))],true,l1_new) with _ -> (r3,false,l1t))
+      | _ -> (r3,true,l1t)) in
+      (r2@[(v::(sort_vars tbl))],newl,f && flag,l1_new2)
+   ) ([],[],true,l1) keys2 in
    (ag,colors,ret)
 ;;
 
