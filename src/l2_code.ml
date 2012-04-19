@@ -259,7 +259,7 @@ let add_edge (v1 : var) (v2 : var)
    if (name <> name2) then Hashtbl.replace t (get_var_name v2) v2
 ;;
 
-let add_all_edges (vl1 : var list) (vl2 : var list) (so : (string * string) option)
+let add_all_edges (vl1 : var list) (vl2 : var list) (so : (var * var) option)
                   (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
    List.iter (fun v1 ->
       (match vl2 with
@@ -272,13 +272,17 @@ let add_all_edges (vl1 : var list) (vl2 : var list) (so : (string * string) opti
             Hashtbl.replace h name (v1,t2) )
       | _ ->
          List.iter (fun v2 ->
-            let s1 = get_var_name v1 in
-            let s2 = get_var_name v2 in
             (match so with
-            | Some(s1t,s2t) -> if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then ()
-                               else (
-                                 add_edge v1 v2 h;
-                                 add_edge v2 v1 h )
+            | Some(v1t,v2t) ->
+               let s1 = get_var_name v1 in
+               let s2 = get_var_name v2 in
+               let s1t = get_var_name v1t in
+               let s2t = get_var_name v2t in
+               (*print_string ("NOTADDING: "^s1^", "^s2^"\n");*)
+               if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then ()
+               else (
+                  add_edge v1 v2 h;
+                  add_edge v2 v1 h )
             | _ -> add_edge v1 v2 h; add_edge v2 v1 h )
          ) vl2 )
    ) vl1
@@ -312,7 +316,7 @@ let rec compute_adjacency_graph (il : (instr * var list * var list) list)
       let (gens,kills) = get_gens_kills i in
       (match i with
       (* if this instruction is a <- b, then a,b don't conflict *)
-      | AssignInstr(_,Var(_,s1),VarSVal(_,Var(_,s2))) -> add_all_edges kills outs (Some((s1,s2))) h
+      | AssignInstr(_,v1,VarSVal(_,v2)) -> add_all_edges kills outs (Some((v1,v2))) h
       | _ -> add_all_edges kills outs None h );
       (* handle the special instructions *)
       let l1 = [EaxReg(NoPos);EbxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
@@ -346,14 +350,19 @@ let graph_test (il : instr list) : ((var list) list * (var * var) list * bool) =
          vr::res2
       ) tb [] in
       let (l2,l1_new) = List.fold_left (fun (r,l1r) l3 ->
-         try (let _ = Hashtbl.find tb (get_var_name l3) in (r,l1r@[l3])) with _ -> (l3::r, l1r)
-      ) ([],[]) l1t in
-      let choices = (sort_vars l2) in
-      print_string ("processing: "^x^"\n");
-      print_var_list l1t;
-      print_var_list choices; 
+         match r with
+         | None ->
+            (try (let _ = Hashtbl.find tb (get_var_name l3) in (None,l1r@[l3])) with _ -> (Some(l3), l1r))
+         | Some(_) -> (r,l1r@[l3])
+      ) (None,[]) l1t in
+      (*let choices = (sort_vars l2) in*)
+      (*print_string ("processing: "^x^"\n");
+      print_var_list l1t;*)
       let (newl,f,l1_new2) = (match v with
-      | Var(_,_) -> (try (r3@[(v,(List.hd choices))],true,l1_new) with _ -> (r3,false,l1t))
+      | Var(_,_) ->
+         (match l2 with
+         | Some(c) -> (r3@[(v,c)],true,l1_new) 
+         | _ -> (r3,false,l1t) )
       | _ -> (r3,true,l1t)) in
       (r2@[(v::(sort_vars tbl))],newl,f && flag,l1_new2)
    ) ([],[],true,l1) keys2 in
