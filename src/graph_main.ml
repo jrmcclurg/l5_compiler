@@ -42,12 +42,14 @@ let in_stream = if (!filename="") then stdin else (
 ) in
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let il = Liveness_parser.main Liveness_lexer.token lexbuf in (* run the parser, producing AST *)
-(*let (il2,ol2) = liveness il in 
+
+let (il2,ol2) = liveness il in 
 print_string "((in ";
 print_vars_list il2 " ";
 print_string ")\n(out ";
 print_vars_list ol2 " ";
-print_string "))\n"; *)
+print_string "))\n"; 
+
 let (ag,colors,ok) = graph_test il in
 print_string "\n\n( ";
 print_vars_list ag "\n";

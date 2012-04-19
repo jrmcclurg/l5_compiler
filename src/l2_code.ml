@@ -262,16 +262,25 @@ let add_edge (v1 : var) (v2 : var)
 let add_all_edges (vl1 : var list) (vl2 : var list) (so : (string * string) option)
                   (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
    List.iter (fun v1 ->
-      List.iter (fun v2 ->
-         let s1 = get_var_name v1 in
-         let s2 = get_var_name v2 in
-         (match so with
-         | Some(s1t,s2t) -> if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then ()
-                            else (
-                              add_edge v1 v2 h;
-                              add_edge v2 v1 h )
-         | _ -> add_edge v1 v2 h; add_edge v2 v1 h )
-      ) vl2
+      (match vl2 with
+      (* if vl2 is empty, just "touch" the vars in vl1 *)
+      | [] -> 
+         let name = get_var_name v1 in
+         (try let _ = Hashtbl.find h name in ()
+         with _ ->
+            let t2 = ((Hashtbl.create 10) : (string,var) Hashtbl.t) in
+            Hashtbl.replace h name (v1,t2) )
+      | _ ->
+         List.iter (fun v2 ->
+            let s1 = get_var_name v1 in
+            let s2 = get_var_name v2 in
+            (match so with
+            | Some(s1t,s2t) -> if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then ()
+                               else (
+                                 add_edge v1 v2 h;
+                                 add_edge v2 v1 h )
+            | _ -> add_edge v1 v2 h; add_edge v2 v1 h )
+         ) vl2 )
    ) vl1
 ;;
 
@@ -297,12 +306,12 @@ let rec compute_adjacency_graph (il : (instr * var list * var list) list)
       print_string "\n";*)
 
       (* add edges variables that are live at the same time *)
-      if first then add_all_edges ins ins None h;
+      if first then add_all_edges ins ins None h else add_all_edges ins [] None h;
       add_all_edges outs outs None h;
       (* add edges between the kills and the out set *)
-      (* if this instruction is a <- b, then a,b don't conflict *)
       let (gens,kills) = get_gens_kills i in
       (match i with
+      (* if this instruction is a <- b, then a,b don't conflict *)
       | AssignInstr(_,Var(_,s1),VarSVal(_,Var(_,s2))) -> add_all_edges kills outs (Some((s1,s2))) h
       | _ -> add_all_edges kills outs None h );
       (* handle the special instructions *)
@@ -340,9 +349,9 @@ let graph_test (il : instr list) : ((var list) list * (var * var) list * bool) =
          try (let _ = Hashtbl.find tb (get_var_name l3) in (r,l1r@[l3])) with _ -> (l3::r, l1r)
       ) ([],[]) l1t in
       let choices = (sort_vars l2) in
-      (*print_string ("processing: "^x^"\n");
+      print_string ("processing: "^x^"\n");
       print_var_list l1t;
-      print_var_list choices; *)
+      print_var_list choices; 
       let (newl,f,l1_new2) = (match v with
       | Var(_,_) -> (try (r3@[(v,(List.hd choices))],true,l1_new) with _ -> (r3,false,l1t))
       | _ -> (r3,true,l1t)) in
