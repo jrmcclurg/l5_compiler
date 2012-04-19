@@ -245,8 +245,12 @@ let liveness (il : instr list) : ((var list) list * (var list) list) =
    List.fold_right (fun (i,ins,outs) (inl,outl) -> (ins::inl,outs::outl)) l ([],[])
 ;;
 
-let add_edge (v1 : var) (v2 : var)
+let add_edge (v1 : var) (v2o : var option)
                   (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
+   match v1 with
+   | EbpReg(_) -> ()
+   | EspReg(_) -> ()
+   | _ -> (
    let name = (get_var_name v1) in
    let (_,t) = (
       try Hashtbl.find h name
@@ -254,36 +258,47 @@ let add_edge (v1 : var) (v2 : var)
          let t2 = ((Hashtbl.create 10) : (string,var) Hashtbl.t) in
          Hashtbl.replace h name (v1,t2);
          (v1,t2)
-   ) in
-   let name2 = (get_var_name v2) in
-   if (name <> name2) then Hashtbl.replace t (get_var_name v2) v2
+   ) in (
+   match v2o with
+   | Some(EbpReg(_)) -> ()
+   | Some(EspReg(_)) -> ()
+   | Some(v2) ->
+      let name2 = (get_var_name v2) in
+      if (name <> name2) then Hashtbl.replace t (get_var_name v2) v2
+   | _ -> () ))
 ;;
 
 let add_all_edges (vl1 : var list) (vl2 : var list) (so : (var * var) option)
                   (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
+   match vl1 with
+   | [] -> List.iter (fun v2 -> add_edge v2 None h) vl2
+   | _ ->
    List.iter (fun v1 ->
       (match vl2 with
       (* if vl2 is empty, just "touch" the vars in vl1 *)
-      | [] -> 
-         let name = get_var_name v1 in
-         (try let _ = Hashtbl.find h name in ()
-         with _ ->
-            let t2 = ((Hashtbl.create 10) : (string,var) Hashtbl.t) in
-            Hashtbl.replace h name (v1,t2) )
+      | [] -> add_edge v1 None h
       | _ ->
          List.iter (fun v2 ->
+            let s1 = get_var_name v1 in
+            let s2 = get_var_name v2 in
             (match so with
             | Some(v1t,v2t) ->
-               let s1 = get_var_name v1 in
-               let s2 = get_var_name v2 in
                let s1t = get_var_name v1t in
                let s2t = get_var_name v2t in
-               (*print_string ("NOTADDING: "^s1^", "^s2^"\n");*)
-               if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then ()
+               if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then (
+                  (* just "touch" each edge *)
+                  add_edge v1 None h;
+                  add_edge v2 None h
+               )
+               (*print_string ("NOTADDING: "^s1^", "^s2^"\n")*)
                else (
-                  add_edge v1 v2 h;
-                  add_edge v2 v1 h )
-            | _ -> add_edge v1 v2 h; add_edge v2 v1 h )
+               (*print_string ("adding: "^s1^", "^s2^"\n"); *)
+                  add_edge v1 (Some(v2)) h;
+                  add_edge v2 (Some(v1)) h )
+            | _ -> 
+               (*print_string ("adding: "^s1^", "^s2^"\n"); *)
+               add_edge v1 (Some(v2)) h;
+               add_edge v2 (Some(v1)) h )
          ) vl2 )
    ) vl1
 ;;
@@ -309,15 +324,18 @@ let rec compute_adjacency_graph (il : (instr * var list * var list) list)
       List.iter (fun v -> print_var v; print_string " ") outs;
       print_string "\n";*)
 
+      let temp = (match i with
+      (* if this instruction is a <- b, then a,b don't conflict *)
+      | AssignInstr(_,v1,VarSVal(_,v2)) -> Some((v1,v2))
+      | _ -> None ) in
       (* add edges variables that are live at the same time *)
       if first then add_all_edges ins ins None h else add_all_edges ins [] None h;
-      add_all_edges outs outs None h;
+      add_all_edges outs outs temp h;
       (* add edges between the kills and the out set *)
       let (gens,kills) = get_gens_kills i in
-      (match i with
-      (* if this instruction is a <- b, then a,b don't conflict *)
-      | AssignInstr(_,v1,VarSVal(_,v2)) -> add_all_edges kills outs (Some((v1,v2))) h
-      | _ -> add_all_edges kills outs None h );
+      (*add_all_edges gens [] temp h; *) (* TODO XXX - do we need this? *)
+      (*add_all_edges kills [] temp h; *) (* TODO XXX - do we need this? *)
+      add_all_edges kills outs temp h;
       (* handle the special instructions *)
       let l1 = [EaxReg(NoPos);EbxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
       let l2 = [EdiReg(NoPos);EsiReg(NoPos)] in
@@ -344,20 +362,38 @@ let graph_test (il : instr list) : ((var list) list * (var * var) list * bool) =
    ) h [] in
    let keys2 = List.sort String.compare keys in
    (* do heuristic graph coloring *)
+   let assignments = ((Hashtbl.create (List.length l1)) : (string,var) Hashtbl.t) in (* reg -> color *)
    let (ag,colors,ret,_) = List.fold_left (fun (r2,r3,flag,l1t) x -> 
       let (v,tb) = Hashtbl.find h x in
       let tbl = Hashtbl.fold (fun _ vr res2 ->
          vr::res2
       ) tb [] in
       let (l2,l1_new) = List.fold_left (fun (r,l1r) l3 ->
+         let the_name = (get_var_name l3) in
          match r with
          | None ->
-            (try (let _ = Hashtbl.find tb (get_var_name l3) in (None,l1r@[l3])) with _ -> (Some(l3), l1r))
+            let found = (List.fold_left (fun flag t ->
+               let f = 
+               (match t with
+               | Var(_,s) ->
+                  (* look it up in the assigned reg table *)
+                  (try let test = Hashtbl.find assignments s in ((get_var_name test)=the_name)
+                  with _ -> false)
+               | _ -> if ((get_var_name t)=the_name) then true else false) in
+               (flag || f)
+            ) false tbl) in
+            if found then (None,l1r@[l3])
+            else (
+               Hashtbl.add assignments x l3;
+               (Some(l3), l1r)
+            )
+            (*(try (let _ = Hashtbl.find tb (get_var_name l3) in (None,l1r@[l3])) with _ -> (Some(l3), l1r))*)
          | Some(_) -> (r,l1r@[l3])
-      ) (None,[]) l1t in
+      ) (None,[]) l1 in (* TODO XXX - should this be l1t ? *)
       (*let choices = (sort_vars l2) in*)
       (*print_string ("processing: "^x^"\n");
-      print_var_list l1t;*)
+      print_var_list l1t;
+      (match l2 with Some(vs) -> print_var vs; print_string "\n" | _ -> ());*)
       let (newl,f,l1_new2) = (match v with
       | Var(_,_) ->
          (match l2 with

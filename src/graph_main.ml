@@ -48,7 +48,7 @@ print_string "((in ";
 print_vars_list il2 " ";
 print_string ")\n(out ";
 print_vars_list ol2 " ";
-print_string "))\n"; *)
+print_string "))\n";   *)
 
 let (ag,colors,ok) = graph_test il in
 print_string "\n\n( ";
