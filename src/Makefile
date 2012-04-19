@@ -6,6 +6,7 @@
 # L1-to-assembly Compiler
 # Spill Test
 # Liveness Test
+# Graph Test
 # Jedidiah R. McClurg
 # v. 1.0
 #
@@ -13,12 +14,21 @@
 # This builds the project using the OCaml native-code
 # compiler.
 #
-# make         - builds the project (L1c, spill, liveness binary)
+# make         - builds the project (L1c, spill, liveness,
+#                                    graph binary)
 # make clean   - deletes all intermediate build files
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L1c spill liveness L2c
+all:			L1c spill liveness graph L2c
+
+### graph test ###
+
+graph:			utils.cmx l2_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx graph_main.cmx
+			ocamlopt -o graph str.cmxa utils.cmx l2_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx graph_main.cmx
+
+graph_main.cmx:		graph_main.ml liveness_parser.cmx liveness_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
+			ocamlopt -c graph_main.ml
 
 ### liveness test ###
 

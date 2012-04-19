@@ -245,6 +245,58 @@ let liveness (il : instr list) : ((var list) list * (var list) list) =
    List.fold_right (fun (i,ins,outs) (inl,outl) -> (ins::inl,outs::outl)) l ([],[])
 ;;
 
+let rec compute_adjacency_graph (vll : (var list) list)
+                                (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
+   match vll with
+   | [] -> ()
+   | vl::more -> 
+      List.iter (fun v ->
+         let name = (get_var_name v) in
+         let (_,t) = (
+            try Hashtbl.find h name
+            with _ ->
+               let t2 = ((Hashtbl.create 10) : (string,var) Hashtbl.t) in
+               Hashtbl.replace h name (v,t2);
+               (v,t2)
+         ) in
+         List.iter (fun v2 ->
+            let name2 = (get_var_name v2) in
+            if (name <> name2) then Hashtbl.replace t (get_var_name v2) v2
+         ) vl
+      ) vl;
+      compute_adjacency_graph more h
+;;
+
+let graph_test (il : instr list) : ((var list) list * (var * var) list * bool) =
+   let (il2,ol2) = liveness il in
+   (* make sure all of the registers are connected *)
+   let l1 = [EaxReg(NoPos);EbxReg(NoPos);EcxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
+   let l = (try l1::(List.hd il2)::ol2 with _ -> l1::ol2) in
+   let h = ((Hashtbl.create (List.length l)) : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) in
+   compute_adjacency_graph l h;
+   let keys = Hashtbl.fold (fun k (v,_) res -> 
+      k::res
+   ) h [] in
+   let keys2 = List.sort String.compare keys in
+   let (ag,colors,ret,_) = List.fold_right (fun x (r2,r3,flag,l1t) -> 
+      let (v,tb) = Hashtbl.find h x in
+      let tbl = Hashtbl.fold (fun _ vr res2 ->
+         vr::res2
+      ) tb [] in
+      let (l2,l1_new) = List.fold_left (fun (r,l1r) l3 ->
+         try (let _ = Hashtbl.find tb (get_var_name l3) in (r,l1r@[l3])) with _ -> (l3::r, l1r)
+      ) ([],[]) l1t in
+      let choices = (sort_vars l2) in
+      let (newl,f) = (match v with
+      | Var(_,_) -> (try ((v,(List.hd choices))::r3,true) with _ -> (r3,false))
+      | _ -> (r3,true)) in
+      ((v::(sort_vars tbl))::r2,newl,f && flag,l1_new)
+   ) keys2 ([],[],true,l1) in
+   (ag,colors,ret)
+;;
+
+
+
 (*
  * spill il v off prefix
  * 
