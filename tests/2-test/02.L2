@@ -1,0 +1,52 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program to test function calls
+;; where callee needs to restore esi/edi
+(
+  ;; this is the program entry point
+  (
+    (someval <- 3)
+    (someval *= 2)
+    (someval += 1)
+    (esi <- someval)
+    (call :one)           ;; call the first function
+    (eax <- (print esi))  ;; print "3"
+  )
+  ;; this is the second function
+  (:two
+    (tempval8 <- 21)
+    (tempval7 <- 19)
+    (tempval6 <- 17)
+    (tempval5 <- 15)
+    (tempval4 <- 13)
+    (tempval3 <- 11)
+    (tempval2 <- 9)
+    (tempval1 <- 7)
+    (tempval <- 5)
+    (esi <- tempval)
+    (eax <- (print esi)) ;; print "2"
+    (esi <- 3)
+    (return)
+  )
+  ;; this is the first function
+  (:one
+    (anotherval <- 21)
+    (anotherval <- 19)
+    (anotherval <- 17)
+    (anotherval <- 15)
+    (anotherval <- 13)
+    (anotherval <- 11)
+    (anotherval <- 9)
+    (anotherval <- 7)
+    (anotherval <- 5)
+    (anotherval <- 3)
+    (esi <- anotherval)            
+    (eax <- (print esi)) ;; print "1"
+    (call :two)          ;; call the second function
+    (eax <- (print esi)) ;; print "1" (esi restored by callee)
+    (esi <- 7)
+    (return)
+  )
+)

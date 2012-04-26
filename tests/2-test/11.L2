@@ -7,7 +7,7 @@
 ;; a dumb n^2 selection sort on an array of numbers
 (
   ;; this is the program entry point
-  (:main
+  (
     (init <- 1)               ;; initial array value
     (len <- 20)               ;; initial length of array
 

@@ -1,0 +1,33 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program to test basic function call
+(
+  ;; this is the program entry point
+  (
+    (myvalue <- 3)
+    (myvalue *= 2)
+    (myvalue += 1)
+    (one <- :one)
+    (call one)         ;; call the first function
+    (eax <- (print myvalue))  ;; print "3"
+  )
+  ;; this is the second function
+  (:two
+    (temp <- 7)
+    (temp <- 5)
+    (eax <- (print temp)) ;; print "2"
+    (return)
+  )
+  ;; this is the first function
+  (:one
+    (eax <- 3)  
+    (temp <- 1)          
+    (temp <- eax)
+    (eax <- temp)            
+    (eax <- (print eax)) ;; print "1"
+    (call :two)          ;; call the second function
+    (return)
+  )
+)
