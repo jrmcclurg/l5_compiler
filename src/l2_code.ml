@@ -1080,30 +1080,34 @@ let rec spill (il : instr list) (v : string) (off : int64) (prefix : string) : i
 let rec compile_program (p : L2_ast.program) : L1_ast.program =
    match p with
    | Program(p,fl) -> 
-      let fl2 = List.map (fun f -> compile_func f) fl in
+      let (_,fl2) = List.fold_left (fun (first,res) f ->
+         (false,res@[compile_func f first])
+      ) (true,[]) fl in
+      (*let fl2 = List.map (fun f -> compile_func f) fl in *)
       L1_ast.Program(p, fl2)
 
-and compile_func (f : L2_ast.func) : L1_ast.func = 
+and compile_func (f : L2_ast.func) (first : bool) : L1_ast.func = 
    match f with
    | Function(p,so,il) -> 
-   let first = (match so with
-   | None -> true
-   | _ -> false) in
-   let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
+   (*let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
                   AssignInstr(p,Var(p,"<esi>"),VarSVal(p,EsiReg(p)))] in
    let restore = [AssignInstr(p,EdiReg(p),VarSVal(p,Var(p,"<edi>")));
-                  AssignInstr(p,EsiReg(p),VarSVal(p,Var(p,"<esi>")))] in
+                  AssignInstr(p,EsiReg(p),VarSVal(p,Var(p,"<esi>")))] in*)
+   let save    = [MemWriteInstr(p,EbpReg(p),(-4L),VarSVal(p,EdiReg(p)));
+                  MemWriteInstr(p,EbpReg(p),(-8L),VarSVal(p,EsiReg(p)))] in
+   let restore = [MemReadInstr(p,EdiReg(p),EbpReg(p),(-4L));
+                  MemReadInstr(p,EsiReg(p),EbpReg(p),(-8L))] in
    (* add save to the front of list, and restore before each tail-call and return *)
    let il2 = List.fold_left (fun res i ->
-      match (so,i) with
-      | (None,_) -> res @ [i]
+      match (first,i) with
+      | (true,_) -> res @ [i]
       | (_,TailCallInstr(_,_)) -> res @ restore @ [i]
       | (_,ReturnInstr(_)) -> res @ restore @ [i]
       | _ -> res @ [i]
    ) (if first then [] else save) il in
-   let (il3,num_spilled) = compile_instr_list il2 0L in
-   let il4 = if ((num_spilled > 0L) && (not first)) then
-      (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul (-4L) num_spilled))))::il3
+   let (il3,num_spilled) = compile_instr_list il2 2L in
+   let il4 = if ((num_spilled > 0L) && (not first)) then (* TODO not first? *)
+      (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3
    else il3 in
    L1_ast.Function(p,so,il4)
 

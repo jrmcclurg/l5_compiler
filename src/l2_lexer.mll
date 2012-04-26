@@ -58,9 +58,7 @@ rule token = parse
       ['a'-'z' 'A'-'Z'
        '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
 | ['a'-'z' 'A'-'Z' '-'
-   '_' '0'-'9']
-  ['a'-'z' 'A'-'Z' '-'
-   '_' '0'-'9' ':']* as s    { IDENT(s) }                        (* variable *)
+   '_' '0'-'9']* as s        { IDENT(s) }                        (* variable *)
 | eof { EOF }
 | _ { let p = Lexing.lexeme_end_p lexbuf in
       let file_name = p.Lexing.pos_fname in
