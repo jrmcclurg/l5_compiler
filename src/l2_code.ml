@@ -1080,13 +1080,14 @@ let rec spill (il : instr list) (v : string) (off : int64) (prefix : string) : i
 let rec compile_program (p : L2_ast.program) : L1_ast.program =
    match p with
    | Program(p,fl) -> 
-      let (_,fl2) = List.fold_left (fun (first,res) f ->
-         (false,res@[compile_func f first])
-      ) (true,[]) fl in
+      let (_,fl2) = List.fold_left (fun (count,res) f ->
+         (count+1,res@[compile_func f count])
+      ) (0,[]) fl in
       (*let fl2 = List.map (fun f -> compile_func f) fl in *)
       L1_ast.Program(p, fl2)
 
-and compile_func (f : L2_ast.func) (first : bool) : L1_ast.func = 
+and compile_func (f : L2_ast.func) (count : int) : L1_ast.func = 
+   let first = (count=0) in
    match f with
    | Function(p,so,il) -> 
    (*let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
@@ -1099,20 +1100,21 @@ and compile_func (f : L2_ast.func) (first : bool) : L1_ast.func =
                   MemReadInstr(p,EsiReg(p),EbpReg(p),(-8L))] in
    (* add save to the front of list, and restore before each tail-call and return *)
    let il2 = List.fold_left (fun res i ->
-      match (first,i) with
-      | (true,_) -> res @ [i]
+      match (count,i) with
+      | (0,_) -> res @ [i]
       | (_,TailCallInstr(_,_)) -> res @ restore @ [i]
       | (_,ReturnInstr(_)) -> res @ restore @ [i]
       | _ -> res @ [i]
    ) (if first then [] else save) il in
-   let (il3,num_spilled) = compile_instr_list il2 2L in
+   let (il3,num_spilled) = compile_instr_list il2 2L count in
    let il4 = if ((num_spilled > 0L) && (not first)) then (* TODO not first? *)
       (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3
    else il3 in
    L1_ast.Function(p,so,il4)
 
 (* this is a fixpoint operator where i is the current number of spilled vars *)
-and compile_instr_list (il : L2_ast.instr list) (num : int64) : (L1_ast.instr list * int64) =
+and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
+                                                              (L1_ast.instr list * int64) =
    let (at,colors,ok) = graph_color il in
    (* if the graph coloring failed... *)
    if (not ok) then (
@@ -1126,8 +1128,10 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) : (L1_ast.instr li
       match nameop with
       | None -> parse_error "register allocation failed" (* TODO don't use parse_error for this message *)
       | Some(name) ->
-         let il2 = spill il name (Int64.mul (-4L) (Int64.add num (1L))) "<s>" in
-         compile_instr_list il2 (Int64.add num (1L))
+         (*print_string ("spilling: "^name^"\n");*)
+         let il2 = spill il name (Int64.mul (-4L) (Int64.add num (1L)))
+	                         ("<s_"^(string_of_int count)^"_"^(Int64.to_string num)^">") in
+         compile_instr_list il2 (Int64.add num (1L)) count
    )
    (* if the graph coloring succeeded *)
    else (
