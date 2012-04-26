@@ -23,6 +23,7 @@ let filename = ref "";;
 Arg.parse [
 ] (fun x -> filename := x) banner_text;;
 
+(* print a list of (var list) *)
 let print_vars_list vls sp =
    List.iter (fun vl ->
       print_string "(";
@@ -42,21 +43,19 @@ let in_stream = if (!filename="") then stdin else (
 ) in
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let il = Liveness_parser.main Liveness_lexer.token lexbuf in (* run the parser, producing AST *)
-
-(*let (il2,ol2) = liveness il in 
-print_string "((in ";
-print_vars_list il2 " ";
-print_string ")\n(out ";
-print_vars_list ol2 " ";
-print_string "))\n";   *)
-
-let (ag,colors,ok) = graph_test il in
+(* get the adjacency list (ag),
+ * register assignments (colors), and
+ * any error message (ok) *)
+let (ag,colors,ok) = graph_color il in
+(* print the adjacency list *)
 print_string "\n\n( ";
 print_vars_list ag "\n";
 print_string ")\n";
 print_string "\n";
+(* if the graph was colorable... *)
 if ok then (
 print_string "(";
+(* print assignments of colors (i.e. registers) to variables *)
 List.iter (fun (v,c) -> 
    print_string "(";
    print_var v;
@@ -65,6 +64,7 @@ List.iter (fun (v,c) ->
    print_string ")\n"
 ) colors;
 print_string ")\n" 
+(* if the graph was not colorable, print error *)
 ) else (
   print_string "#f\n"
 );

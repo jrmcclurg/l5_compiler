@@ -1,25 +1,21 @@
 (*
  * EECS 322 Compiler Construction
  * Northwestern University
- * 4/9/2012
+ * 4/26/2012
  *
  * L2-to-L1 Compiler
  * Jedidiah R. McClurg
  * v. 1.0
  *
  * l2_main.ml
- * In progress!!!! Currently just prints the parsed L2 program.
  *)
 
 open L2_ast;;
+open L2_code;;
 open Utils;;
 
 (* flags and defaults for command-line args *)
-let assembly_file_name = ref "prog.S";;
-let runtime_file_name  = ref "runtime.c";;
-let output_file_name   = ref "a.out";;
-let use_32bit_arch     = ref true;;
-let do_print_only      = ref true;;
+let do_print_only      = ref false;;
 let verbose_mode       = ref false;;
 
 (* program banner text *)
@@ -42,5 +38,8 @@ let result = L2_parser.main L2_lexer.token lexbuf in (* run the parser, producin
 if !do_print_only then (
    print_program result;
    print_newline()
+) else (
+   let p = compile_program result in
+   L1_ast.print_program p
 );
 exit 0

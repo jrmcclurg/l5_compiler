@@ -8,11 +8,22 @@
  * v. 1.0
  *
  * l2_code.ml
- * In progress. Currently only has the "spill" and "liveness" functions.
+ * In progress. Currently only has the "spill", "liveness",
+ * and "graph" functions.
  *)
 
 open L2_ast;;
 open Utils;;
+
+(*********************************************************
+ **  LIVENESS                                           **
+ *********************************************************)
+
+(* prints a list of vars *)
+let print_var_list (vl : var list) = 
+      List.iter (fun v -> print_var v; print_string " ") vl;
+      print_string "\n"
+;;
 
 (* compares two variables (returns 0 iff they are equal) *)
 let compare_var (v1 : var) (v2 : var) : int =
@@ -245,167 +256,301 @@ let liveness (il : instr list) : ((var list) list * (var list) list) =
    List.fold_right (fun (i,ins,outs) (inl,outl) -> (ins::inl,outs::outl)) l ([],[])
 ;;
 
+(*********************************************************
+ **  GRAPH                                              **
+ *********************************************************)
+
+(*
+ * add_edge v1 v2o h
+ *
+ * Adds an edge from v1 to v2 in the graph h
+ *
+ * v1     - the source variable v1
+ * v2o    - an optional destination variable
+ * h      - the graph
+ *
+ * If v2o is None, then just a vertex v1 is added to the
+ * graph.  The graph is represented as a hashtable mapping
+ * source vertex names s to pairs (v,dests) where v is the
+ * var corresponding to the name s, and dests is a
+ * hashtable of destination vertices (more specifically,
+ * dests is a hashtable mapping vertex names to their
+ * corresponding vars).
+ *)
 let add_edge (v1 : var) (v2o : var option)
                   (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
+   (* leave ebp/esp registers out of the graph *)
    match v1 with
    | EbpReg(_) -> ()
    | EspReg(_) -> ()
+   (* process registers other than ebp/esp... *)
    | _ -> (
+   (* get the name of v1 *)
    let name = (get_var_name v1) in
    let (_,t) = (
+      (* see if there's a source vertex for "name" in the graph
+       * (if there is, "t" will be bound to its table
+       * of destinations) *)
       try Hashtbl.find h name
       with _ ->
+         (* if there's no source vertex "name" in the graph, add one,
+          * along with an empty table for destination vertices *)
          let t2 = ((Hashtbl.create 10) : (string,var) Hashtbl.t) in
          Hashtbl.replace h name (v1,t2);
          (v1,t2)
    ) in (
    match v2o with
+   (* ignore v2o if it is ebp/esp *)
    | Some(EbpReg(_)) -> ()
    | Some(EspReg(_)) -> ()
+   (* otherwise, if v2o okay... *)
    | Some(v2) ->
+      (* get the name of v2 *)
       let name2 = (get_var_name v2) in
+      (* if v2 is a different variable/register than v1, add
+       * an edge (v1,v2) by putting v2 in v1's dest table *)
       if (name <> name2) then Hashtbl.replace t (get_var_name v2) v2
    | _ -> () ))
 ;;
 
+(*
+ * add_all_edges vl1 vl2 so h
+ *
+ * Add all the edges (v1,v2) to graph h, where
+ * v1 is in vl1 and v2 is in vl2.
+ *
+ * vl1    - a list of source vertices (variables)
+ * vl2    - a list of destination vertices (variables)
+ * so     - optional edge to ignore
+ * h      - the graph
+ *
+ * Every edge having a source in vl1 and destination in vl2
+ * is added to the graph h, with the exception of the edge
+ * (u,v) if so = Some((u,v)), in which case u and v are just
+ * added as vertices in h.  The graph h has the same structure
+ * as the "h" parameter of the add_edge function.
+ *)
 let add_all_edges (vl1 : var list) (vl2 : var list) (so : (var * var) option)
                   (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) : unit =
+   (* if vl1 is empty, just add a vertex for each item in vl2 *)
    match vl1 with
    | [] -> List.iter (fun v2 -> add_edge v2 None h) vl2
    | _ ->
+   (* if vl1 is non-empty, iterate through its items *)
    List.iter (fun v1 ->
       (match vl2 with
-      (* if vl2 is empty, just "touch" the vars in vl1 *)
+      (* if vl2 is empty, just add a vertex for the current item of vl1 *)
       | [] -> add_edge v1 None h
       | _ ->
+         (* if vl2 is non-empty, iterate through its item *)
          List.iter (fun v2 ->
+            (* get the names for v1/v2 *)
             let s1 = get_var_name v1 in
             let s2 = get_var_name v2 in
             (match so with
+            (* if there's an edge we want to ignore... *)
             | Some(v1t,v2t) ->
                let s1t = get_var_name v1t in
                let s2t = get_var_name v2t in
+               (* if (v1,v2) matches the ignored edge, then
+                * just add disconnected vertices v1 and v2 *)
                if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then (
-                  (* just "touch" each edge *)
                   add_edge v1 None h;
                   add_edge v2 None h
                )
-               (*print_string ("NOTADDING: "^s1^", "^s2^"\n")*)
+               (* if (v1,v2) is not the ignored edge... *)
                else (
-               (*print_string ("adding: "^s1^", "^s2^"\n"); *)
+                  (* add the edges (v1,v2) and (v2,v1) *)
                   add_edge v1 (Some(v2)) h;
                   add_edge v2 (Some(v1)) h )
+            (* if there's no edge we want to ignore... *)
             | _ -> 
-               (*print_string ("adding: "^s1^", "^s2^"\n"); *)
+               (* add the edges (v1,v2) and (v2,v1) *)
                add_edge v1 (Some(v2)) h;
                add_edge v2 (Some(v1)) h )
          ) vl2 )
    ) vl1
 ;;
 
-let print_var_list (vl : var list) = 
-      List.iter (fun v -> print_var v; print_string " ") vl;
-      print_string "\n"
-;;
-
-let rec compute_adjacency_graph (il : (instr * var list * var list) list)
+(*
+ * compute_adjacency_table il h first
+ *
+ * Given an empty graph h, adds all the appropriate
+ * edges for the graph coloring analysis, based on a
+ * list of instructions il.
+ *
+ * il    - the list of instructions
+ * h     - an empty graph to populate
+ * first - whether this is the first call (rather
+ *         than a recursive one)
+ *
+ * The il should have the same structure as the instruction
+ * list returned by the liveness analysis in the
+ * liveness_helper function.  The (initially empty) graph h
+ * should have the same format as the "h" argument to the
+ * add_edge function.  The "first" argument should be true
+ * when this function is called normally.
+ *)
+let rec compute_adjacency_table (il : (instr * var list * var list) list)
                                 (h : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t)
                                 (first : bool) : unit =
    match (il) with
    | [] -> ()
    | (i,ins,outs)::more -> 
-      (*print_string "processing ";
-      if first then print_string "(first)";
-      print_string ": ";
-      print_instr i;
-      print_string "\n";
-      List.iter (fun v -> print_var v; print_string " ") ins;
-      print_string "\n";
-      List.iter (fun v -> print_var v; print_string " ") outs;
-      print_string "\n";*)
-
+      (* "temp" is a potential edge to ignore when generating the graph *)
       let temp = (match i with
-      (* if this instruction is a <- b, then a,b don't conflict *)
+      (* if this instruction is a <- b, then a,b don't conflict, so
+       * we want to ignore the edge (a,b) in the graph *)
       | AssignInstr(_,v1,VarSVal(_,v2)) -> Some((v1,v2))
+      (* for any other instructions, we don't ignore the edge *)
       | _ -> None ) in
-      (* add edges variables that are live at the same time *)
+      (* add edges between variables that are live at the same time
+       * (this means any variables that appear in any "out" set together,
+       * or any variables that appear together in the first instruction's
+       * "in" set *)
       if first then add_all_edges ins ins None h else add_all_edges ins [] None h;
       add_all_edges outs outs temp h;
       (* add edges between the kills and the out set *)
       let (gens,kills) = get_gens_kills i in
-      (*add_all_edges gens [] temp h; *) (* TODO XXX - do we need this? *)
-      (*add_all_edges kills [] temp h; *) (* TODO XXX - do we need this? *)
+      (* NOTE: we don't need to add vertices for the gens, since all the gens
+       * except for that of the first instruction go into the outs of previous
+       * instructions.  The gens for the first instruction are capture by the ins
+       * of the first instruction. *)
       add_all_edges kills outs temp h;
       (* handle the special instructions *)
+      (* l1 is all the usable registers except ecx *)
       let l1 = [EaxReg(NoPos);EbxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
+      (* l2 is the callee-save registers *)
       let l2 = [EdiReg(NoPos);EsiReg(NoPos)] in
       (match i with
+      (* any shift variable v will conflict with all usable registers except ecx
+       * (since ecx is the only allowable shift register in the x86 instruction) *)
       | SllInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges [v] l1 None h
       | SrlInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges [v] l1 None h
+      (* a destination variable for comparisons will conflict with the 
+       * callee-save registers, since the callER-save registers are the only
+       * valid destinations *)
       | LtInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
       | LeqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
       | EqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
       | _ -> ());
-      compute_adjacency_graph more h false
+      (* recursively process the remaining instructions *)
+      compute_adjacency_table more h false
 ;;
 
-let graph_test (il : instr list) : ((var list) list * (var * var) list * bool) =
+(*
+ * graph_color il
+ *
+ * Performs graph coloring based on a given instruction list il.
+
+ * The graph is returned as an adjacency table "at" which is
+ * structured as a list of tuples (src,dest1,dest2,dest3,...)
+ * representing the edges from src to various destinations.
+ *
+ * returns (at,colors,ok) where
+ * "at" is the adjacency table representing the graph,
+ * "colors" is the list of (var,reg) coloring assignments, and
+ * "ok" is true iff the graph was able to be colored properly
+ *)
+let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) =
+   (* perform the liveness analysis based on the instruction list *)
    let nl = List.map (fun i -> (i,[],[])) il in
    let il2 = liveness_helper nl in
-   (* make sure all of the registers are connected *)
+   (* make sure all of the usable registers are connected *)
    let l1 = [EaxReg(NoPos);EbxReg(NoPos);EcxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
+   (* create an empty hashtable for the graph *)
    let h = ((Hashtbl.create (List.length l1)) : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) in
+   (* add edges between all the usable registers *)
    add_all_edges l1 l1 None h;
-   compute_adjacency_graph il2 h true;
+   (* populate h with the conflict graph *)
+   compute_adjacency_table il2 h true;
+   (* find all the source vertices in graph h *)
    let keys = Hashtbl.fold (fun k (v,_) res -> 
       k::res
    ) h [] in
+   (* sort the source vertices by name *)
    let keys2 = List.sort String.compare keys in
-   (* do heuristic graph coloring *)
-   let assignments = ((Hashtbl.create (List.length l1)) : (string,var) Hashtbl.t) in (* reg -> color *)
-   let (ag,colors,ret,_) = List.fold_left (fun (r2,r3,flag,l1t) x -> 
+   (* now we do the heuristic graph coloring *)
+   (* create a hashtable for mapping variable names to their register (color) assignments *)
+   let assignments = ((Hashtbl.create (List.length l1)) : (string,var) Hashtbl.t) in
+   (* go through the graph (via the sorted keys2 list)
+    * and compute the return values (ag,colors,ok) *)
+   let (ag,colors,ok) = List.fold_left (fun (r2,r3,flag) x -> 
+      (* find the current source variable "x" in the graph
+       * (v is the corresponding var data structure, and 
+       * tb is the hashtable of destinations) *)
       let (v,tb) = Hashtbl.find h x in
+      (* get the list of destination variables *)
       let tbl = Hashtbl.fold (fun _ vr res2 ->
          vr::res2
       ) tb [] in
-      let (l2,l1_new) = List.fold_left (fun (r,l1r) l3 ->
+      (* go through all of the usable registers l1, 
+       * and compute an optional color (register)
+       * assignment l2 *)
+      let l2 = List.fold_left (fun r l3 ->
+         (* the_name is the current register name *)
          let the_name = (get_var_name l3) in
+         (* check if "r" already contains a coloring *)
          match r with
+         (* if "r" does not contain a coloring yet... *)
          | None ->
+            (* go through the list tbl of destination vertices to see
+             * if register the_name is contained there *)
             let found = (List.fold_left (fun flag t ->
                let f = 
                (match t with
+               (* if this destination vertex is a variable... *)
                | Var(_,s) ->
                   (* look it up in the assigned reg table *)
                   (try let test = Hashtbl.find assignments s in ((get_var_name test)=the_name)
                   with _ -> false)
+               (* if this destination vertex is a register... *)
                | _ -> if ((get_var_name t)=the_name) then true else false) in
                (flag || f)
             ) false tbl) in
-            if found then (None,l1r@[l3])
+            (* if register the_name was found in the dest list,
+             * we can't used it as the coloring assignment *)
+            if found then None
+            (* otherwise, if the_name was NOT found, we can use
+             * it as a coloring assignment (and add it to the
+             * table of assignments) *)
             else (
                Hashtbl.add assignments x l3;
-               (Some(l3), l1r)
+               (Some(l3))
             )
-            (*(try (let _ = Hashtbl.find tb (get_var_name l3) in (None,l1r@[l3])) with _ -> (Some(l3), l1r))*)
-         | Some(_) -> (r,l1r@[l3])
-      ) (None,[]) l1 in (* TODO XXX - should this be l1t ? *)
-      (*let choices = (sort_vars l2) in*)
-      (*print_string ("processing: "^x^"\n");
-      print_var_list l1t;
-      (match l2 with Some(vs) -> print_var vs; print_string "\n" | _ -> ());*)
-      let (newl,f,l1_new2) = (match v with
+         (* if "r" already contains a coloring, just use that one *)
+         | Some(_) -> r
+      ) None l1 in
+
+      (* based on the current source vertex v, compute newl,
+       * the updated list of coloring assignments, and
+       * f, the updated status of the coloring (true iff successful
+       * coloring) *)
+      let (newl,f) = (match v with
+      (* if the current source vertex is a variable... *)
       | Var(_,_) ->
+         (* if we found a valid coloring for v, update the list of
+          * coloring assignments *)
          (match l2 with
-         | Some(c) -> (r3@[(v,c)],true,l1_new) 
-         | _ -> (r3,false,l1t) )
-      | _ -> (r3,true,l1t)) in
-      (r2@[(v::(sort_vars tbl))],newl,f && flag,l1_new2)
-   ) ([],[],true,l1) keys2 in
-   (ag,colors,ret)
+         | Some(c) -> (r3@[(v,c)],true) 
+         | _ -> (r3,false) )
+      (* if the current source vertex is a REGISTER, we don't need
+       * to add a register assignment *)
+      | _ -> (r3,true)) in
+      (* add the row (v,dest1,dest2,dest3,...) to the adjacency
+       * table, where [dest1;dest2;dest] is the sorted version of
+       * destination list tbl.  also update the coloring assignment
+       * list (newl) and the result status (f && flag) which is
+       * true iff ALL source vertices are able to be assigned a
+       * color properly *)
+      (r2@[(v::(sort_vars tbl))],newl,f && flag)
+   ) ([],[],true) keys2 in
+   (ag,colors,ok)
 ;;
 
-
+(*********************************************************
+ **  SPILL                                              **
+ *********************************************************)
 
 (*
  * spill il v off prefix
@@ -926,4 +1071,166 @@ let rec spill (il : instr list) (v : string) (off : int64) (prefix : string) : i
       | _ -> (l@[i],k)
    ) ([],0) il in result (* start with an empty list and unique counter "0". return the expanded
                           * list of instructions *)
+;;
+
+(*********************************************************
+ **  L2-to-L1 CODE GENERATION                           **
+ *********************************************************)
+
+let rec compile_program (p : L2_ast.program) : L1_ast.program =
+   match p with
+   | Program(p,fl) -> 
+      let fl2 = List.map (fun f -> compile_func f) fl in
+      L1_ast.Program(p, fl2)
+
+and compile_func (f : L2_ast.func) : L1_ast.func = 
+   match f with
+   | Function(p,so,il) -> 
+   let first = (match so with
+   | None -> true
+   | _ -> false) in
+   let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
+                  AssignInstr(p,Var(p,"<esi>"),VarSVal(p,EsiReg(p)))] in
+   let restore = [AssignInstr(p,EdiReg(p),VarSVal(p,Var(p,"<edi>")));
+                  AssignInstr(p,EsiReg(p),VarSVal(p,Var(p,"<esi>")))] in
+   (* add save to the front of list, and restore before each tail-call and return *)
+   let il2 = List.fold_left (fun res i ->
+      match (so,i) with
+      | (None,_) -> res @ [i]
+      | (_,TailCallInstr(_,_)) -> res @ restore @ [i]
+      | (_,ReturnInstr(_)) -> res @ restore @ [i]
+      | _ -> res @ [i]
+   ) (if first then [] else save) il in
+   let (il3,num_spilled) = compile_instr_list il2 0L in
+   let il4 = if ((num_spilled > 0L) && (not first)) then
+      (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul (-4L) num_spilled))))::il3
+   else il3 in
+   L1_ast.Function(p,so,il4)
+
+(* this is a fixpoint operator where i is the current number of spilled vars *)
+and compile_instr_list (il : L2_ast.instr list) (num : int64) : (L1_ast.instr list * int64) =
+   let (at,colors,ok) = graph_color il in
+   (* if the graph coloring failed... *)
+   if (not ok) then (
+      (* just pick any old variable to spill *)
+      let nameop = List.fold_left (fun res vl -> 
+         match (List.hd vl) with
+	 | Var(_,s) -> Some(s)
+	 | _ -> res
+      ) None at in
+      (* TODO spill and try again *)
+      match nameop with
+      | None -> parse_error "register allocation failed" (* TODO don't use parse_error for this message *)
+      | Some(name) ->
+         let il2 = spill il name (Int64.mul (-4L) (Int64.add num (1L))) "<s>" in
+         compile_instr_list il2 (Int64.add num (1L))
+   )
+   (* if the graph coloring succeeded *)
+   else (
+      (* set up the replacement table *)
+      let h = ((Hashtbl.create (List.length colors)) : (string,L1_ast.reg) Hashtbl.t) in
+      List.iter (fun (v,c) -> 
+         let name = get_var_name v in
+         let r = (match c with
+	 | EsiReg(p) -> L1_ast.EsiReg(p)
+	 | EdiReg(p) -> L1_ast.EdiReg(p)
+	 | EbpReg(p) -> L1_ast.EbpReg(p)
+	 | EspReg(p) -> L1_ast.EspReg(p)
+	 | EaxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EaxReg(p))
+	 | EcxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EcxReg(p))
+	 | EdxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EdxReg(p))
+	 | EbxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EbxReg(p))
+	 | Var(p,_) -> die_error p "invalid register coloring" (* TODO this should never happen *)
+	 ) in
+	 Hashtbl.replace h name r
+      ) colors;
+      (List.map (fun i -> compile_instr i h) il, num)
+   )
+
+and compile_instr (i : instr) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.instr =
+   match i with
+   | AssignInstr(p,v,sv) ->
+      L1_ast.AssignInstr(p, compile_var v h, compile_sval sv h)
+   | MemReadInstr(p,v1,v2,i) ->
+      L1_ast.MemReadInstr(p, compile_var v1 h, compile_var v2 h, i)
+   | MemWriteInstr(p,v,i,sv) ->
+      L1_ast.MemWriteInstr(p, compile_var v h, i, compile_sval sv h)
+   | PlusInstr(p,v,tv) ->
+      L1_ast.PlusInstr(p, compile_var v h, compile_tval tv h)
+   | MinusInstr(p,v,tv) ->
+      L1_ast.MinusInstr(p, compile_var v h, compile_tval tv h)
+   | TimesInstr(p,v,tv) ->
+      L1_ast.TimesInstr(p, compile_var v h, compile_tval tv h)
+   | BitAndInstr(p,v,tv) ->
+      L1_ast.BitAndInstr(p, compile_var v h, compile_tval tv h)
+   | SllInstr(p,v,svr) ->
+      L1_ast.SllInstr(p, compile_var v h, compile_svar svr h)
+   | SrlInstr(p,v,svr) ->
+      L1_ast.SrlInstr(p, compile_var v h, compile_svar svr h)
+   | LtInstr(p,v,tv1,tv2) ->
+      (* TODO XXX - the get_creg function throws a parse error on failure - is that okay? *)
+      L1_ast.LtInstr(p, L1_ast.get_creg (compile_var v h), compile_tval tv1 h, compile_tval tv2 h)
+   | LeqInstr(p,v,tv1,tv2) ->
+      L1_ast.LeqInstr(p, L1_ast.get_creg (compile_var v h), compile_tval tv1 h, compile_tval tv2 h)
+   | EqInstr(p,v,tv1,tv2) ->
+      L1_ast.EqInstr(p, L1_ast.get_creg (compile_var v h), compile_tval tv1 h, compile_tval tv2 h)
+   | LabelInstr(p,s) ->
+      L1_ast.LabelInstr(p,s);
+   | GotoInstr(p,s) ->
+      L1_ast.GotoInstr(p,s);
+   | LtJumpInstr(p,tv1,tv2,s1,s2) ->
+      L1_ast.LtJumpInstr(p, compile_tval tv1 h, compile_tval tv2 h, s1, s2)
+   | LeqJumpInstr(p,tv1,tv2,s1,s2) ->
+      L1_ast.LeqJumpInstr(p, compile_tval tv1 h, compile_tval tv2 h, s1, s2)
+   | EqJumpInstr(p,tv1,tv2,s1,s2) ->
+      L1_ast.EqJumpInstr(p, compile_tval tv1 h, compile_tval tv2 h, s1, s2)
+   | CallInstr(p,uv) ->
+      L1_ast.CallInstr(p, compile_uval uv h)
+   | TailCallInstr(p,uv) ->
+      L1_ast.TailCallInstr(p, compile_uval uv h)
+   | ReturnInstr(p) ->
+      L1_ast.ReturnInstr(p);
+   | PrintInstr(p,tv) ->
+      L1_ast.PrintInstr(p, compile_tval tv h)
+   | AllocInstr(p,tv1,tv2) ->
+      L1_ast.AllocInstr(p, compile_tval tv1 h, compile_tval tv2 h)
+   | ArrayErrorInstr(p,tv1,tv2) ->
+      L1_ast.ArrayErrorInstr(p, compile_tval tv1 h, compile_tval tv2 h)
+
+and compile_sval (sv : sval) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.sval =
+   match sv with
+   | VarSVal(p,v) -> L1_ast.RegSVal(p, compile_var v h)
+   | IntSVal(p,i) -> L1_ast.IntSVal(p,i)
+   | LabelSVal(p,s) -> L1_ast.LabelSVal(p,s)
+
+and compile_uval (uv : uval) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.uval =
+   match uv with
+   | VarUVal(p,v) -> L1_ast.RegUVal(p, compile_var v h)
+   | IntUVal(p,i) -> L1_ast.IntUVal(p,i)
+   | LabelUVal(p,s) -> L1_ast.LabelUVal(p,s)
+
+and compile_tval (tv : tval) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.tval =
+   match tv with
+   | VarTVal(p,v) -> L1_ast.RegTVal(p, compile_var v h)
+   | IntTVal(p,i) -> L1_ast.IntTVal(p,i)
+   | LabelTVal(p,s) -> L1_ast.LabelTVal(p,s)
+
+and compile_var (v : var) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.reg =
+   match v with
+   | EsiReg(p) -> L1_ast.EsiReg(p)
+   | EdiReg(p) -> L1_ast.EdiReg(p)
+   | EbpReg(p) -> L1_ast.EbpReg(p)
+   | EspReg(p) -> L1_ast.EspReg(p)
+   | EaxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EaxReg(p))
+   | EcxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EcxReg(p))
+   | EdxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EdxReg(p))
+   | EbxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EbxReg(p))
+   | Var(p,s) ->
+      (* print_string ("compile_var: "^s^"\n"); *)
+      Hashtbl.find h s
+
+and compile_svar (sv : svar) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.sreg =
+   match sv with
+   | IntShVal(p,i) -> L1_ast.IntShVal(p,i)
+   | ShVar(p,v) -> L1_ast.EcxShReg(p)  (* TODO XXX - make sure v really matches ecx? *)
 ;;

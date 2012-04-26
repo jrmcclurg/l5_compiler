@@ -24,16 +24,16 @@ all:			L1c spill liveness graph L2c
 
 ### graph test ###
 
-graph:			utils.cmx l2_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx graph_main.cmx
-			ocamlopt -o graph str.cmxa utils.cmx l2_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx graph_main.cmx
+graph:			utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx graph_main.cmx
+			ocamlopt -o graph str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx graph_main.cmx
 
 graph_main.cmx:		graph_main.ml liveness_parser.cmx liveness_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
 			ocamlopt -c graph_main.ml
 
 ### liveness test ###
 
-liveness:		utils.cmx l2_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
-			ocamlopt -o liveness str.cmxa utils.cmx l2_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
+liveness:		utils.cmx l2_ast.cmx l1_ast.ml l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
+			ocamlopt -o liveness str.cmxa utils.cmx l2_ast.cmx l1_ast.ml l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
 
 liveness_main.cmx:	liveness_main.ml liveness_parser.cmx liveness_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
 			ocamlopt -c liveness_main.ml
@@ -58,8 +58,8 @@ liveness_lexer.ml:	liveness_lexer.mll
 
 ### spill test ###
 
-spill:			utils.cmx l2_ast.cmx l2_code.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
-			ocamlopt -o spill str.cmxa utils.cmx l2_ast.cmx l2_code.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
+spill:			utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
+			ocamlopt -o spill str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
 
 spill_main.cmx:		spill_main.ml spill_parser.cmx spill_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
 			ocamlopt -c spill_main.ml
@@ -84,10 +84,10 @@ spill_lexer.ml:		spill_lexer.mll
 
 ### L2 compiler ###
 
-L2c:	utils.cmx l2_ast.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
-	ocamlopt -o L2c str.cmxa utils.cmx l2_ast.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
+L2c:	utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
+	ocamlopt -o L2c str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
 
-l2_main.cmx:	l2_main.ml l2_parser.cmx l2_lexer.cmx l2_ast.cmx utils.cmx
+l2_main.cmx:	l2_main.ml l2_parser.cmx l2_lexer.cmx l2_ast.cmx l1_ast.cmx l1_code.cmx utils.cmx
 		ocamlopt -c l2_main.ml
 
 l2_parser.cmx:	l2_parser.ml l2_parser.cmi utils.cmx
@@ -96,7 +96,7 @@ l2_parser.cmx:	l2_parser.ml l2_parser.cmi utils.cmx
 l2_lexer.cmx:	l2_lexer.ml l2_parser.cmi l2_ast.cmx utils.cmx
 		ocamlopt -c l2_lexer.ml
 
-l2_code.cmx:	l2_code.ml l2_ast.cmx utils.cmx
+l2_code.cmx:	l2_code.ml l2_ast.cmx l1_ast.cmx utils.cmx
 		ocamlopt -c l2_code.ml
 
 l2_parser.cmi:	l2_parser.mli l2_ast.cmx utils.cmx
@@ -156,14 +156,17 @@ binary:
 		gcc -m32 -c -O2 -o runtime.o runtime.c
 		gcc -m32 -o a.out prog.o runtime.o
 
-l1_tarball:	L1c clean
-		tar -cvzf mcclurg.1.tar.gz L1* l1* Makefile utils.ml
+l1_tarball:		L1c clean
+			tar -cvzf mcclurg.1.tar.gz L1* l1* Makefile utils.ml
 
-spill_tarball:	spill clean
-		tar -cvzf mcclurg.spill.tar.gz SPILL* spill* Makefile l2_ast.ml l2_code.ml utils.ml
+spill_tarball:		spill clean
+			tar -cvzf mcclurg.spill.tar.gz SPILL* spill* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml
 
 liveness_tarball:	liveness clean
-			tar -cvzf mcclurg.liveness.tar.gz LIVENESS* liveness* Makefile l2_ast.ml l2_code.ml utils.ml
+			tar -cvzf mcclurg.liveness.tar.gz LIVENESS* liveness* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml
+
+graph_tarball:		graph clean
+			tar -cvzf mcclurg.graph.tar.gz GRAPH* graph* liveness_pars* liveness_lex* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml
 
 wc:		
 		wc -l *.m*
