@@ -1,0 +1,28 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program which prints a triangle using integers
+(
+  ;; this is the program entry point
+  (
+    (maxVar <- 8)
+    (ebx <- 1)
+
+    (counterVar <- 1)
+    :loop
+    (cjump counterVar <= maxVar :continue :end)
+    :continue
+    (ebx *= 10)
+    (ebx += counterVar)
+
+    (eax <- ebx)
+    (eax *= 2)
+    (eax += 1)
+    (eax <- (print eax))
+
+    (counterVar += 1)
+    (goto :loop)
+    :end
+  )
+)

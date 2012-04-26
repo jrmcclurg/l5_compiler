@@ -1,0 +1,28 @@
+(
+  (
+    (edi <- 2147483637)
+    (eax <- (print edi))
+    (ebx <- 1)
+    :loop1
+    (cjump ebx < 11 :continue1 :end1)
+    :continue1
+    (edi += 2)
+    (eax <- (print edi))
+    (ebx += 2)
+    (goto :loop1)
+    :end1
+    (edi <- -13)
+    (eax <- (print edi))
+    (ebx <- 1)
+    :loop2
+    (cjump ebx < 21 :continue2 :end2)
+    :continue2
+    (edi += 2)
+    (eax <- (print edi))
+    (ebx += 2)
+    (goto :loop2)
+    :end2
+    (edi <- -2147483647)
+    (eax <- (print edi))
+  )
+)

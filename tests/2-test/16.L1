@@ -1,0 +1,29 @@
+(
+  (
+    (eax <- 15)
+    (ebx <- 17)
+    (edi <- 19)
+    (esi <- 21)
+    (eax <- (print eax))
+    (goto :skip)
+    :hop
+    (eax <- (print ebx))
+    (goto :skip2)
+    :skip
+    (eax <- (print edi))
+    (goto :hop)
+    :skip2
+    (eax <- (print esi))
+    (call :func)
+    (eax <- (print edx))
+  )
+  (:func
+    (ebx <- edi)
+    (ecx <- esi)
+    (edi <- 23)
+    (edx <- 13)
+    (edi <- ebx)
+    (esi <- ecx)
+    (return)
+  )
+)

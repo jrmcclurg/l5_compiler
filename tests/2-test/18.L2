@@ -1,0 +1,23 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program which computes a sum
+(
+  ;; this is the program entry point
+  (
+    (max <- 201)  ;; sum the first 100 integers
+    (ebx <- 1)
+
+    (counter <- 1)
+    :loop
+    (cjump counter < max :continue :end)
+    :continue
+    (ebx += counter)
+    (ebx -= 1)
+    (counter += 2)
+    (goto :loop)
+    :end
+    (eax <- (print ebx))
+  )
+)

@@ -1,0 +1,38 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program to test backward array iteration
+(
+  ;; this is the program entry point
+  (
+    (temp <- 41)                 ;; store "20" in edi
+    (eax <- (allocate temp temp))
+    (edi <- eax)
+
+    (eax <- (print edi))
+
+    (theIndex <- temp)                ;; index to the end of the array
+    (theIndex -= 2)                  ;; subtract 1
+
+    :loop
+    (cjump 1 <= theIndex  :continue :done)
+    :continue
+
+    (ecx <- theIndex)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += edi)
+    (ecx += 4)
+    (edx <- (mem ecx 0))
+    (edx -= theIndex)
+    (edx -= 1)
+    ((mem ecx 0) <- edx)
+    (theIndex -= 2)
+    (goto :loop)
+
+    :done
+    (eax <- (print theIndex))
+    (eax <- (print edi))
+  )
+)

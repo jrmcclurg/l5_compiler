@@ -1,0 +1,60 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program to iterate over an array and
+;; allocate arrays based on the values at the various indices
+(
+  ;; this is the program entry point
+  (
+    (esi <- 39)               ;; store "17" in edi
+    (eax <- (allocate esi 1))
+    (edi <- eax)
+
+    (eax <- (print esi))
+
+    (counter <- 1)                ;; store "0" for initial array index
+
+    :loop
+    (cjump counter < esi :continue :done)
+    :continue
+
+    (ecx <- counter)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += edi)
+    (ecx += 4)
+    ;; (eax <- (mem ecx 0))
+    ((mem ecx 0) <- counter)
+    (counter += 2)
+    (goto :loop)
+
+    :done
+    (eax <- (print counter))
+    (eax <- (print edi))
+    (call :alloc)
+  )
+  (:alloc
+    (counter <- 1)                ;; store "0" for initial array index
+
+    :loop2
+    (cjump counter < esi :continue2 :done2)
+    :continue2
+
+    (ecx <- counter)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += edi)
+    (ecx += 4)
+    (eax <- (mem ecx 0))
+    (eax <- (allocate eax counter))
+    ;;((mem ecx 0) <- counter)
+    (eax <- (print eax))
+    (counter += 2)
+    (goto :loop2)
+
+    :done2
+    (eax <- (print edi))
+    (return)
+  )
+)

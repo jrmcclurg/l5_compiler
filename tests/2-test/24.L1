@@ -1,0 +1,13 @@
+(
+  (:main
+    (eax <- :after_1234)
+    (eax <- 27)
+    (goto :after_1234)
+    :_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789
+    (goto :the_end)
+    :after_1234
+    (goto :_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789)
+    :the_end
+    (eax <- (print eax))
+  )
+)

@@ -1,0 +1,24 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program which jumps back and forth for a while
+(
+  ;; this is the program entry point
+  (
+    (count <- 1)                ;; store "0" in len
+    (len <- 41)               ;; store "10" in len
+
+    :ping
+    (eax <- (print count))
+    (count += 2)
+    (cjump count < len :pong :done)
+
+    :pong
+    (eax <- (print count))
+    (count += 2)
+    (cjump count < len :ping :done)
+
+    :done
+  )
+)

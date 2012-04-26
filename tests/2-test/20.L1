@@ -1,0 +1,19 @@
+(
+  (
+    (esi <- 8)
+    (ebx <- 1)
+    (edi <- 1)
+    :loop
+    (cjump edi <= esi :continue :end)
+    :continue
+    (ebx *= 10)
+    (ebx += edi)
+    (eax <- ebx)
+    (eax *= 2)
+    (eax += 1)
+    (eax <- (print eax))
+    (edi += 1)
+    (goto :loop)
+    :end
+  )
+)

@@ -1,0 +1,26 @@
+(
+  (
+    (edi <- 13)
+    (eax <- edi)
+    (eax <- (print eax))
+    (edx <- edi)
+    (call :func)
+    (eax <- (print edx))
+  )
+  (:func
+    (ebx <- edi)
+    (esi <- esi)
+    (edi <- 123)
+    (cjump 0 < edx :continue :end)
+    :end
+    (edi <- ebx)
+    (esi <- esi)
+    (return)
+    :continue
+    (edx -= 2)
+    (edi <- 345)
+    (edi <- ebx)
+    (esi <- esi)
+    (tail-call :func)
+  )
+)

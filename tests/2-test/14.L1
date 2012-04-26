@@ -1,0 +1,20 @@
+(
+  (
+    (esi <- 3)
+    (ebx <- 0)
+    :loop1
+    (cjump ebx < 23 :continue1 :end1)
+    :continue1
+    (eax <- (print esi))
+    (eax <- esi)
+    (eax -= 1)
+    (eax <<= 2)
+    (eax += 1)
+    (eax <- (print eax))
+    (esi *= 2)
+    (esi -= 1)
+    (ebx += 2)
+    (goto :loop1)
+    :end1
+  )
+)

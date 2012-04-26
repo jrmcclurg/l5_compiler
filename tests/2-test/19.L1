@@ -1,0 +1,17 @@
+(
+  (
+    (ecx <- 7)
+    (ebx <- 1)
+    (eax <- 1)
+    :loop
+    (cjump eax <= ecx :continue :end)
+    :continue
+    (ebx *= eax)
+    (eax += 1)
+    (goto :loop)
+    :end
+    (ebx *= 2)
+    (ebx += 1)
+    (eax <- (print ebx))
+  )
+)

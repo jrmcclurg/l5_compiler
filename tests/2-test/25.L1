@@ -1,0 +1,9 @@
+(
+  (
+    (eax <- (allocate 13 1))
+    (ebx <- eax)
+    (eax <- (print ebx))
+    ((mem ebx 0) <- 1)
+    (eax <- (print ebx))
+  )
+)

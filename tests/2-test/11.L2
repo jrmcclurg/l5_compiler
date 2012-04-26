@@ -1,6 +1,5 @@
 ;; EECS 322 Compiler Construction
 ;; Test-2 Assignment (Test Cases for L2)
-;; Jedidiah R. McClurg
 ;; 4-26-12
 
 ;; Simple L1 program which implements
@@ -31,7 +30,6 @@
     ((mem myarray 32) <- 149)
     ((mem myarray 36) <- 87)
     ((mem myarray 40) <- 139)
-
     ((mem myarray 44)  <- 119)
     ((mem myarray 48)  <- 105)
     ((mem myarray 52) <- 93)

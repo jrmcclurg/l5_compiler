@@ -1,0 +1,16 @@
+(
+  (
+    (ecx <- 201)
+    (ebx <- 1)
+    (eax <- 1)
+    :loop
+    (cjump eax < ecx :continue :end)
+    :continue
+    (ebx += eax)
+    (ebx -= 1)
+    (eax += 2)
+    (goto :loop)
+    :end
+    (eax <- (print ebx))
+  )
+)

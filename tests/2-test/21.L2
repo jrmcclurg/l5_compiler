@@ -1,0 +1,53 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program to simulate fold operation over list
+(
+  ;; this is the program entry point
+  (
+    (listLen <- 21)               ;; store "10" in myList
+    (eax <- (allocate listLen 1))
+    (myList <- eax)
+
+    ((mem myList 4)  <- 11)
+    ((mem myList 8)  <- 41)
+    ((mem myList 12) <- 35)
+    ((mem myList 16) <- 39)
+    ((mem myList 20) <- 85)
+    ((mem myList 24) <- 161)
+    ((mem myList 28) <- 5)
+    ((mem myList 32) <- 7)
+    ((mem myList 36) <- 47)
+    ((mem myList 40) <- 9)
+
+    (eax <- (print myList))
+
+    (tempCounter <- 1)                ;; store "0" for initial array index
+    (edx <- 20001)            ;; very large value for the min
+
+    :loop
+    (cjump tempCounter < listLen :continue :done)
+    :continue
+
+    (ecx <- tempCounter)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += myList)
+    (ecx += 4)
+    (eax <- (mem ecx 0))
+    (cjump eax <= edx :update :ignore)
+    :update
+    ;;(edx <- eax)
+    :ignore
+    (edx <- eax)
+    (edx *= 2)
+    (edx -= 1)
+    ((mem ecx 0) <- edx)
+    (tempCounter += 2)
+    (goto :loop)
+
+    :done
+    (eax <- (print myList))
+  )
+)

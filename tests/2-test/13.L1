@@ -1,0 +1,21 @@
+(
+  (
+    (ebx <- 21)
+    (eax <- (allocate ebx 1))
+    (edi <- eax)
+    (eax <- (print eax))
+    (eax <- 1)
+    (edx <- ebx)
+    (edx += 10)
+    :loop1
+    (cjump eax < edx :continue1 :end1)
+    :continue1
+    (cjump eax < ebx :continue2 :err)
+    :err
+    (eax <- (array-error edi eax))
+    :continue2
+    (eax += 2)
+    (goto :loop1)
+    :end1
+  )
+)

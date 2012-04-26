@@ -1,0 +1,27 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program which does some tail recursion
+(
+  ;; this is the program entry point
+  (
+    (edi <- 13)
+    (temp <- edi)
+    (eax <- (print temp))
+    (edx <- edi)
+    (call :func)
+    (eax <- (print edx))
+  )
+  (:func
+    (temp <- 123)
+    ;; (eax <- (print edx))
+    (cjump 0 < edx :continue :end)
+    :end
+    (return)
+    :continue
+    (edx -= 2)
+    (temp <- 345)
+    (tail-call :func)
+  )
+)

@@ -1,0 +1,52 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program to test iteration and
+;; min operation over an array
+(
+  ;; this is the program entry point
+  (
+    (esi <- 21)               ;; store "10" in myarray
+    (eax <- (allocate esi 1))
+    (myarray <- eax)
+
+    ((mem myarray 4)  <- 11)
+    ((mem myarray 8)  <- 41)
+    ((mem myarray 12) <- 35)
+    ((mem myarray 16) <- 39)
+    ((mem myarray 20) <- 85)
+    ((mem myarray 24) <- 161)
+    ((mem myarray 28) <- 5)
+    ((mem myarray 32) <- 7)
+    ((mem myarray 36) <- 47)
+    ((mem myarray 40) <- 9)
+
+    (eax <- (print myarray))
+
+    (ebx <- 1)                ;; store "0" for initial array index
+    (edx <- 20001)            ;; very large value for the min
+
+    :loop
+    (cjump ebx < esi :continue :done)
+    :continue
+
+    (myecx <- ebx)
+    (myecx -= 1)
+    (myecx *= 2)
+    (myecx += myarray)
+    (myecx += 4)
+    (eax <- (mem myecx 0))
+    (cjump eax <= edx :update :ignore)
+    :update
+    (edx <- eax)
+    :ignore
+    ((mem myecx 0) <- edx)
+    (ebx += 2)
+    (goto :loop)
+
+    :done
+    (eax <- (print edx))
+    (eax <- (print myarray))
+  )
+)

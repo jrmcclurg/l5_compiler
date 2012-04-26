@@ -1,0 +1,42 @@
+(
+  (
+    (ebx <- 27)
+    (eax <- (allocate ebx 1))
+    (esi <- eax)
+    ((mem esi 4) <- 5)
+    ((mem esi 8) <- 35)
+    ((mem esi 12) <- 85)
+    ((mem esi 16) <- 39)
+    ((mem esi 20) <- 47)
+    ((mem esi 24) <- -161)
+    ((mem esi 28) <- 5)
+    ((mem esi 32) <- 7)
+    ((mem esi 36) <- 11)
+    ((mem esi 40) <- 9)
+    ((mem esi 44) <- 39)
+    ((mem esi 48) <- 47)
+    ((mem esi 52) <- 35)
+    (eax <- (print esi))
+    (edi <- 1)
+    (edx <- -20001)
+    :loop
+    (cjump edi < ebx :continue :done)
+    :continue
+    (ecx <- edi)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += esi)
+    (ecx += 4)
+    (eax <- (mem ecx 0))
+    (cjump edx <= eax :update :ignore)
+    :update
+    (edx <- eax)
+    :ignore
+    ((mem ecx 0) <- edx)
+    (edi += 2)
+    (goto :loop)
+    :done
+    (eax <- (print edx))
+    (eax <- (print esi))
+  )
+)

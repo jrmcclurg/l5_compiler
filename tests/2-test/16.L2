@@ -1,0 +1,34 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program which does some gotos
+(
+  ;; this is the program entry point
+  (
+    (temp1 <- 15)
+    (temp2 <- 17)
+    (temp3 <- 19)
+    (temp4 <- 21)
+    (eax <- (print temp1)) ;; print "7"
+    (goto :skip)
+
+    :hop
+    (eax <- (print temp2)) ;; print "8"
+    (goto :skip2)
+
+    :skip
+    (eax <- (print temp3)) ;; print "9"
+    (goto :hop)
+
+    :skip2
+    (eax <- (print temp4)) ;; print "10"
+    (call :func)
+    (eax <- (print edx))
+  )
+  (:func
+    (temp5 <- 23)
+    (edx <- 13)
+    (return)
+  )
+)

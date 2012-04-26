@@ -1,0 +1,24 @@
+(
+  (
+    (eax <- 39)
+    (esi <- eax)
+    (eax <- (print esi))
+    (ebx <- 1)
+    (edi <- 1)
+    :loop
+    (cjump 0 < ebx :continue :done)
+    :continue
+    (eax <- (allocate ebx ebx))
+    (eax <- (print eax))
+    (edi += 2)
+    (cjump edi < 17 :continue2 :done2)
+    :continue2
+    (ebx += 2)
+    (goto :loop)
+    :done2
+    (ebx -= 2)
+    (goto :loop)
+    :done
+    (eax <- (print ebx))
+  )
+)

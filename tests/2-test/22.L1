@@ -1,0 +1,15 @@
+(
+  (
+    (ebx <- 1)
+    (edi <- 41)
+    :ping
+    (eax <- (print ebx))
+    (ebx += 2)
+    (cjump ebx < edi :pong :done)
+    :pong
+    (eax <- (print ebx))
+    (ebx += 2)
+    (cjump ebx < edi :ping :done)
+    :done
+  )
+)
