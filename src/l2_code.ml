@@ -1090,27 +1090,29 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    let first = (count=0) in
    match f with
    | Function(p,so,il) -> 
-   (*let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
+   let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
                   AssignInstr(p,Var(p,"<esi>"),VarSVal(p,EsiReg(p)))] in
    let restore = [AssignInstr(p,EdiReg(p),VarSVal(p,Var(p,"<edi>")));
-                  AssignInstr(p,EsiReg(p),VarSVal(p,Var(p,"<esi>")))] in*)
-   let save    = [MemWriteInstr(p,EbpReg(p),(-4L),VarSVal(p,EdiReg(p)));
+                  AssignInstr(p,EsiReg(p),VarSVal(p,Var(p,"<esi>")))] in
+   (*let save    = [MemWriteInstr(p,EbpReg(p),(-4L),VarSVal(p,EdiReg(p)));
                   MemWriteInstr(p,EbpReg(p),(-8L),VarSVal(p,EsiReg(p)))] in
    let restore = [MemReadInstr(p,EdiReg(p),EbpReg(p),(-4L));
-                  MemReadInstr(p,EsiReg(p),EbpReg(p),(-8L))] in
+                  MemReadInstr(p,EsiReg(p),EbpReg(p),(-8L))] in*)
    (* add save to the front of list, and restore before each tail-call and return *)
    let il2 = List.fold_left (fun res i ->
       match (count,i) with
-      | (0,_) -> res @ [i]
       | (_,TailCallInstr(_,_)) -> res @ restore @ [i]
       | (_,ReturnInstr(_)) -> res @ restore @ [i]
       | _ -> res @ [i]
    ) (if first then [] else save) il in
-   let (il3,num_spilled) = compile_instr_list il2 2L count in
-   let il4 = if ((num_spilled > 0L) && (not first)) then (* TODO not first? *)
+   let (il3,num_spilled) = compile_instr_list il2 0L count in
+   let il4 = if (num_spilled > 0L) then (* TODO not first? *)
       (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3
    else il3 in
-   L1_ast.Function(p,so,il4)
+   let il5 = if ((num_spilled > 0L) && first) then
+      il4@[L1_ast.PlusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled)))]
+   else il4 in
+   L1_ast.Function(p,so,il5)
 
 (* this is a fixpoint operator where i is the current number of spilled vars *)
 and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
