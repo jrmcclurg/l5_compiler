@@ -25,6 +25,18 @@ let print_var_list (vl : var list) =
       print_string "\n"
 ;;
 
+(* print a list of (var list) *)
+let print_vars_list vls sp =
+   List.iter (fun vl ->
+      print_string "(";
+      List.iter (fun v -> 
+         print_var v;
+         print_string " "
+      ) vl;
+      print_string (")"^sp);
+   ) vls
+;;
+
 (* compares two variables (returns 0 iff they are equal) *)
 let compare_var (v1 : var) (v2 : var) : int =
   String.compare (get_var_name v1) (get_var_name v2)
@@ -356,7 +368,7 @@ let add_all_edges (vl1 : var list) (vl2 : var list) (so : (var * var) option)
                 * just add disconnected vertices v1 and v2 *)
                if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then (
                   add_edge v1 None h;
-                  add_edge v2 None h
+                  add_edge v2 None h;
                )
                (* if (v1,v2) is not the ignored edge... *)
                else (
@@ -1090,26 +1102,29 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    let first = (count=0) in
    match f with
    | Function(p,so,il) -> 
-   let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
+   let init_offset = 6L in (* number of spots on the stack to allow *)
+   (*let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
                   AssignInstr(p,Var(p,"<esi>"),VarSVal(p,EsiReg(p)))] in
    let restore = [AssignInstr(p,EdiReg(p),VarSVal(p,Var(p,"<edi>")));
-                  AssignInstr(p,EsiReg(p),VarSVal(p,Var(p,"<esi>")))] in
-   (*let save    = [MemWriteInstr(p,EbpReg(p),(-4L),VarSVal(p,EdiReg(p)));
-                  MemWriteInstr(p,EbpReg(p),(-8L),VarSVal(p,EsiReg(p)))] in
-   let restore = [MemReadInstr(p,EdiReg(p),EbpReg(p),(-4L));
-                  MemReadInstr(p,EsiReg(p),EbpReg(p),(-8L))] in*)
+                  AssignInstr(p,EsiReg(p),VarSVal(p,Var(p,"<esi>")))] in *)
+   let save    = [MemWriteInstr(p,EbpReg(p),Int64.mul init_offset (-4L),VarSVal(p,EdiReg(p)));
+                  MemWriteInstr(p,EbpReg(p),Int64.sub (Int64.mul init_offset (-4L)) 4L,VarSVal(p,EsiReg(p)))] in
+   let restore = [MemReadInstr(p,EdiReg(p),EbpReg(p),Int64.mul init_offset (-4L));
+                  MemReadInstr(p,EsiReg(p),EbpReg(p),Int64.sub (Int64.mul init_offset (-4L)) 4L)] in
    (* add save to the front of list, and restore before each tail-call and return *)
-   let il2 = List.fold_left (fun res i ->
+   let il2t = List.fold_left (fun res i ->
       match (count,i) with
       | (_,TailCallInstr(_,_)) -> res @ restore @ [i]
       | (_,ReturnInstr(_)) -> res @ restore @ [i]
       | _ -> res @ [i]
-   ) (if first then [] else save) il in
-   let (il3,num_spilled) = compile_instr_list il2 0L count in
-   let il4 = if (num_spilled > 0L) then (* TODO not first? *)
+   ) save (*(if first then [] else save)*) il in
+   let il2 = if first then il2t@restore else il2t in
+   let initial = (Int64.add 2L init_offset) in
+   let (il3,num_spilled) = compile_instr_list il2 initial count in
+   let il4 = if true (*(num_spilled > initial)*) then (* TODO not first? *)
       (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3
    else il3 in
-   let il5 = if ((num_spilled > 0L) && first) then
+   let il5 = if (true (*(num_spilled > initial)*) && first) then
       il4@[L1_ast.PlusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled)))]
    else il4 in
    L1_ast.Function(p,so,il5)
@@ -1117,26 +1132,44 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
 (* this is a fixpoint operator where i is the current number of spilled vars *)
 and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
                                                               (L1_ast.instr list * int64) =
+   (* TODO XXX - make this smarter *)
+   (*print_string ("\ntrying to color: "^(string_of_int count)^"\n");*)
+   if (num > 50L) then parse_error "register allocation took too long";
+   (*print_string ("compile_instr_list: "^(Int64.to_string num)^", "^(string_of_int count)^"\n");*)
    let (at,colors,ok) = graph_color il in
+   (* TODO *)
+   (*print_vars_list at "\n"; print_string "\n";*)
    (* if the graph coloring failed... *)
    if (not ok) then (
       (* just pick any old variable to spill *)
       let nameop = List.fold_left (fun res vl -> 
          match (List.hd vl) with
-	 | Var(_,s) -> Some(s)
+	 | Var(_,s) -> if (not ((String.get s 0) = '<')) then Some(s) else None
+	 (*| Var(_,s) -> Some(s) *)
 	 | _ -> res
       ) None at in
+      (*let nameop2 = List.fold_left (fun res vl -> 
+         let v = List.hd vl in
+         match (res, v) with
+	 | (Some(_),_) -> res
+	 | _ ->
+	    let name = get_var_name v in
+	    if (not ((String.get name 0) = '<')) then Some(name) else None
+      ) nameop at in *)
       (* TODO spill and try again *)
       match nameop with
       | None -> parse_error "register allocation failed" (* TODO don't use parse_error for this message *)
       | Some(name) ->
-         (*print_string ("spilling: "^name^"\n");*)
-         let il2 = spill il name (Int64.mul (-4L) (Int64.add num (1L)))
-	                         ("<s_"^(string_of_int count)^"_"^(Int64.to_string num)^">") in
+	 let spill_name = ("<s_"^(string_of_int count)^"_"^(Int64.to_string num)^">") in
+         (*print_string ("spilling: "^name^" to "^spill_name^"\n");*)
+         let il2 = spill il name (Int64.mul (-4L) (Int64.add num (1L))) spill_name in
+	 (*TODO*)
+	 (*List.iter (fun i -> print_instr i; print_string "\n") il2;*)
          compile_instr_list il2 (Int64.add num (1L)) count
    )
    (* if the graph coloring succeeded *)
    else (
+      (*print_string ("colored graph properly: "^(string_of_int count)^"\n");*)
       (* set up the replacement table *)
       let h = ((Hashtbl.create (List.length colors)) : (string,L1_ast.reg) Hashtbl.t) in
       List.iter (fun (v,c) -> 
