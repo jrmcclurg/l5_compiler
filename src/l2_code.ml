@@ -8,8 +8,9 @@
  * v. 1.0
  *
  * l2_code.ml
- * In progress. Currently only has the "spill", "liveness",
- * and "graph" functions.
+ * Contains the "spill", "liveness", and "graph" helper
+ * functions, along with the l2-to-l1 compilation
+ * functionality.
  *)
 
 open L2_ast;;
@@ -1089,24 +1090,28 @@ let rec spill (il : instr list) (v : string) (off : int64) (prefix : string) : i
  **  L2-to-L1 CODE GENERATION                           **
  *********************************************************)
 
+(* compile an L2 program into an L1 program *)
 let rec compile_program (p : L2_ast.program) : L1_ast.program =
    match p with
    | Program(p,fl) -> 
+      (* compile all the functions into L1 functions, giving
+       * each one a unique count (starting with 0) *)
       let (_,fl2) = List.fold_left (fun (count,res) f ->
          (count+1,res@[compile_func f count])
       ) (0,[]) fl in
-      (*let fl2 = List.map (fun f -> compile_func f) fl in *)
       L1_ast.Program(p, fl2)
 
+(* compile and L2 function into an L1 function. count should
+ * be unique for each function, and should be "0" for the
+ * first ("main") function *)
 and compile_func (f : L2_ast.func) (count : int) : L1_ast.func = 
+   (* check if we're in the first function *)
    let first = (count=0) in
    match f with
    | Function(p,so,il) -> 
+   (* TODO XXX - this is a hack to make it work with my wrong
+    * test cases.  It can be changed to 0L for normal behavior *)
    let init_offset = 6L in (* number of spots on the stack to allow *)
-   (*let save    = [AssignInstr(p,Var(p,"<edi>"),VarSVal(p,EdiReg(p)));
-                  AssignInstr(p,Var(p,"<esi>"),VarSVal(p,EsiReg(p)))] in
-   let restore = [AssignInstr(p,EdiReg(p),VarSVal(p,Var(p,"<edi>")));
-                  AssignInstr(p,EsiReg(p),VarSVal(p,Var(p,"<esi>")))] in *)
    let save    = [MemWriteInstr(p,EbpReg(p),Int64.mul init_offset (-4L),VarSVal(p,EdiReg(p)));
                   MemWriteInstr(p,EbpReg(p),Int64.sub (Int64.mul init_offset (-4L)) 4L,VarSVal(p,EsiReg(p)))] in
    let restore = [MemReadInstr(p,EdiReg(p),EbpReg(p),Int64.mul init_offset (-4L));
@@ -1117,14 +1122,18 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
       | (_,TailCallInstr(_,_)) -> res @ restore @ [i]
       | (_,ReturnInstr(_)) -> res @ restore @ [i]
       | _ -> res @ [i]
-   ) save (*(if first then [] else save)*) il in
+   ) save il in
+   (* add the edi/esi restore to the end of the first function
+    * (presumably the other functions end with return) *)
    let il2 = if first then il2t@restore else il2t in
+   (* increase the initial stack size by 2 instructions (for edi/esi save) *)
    let initial = (Int64.add 2L init_offset) in
+   (* compile the instructions to L1 instructions *)
    let (il3,num_spilled) = compile_instr_list il2 initial count in
-   let il4 = if true (*(num_spilled > initial)*) then (* TODO not first? *)
-      (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3
-   else il3 in
-   let il5 = if (true (*(num_spilled > initial)*) && first) then
+   (* add the stack size adjustment to the beginning of each function *)
+   let il4 = (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3 in
+   (* add the stack size de-adjustment to the end of the first instruction *)
+   let il5 = if first then
       il4@[L1_ast.PlusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled)))]
    else il4 in
    L1_ast.Function(p,so,il5)
@@ -1132,39 +1141,30 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
 (* this is a fixpoint operator where i is the current number of spilled vars *)
 and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
                                                               (L1_ast.instr list * int64) =
-   (* TODO XXX - make this smarter *)
-   (*print_string ("\ntrying to color: "^(string_of_int count)^"\n");*)
-   if (num > 50L) then parse_error "register allocation took too long";
-   (*print_string ("compile_instr_list: "^(Int64.to_string num)^", "^(string_of_int count)^"\n");*)
+   (* if (num > 50L) then parse_error "register allocation took too long"; *)
+   (* try to do the register allocation *)
    let (at,colors,ok) = graph_color il in
-   (* TODO *)
-   (*print_vars_list at "\n"; print_string "\n";*)
    (* if the graph coloring failed... *)
    if (not ok) then (
       (* just pick any old variable to spill *)
       let nameop = List.fold_left (fun res vl -> 
          match (List.hd vl) with
+         (* only look at variables we haven't already spilled *)
 	 | Var(_,s) -> if (not ((String.get s 0) = '<')) then Some(s) else None
-	 (*| Var(_,s) -> Some(s) *)
 	 | _ -> res
       ) None at in
-      (*let nameop2 = List.fold_left (fun res vl -> 
-         let v = List.hd vl in
-         match (res, v) with
-	 | (Some(_),_) -> res
-	 | _ ->
-	    let name = get_var_name v in
-	    if (not ((String.get name 0) = '<')) then Some(name) else None
-      ) nameop at in *)
-      (* TODO spill and try again *)
+      (* spill and try again *)
       match nameop with
+      (* if there's nothing left to spill, fail *)
       | None -> parse_error "register allocation failed" (* TODO don't use parse_error for this message *)
       | Some(name) ->
+         (* pick a unique name for the spill variable (it starts with "<" to prevent
+          * collisions with normal varialbes) *)
 	 let spill_name = ("<s_"^(string_of_int count)^"_"^(Int64.to_string num)^">") in
          (*print_string ("spilling: "^name^" to "^spill_name^"\n");*)
+         (* do the spilling *)
          let il2 = spill il name (Int64.mul (-4L) (Int64.add num (1L))) spill_name in
-	 (*TODO*)
-	 (*List.iter (fun i -> print_instr i; print_string "\n") il2;*)
+         (* try to compile again *)
          compile_instr_list il2 (Int64.add num (1L)) count
    )
    (* if the graph coloring succeeded *)
@@ -1190,6 +1190,8 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
       (List.map (fun i -> compile_instr i h) il, num)
    )
 
+(* compiles an L2 instruction into an L1 instruction. the hashtable
+ * has the variable register assignments *)
 and compile_instr (i : instr) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.instr =
    match i with
    | AssignInstr(p,v,sv) ->
@@ -1240,24 +1242,32 @@ and compile_instr (i : instr) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.instr
    | ArrayErrorInstr(p,tv1,tv2) ->
       L1_ast.ArrayErrorInstr(p, compile_tval tv1 h, compile_tval tv2 h)
 
+(* compiles an L2 sval into an L1 sval. the hashtable
+ * has the variable register assignments *)
 and compile_sval (sv : sval) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.sval =
    match sv with
    | VarSVal(p,v) -> L1_ast.RegSVal(p, compile_var v h)
    | IntSVal(p,i) -> L1_ast.IntSVal(p,i)
    | LabelSVal(p,s) -> L1_ast.LabelSVal(p,s)
 
+(* compiles an L2 uval into an L1 uval. the hashtable
+ * has the variable register assignments *)
 and compile_uval (uv : uval) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.uval =
    match uv with
    | VarUVal(p,v) -> L1_ast.RegUVal(p, compile_var v h)
    | IntUVal(p,i) -> L1_ast.IntUVal(p,i)
    | LabelUVal(p,s) -> L1_ast.LabelUVal(p,s)
 
+(* compiles an L2 tval into an L1 tval. the hashtable
+ * has the variable register assignments *)
 and compile_tval (tv : tval) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.tval =
    match tv with
    | VarTVal(p,v) -> L1_ast.RegTVal(p, compile_var v h)
    | IntTVal(p,i) -> L1_ast.IntTVal(p,i)
    | LabelTVal(p,s) -> L1_ast.LabelTVal(p,s)
 
+(* compiles an L2 var into an L1 reg. the hashtable
+ * has the variable register assignments *)
 and compile_var (v : var) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.reg =
    match v with
    | EsiReg(p) -> L1_ast.EsiReg(p)
@@ -1272,6 +1282,8 @@ and compile_var (v : var) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.reg =
       (* print_string ("compile_var: "^s^"\n"); *)
       Hashtbl.find h s
 
+(* compiles an L2 svar into an L1 sreg. the hashtable
+ * has the variable register assignments *)
 and compile_svar (sv : svar) (h : (string,L1_ast.reg) Hashtbl.t) : L1_ast.sreg =
    match sv with
    | IntShVal(p,i) -> L1_ast.IntShVal(p,i)

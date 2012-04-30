@@ -1,0 +1,64 @@
+#####################################################################
+#  EECS 322 Compiler Construction
+#  Northwestern University
+#  4/30/2012
+#  
+#  L2-to-L1 Compiler
+#  Jedidiah R. McClurg
+#  v. 1.0
+#####################################################################
+
+#####################################################################
+#  DESCRIPTION
+#####################################################################
+
+This is a compiler for the L2 language.  It does register allocation
+and outputs an equivalent L1 program.
+
+The project is implemented in OCaml and consists of the following
+files:
+
+L2_README	    - this file
+L2c                 - the L2 compiler binary (64bit Linux)
+Makefile            - GNU makefile for the project
+l2_lexer.mll        - ocamllex lexer specification
+l2_parser.mly       - ocamlyacc parser specification
+l2_main.ml          - program entry-point
+l2_ast.ml           - abstract data types for the L2 AST
+l2_code.ml          - code-generation and compilation utilities
+l1_ast.ml           - abstract data types for the L1 AST
+l1_code.ml          - code-generation and compilation utilities
+utils.ml            - general utilities
+
+#####################################################################
+#  INSTALLATION
+#####################################################################
+
+The project has been built/tested only on 64bit Linux.  Thus,
+the included L2c binary will work only on 64bit systems.
+
+For building the project on other systems, the necessary packages are
+the ocaml package for the OCaml development tools, the gcc package
+for the GNU C compiler development tools, and possibly the
+gcc-multilib package to provide gcc with 32bit support.
+
+To build, simply type
+  make
+
+This should generate the L2 Compiler binary, L2c.  After this,
+typing
+  make clean
+should clear out any intermediate build files.
+
+#####################################################################
+#  USAGE
+#####################################################################
+
+Given an L2 program test.L2, the equivalent L1 code can be generated
+by typing
+  ./L2c test.L2
+
+This should output the L1 code.
+
+If L2c is run with no command-line options, it reads the input
+file from stdin.

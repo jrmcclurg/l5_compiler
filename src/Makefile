@@ -7,6 +7,7 @@
 # Spill Test
 # Liveness Test
 # Graph Test
+# L2-to-L1 Compiler
 # Jedidiah R. McClurg
 # v. 1.0
 #
@@ -15,12 +16,13 @@
 # compiler.
 #
 # make         - builds the project (L1c, spill, liveness,
-#                                    graph binary)
+#                                    graph, L2c binary)
 # make clean   - deletes all intermediate build files
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L1c spill liveness graph L2c
+all:			L2c
+#all:			L1c spill liveness graph L2c
 
 ### graph test ###
 
@@ -167,6 +169,9 @@ liveness_tarball:	liveness clean
 
 graph_tarball:		graph clean
 			tar -cvzf mcclurg.graph.tar.gz GRAPH* graph* liveness_pars* liveness_lex* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml
+
+l2c_tarball:		graph clean
+			tar -cvzf mcclurg.2.tar.gz L2* Makefile l2* l1_code.ml l1_ast.ml utils.ml
 
 wc:		
 		wc -l *.m*
