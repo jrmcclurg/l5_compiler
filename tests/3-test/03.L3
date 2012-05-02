@@ -1,0 +1,23 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 5-3-12
+
+;; Simple L3 program to test function calls
+;; with arguments and return values
+(
+  ;; this is the program entry point
+  (let ([eaxv (print 4)])  ;; use esi (print "4")
+  (let ([t (:one 1 2)])    ;; call the first function
+  (let ([eaxv (print t)]) eaxv  ;; print "4"
+  )))
+  ;; this is the second function
+  (:two (x y)
+    (let ([esiv x])
+    (let ([eaxv (print esiv)]) 4)) ;; print "2"
+  )
+  ;; this is the first function
+  (:one (x y)
+    (let ([eaxv (print x)])  ;; print "1"
+    (let ([t (:two 2 1)]) 4))    ;; call the second function
+  )
+)

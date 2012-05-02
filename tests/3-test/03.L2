@@ -1,0 +1,56 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-2-12
+
+;; Simple L2 program to test function calls
+;; where callee needs to restore esi/edi
+;; using the stack
+(
+  ;; this is the program entry point
+  (
+    (howmuch <- 4)
+    (ival <- 9)
+    (esi <- ival)
+
+    (esp -= howmuch)            ;; allocate space for one word
+    ((mem ebp -4) <- esi) ;; push esi to the stack (save the old value)
+
+    (eax <- (print esi))  ;; use esi (print "4")
+
+    (call :one)         ;; call the first function
+
+    (esi <- (mem ebp -4)) ;; pop esi off the stack (restore the old value)
+    (ival <- esi)
+    (esp += howmuch)            ;; dealocate stack space
+
+    (eax <- (print ival))  ;; print "4"
+  )
+  ;; this is the second function
+  (:two
+    (esp -= 4)            ;; allocate space for one word
+    ((mem ebp -4) <- esi) ;; push esi to the stack (save the old value)
+
+    (esi <- 5)
+    (eax <- (print esi)) ;; print "2"
+
+    (esi <- (mem ebp -4)) ;; pop esi off the stack (restore the old value)
+    (esp += 4)            ;; dealocate stack space
+
+    (return)
+  )
+  ;; this is the first function
+  (:one
+    (esp -= 4)            ;; allocate space for one word
+    ((mem ebp -4) <- esi) ;; push esi to the stack (save the old value)
+
+    (esi <- 3)            ;; use esi in our local function
+    (eax <- (print esi))  ;; print "1"
+
+    (call :two)           ;; call the second function
+
+    (esi <- (mem ebp -4)) ;; pop esi off the stack (restore the old value)
+    (esp += 4)            ;; dealocate stack space
+
+    (return)
+  )
+)
