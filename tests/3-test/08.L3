@@ -1,0 +1,38 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program to test max array operation
+(
+  ;; this is the program entry point
+  (let ([temp 13])
+  (let ([esiv temp])               ;; store "20" in esiv
+  (let ([eaxv (new-array esiv 0)])
+  (let ([ediv eaxv])
+  (let ([temp (aset ediv 0 2)])
+  (let ([temp (aset ediv 1 17)])
+  (let ([temp (aset ediv 2 42)])
+  (let ([temp (aset ediv 3 19)])
+  (let ([temp (aset ediv 4 23)])
+  (let ([temp (aset ediv 5 -81)])
+  (let ([temp (aset ediv 6 2)])
+  (let ([temp (aset ediv 7 3)])
+  (let ([temp (aset ediv 8 5)])
+  (let ([temp (aset ediv 9 4)])
+  (let ([temp (aset ediv 10 19)])
+  (let ([temp (aset ediv 11 23)])
+  (let ([temp (aset ediv 12 17)])
+  (let ([eaxv (print ediv)])
+  (let ([a2 (:amax ediv 0 -20000)])
+  (let ([eaxv (print a2)])
+       (print ediv)))))))))))))))))))))
+  (:amax (arr pos max)
+  (let ([len (alen arr)])
+  (let ([c (= pos len)])
+  (if c max (let ([t (aref arr pos)])
+            (let ([p2 (+ pos 1)])
+            (let ([newMax (:max2 t max)])
+            (let ([temp (aset arr pos newMax)])
+            (:amax arr p2 newMax)))))))))
+   (:max2 (a b) (let ([v (< a b)]) (if v b a)))
+)

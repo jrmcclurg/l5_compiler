@@ -1,0 +1,55 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 4-26-12
+
+;; Simple L2 program to test iteration and
+;; max operation over an array
+(
+  ;; this is the program entry point
+  (
+    (length <- 27)               ;; store "13" in theArray
+    (eax <- (allocate length 1))
+    (theArray <- eax)
+
+    ((mem theArray 4)  <- 5)
+    ((mem theArray 8)  <- 35)
+    ((mem theArray 12) <- 85)
+    ((mem theArray 16) <- 39)
+    ((mem theArray 20) <- 47)
+    ((mem theArray 24) <- -161)
+    ((mem theArray 28) <- 5)
+    ((mem theArray 32) <- 7)
+    ((mem theArray 36) <- 11)
+    ((mem theArray 40) <- 9)
+    ((mem theArray 44) <- 39)
+    ((mem theArray 48) <- 47)
+    ((mem theArray 52)  <- 35)
+
+    (eax <- (print theArray))
+
+    (myCounter <- 1)                ;; store "0" for initial array index
+    (edx <- -20001)           ;; very small value for the min
+
+    :loop
+    (cjump myCounter < length :continue :done)
+    :continue
+
+    (ecx <- myCounter)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += theArray)
+    (ecx += 4)
+    (eax <- (mem ecx 0))
+    (cjump edx <= eax :update :ignore)
+    :update
+    (edx <- eax)
+    :ignore
+    ((mem ecx 0) <- edx)
+    (myCounter += 2)
+    (goto :loop)
+
+    :done
+    (eax <- (print edx))
+    (eax <- (print theArray))
+  )
+)
