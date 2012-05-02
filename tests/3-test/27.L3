@@ -1,0 +1,4 @@
+(
+   (let ([result (:rec 5 10)]) (print result))
+   (:rec (a n) (let ([c (= n 0)]) (if c 0 (let ([x (- n 1)]) (let ([y (:rec x a)]) (+ a y))))))
+)

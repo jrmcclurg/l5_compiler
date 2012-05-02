@@ -1,0 +1,30 @@
+(
+   (
+      (edx <- 5)
+      (ecx <- 10)
+      (call :rec)
+      (t <- eax)
+      (t *= 2)
+      (t += 1)
+      (eax <- (print t))
+   )
+   (:rec
+      (a <- edx)
+      (n <- ecx)
+      (c <- n = 0)
+      (cjump c = 1 :yes :no)
+      :yes
+      (eax <- 0)
+      (return)
+      :no
+      (edx <- a)
+      (t <- n)
+      (t -= 1)
+      (ecx <- t)
+      (call :rec)
+      (t2 <- eax)
+      (t2 += a)
+      (eax <- t2)
+      (return)
+   )
+)

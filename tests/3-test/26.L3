@@ -1,0 +1,9 @@
+(
+   (let ([x 10])
+   (let ([y 20])
+   (let ([z 30])
+   (let ([r (:adder3 x y z)]) (print r)))))
+   (:adder2 (a b) (+ a b))
+   (:adder3 (a b c) (let ([x (:adder2 a b)]) (+ x c)))
+
+)

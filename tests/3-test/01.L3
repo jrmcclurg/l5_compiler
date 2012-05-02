@@ -1,0 +1,23 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program to test basic function call
+(
+  ;; this is the program entry point
+  (let ([myvalue 1])
+  (let ([myvalue1 (* myvalue 2)])
+  (let ([myvalue2 (+ myvalue1 1)])
+  (let ([one :one])
+  (let ([temp (one 0)])
+       (print myvalue2))))))
+  (:two (x) (let ([temp 3])
+            (let ([temp 2])
+                 (print temp))))
+  (:one (x) (let ([eaxv 1])
+            (let ([temp 1])
+            (let ([temp eaxv])
+            (let ([eaxv temp])
+            (let ([t (print eaxv)])
+                 (:two 0)))))))
+)
