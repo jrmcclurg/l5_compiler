@@ -1,0 +1,50 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program to test recursion and 
+;; access to the stack via very deep recursion.
+(
+  ;; this is the program entry point
+  (
+    (recursionAmnt <- 100)
+    (recursionAmnt *= 2)
+    (recursionAmnt += 1)
+    (edi <- recursionAmnt)          ;; store "100" in edi
+
+    (esp -= 4)            ;; allocate space for one word
+    ((mem ebp -4) <- edi) ;; push edi to the stack (save the old value)
+
+    (eax <- (print edi))  ;; use edi (print "4")
+
+    (call :recurse)       ;; call the first function (it calls itself
+                          ;; until the edi counter hits 0)
+
+    (edi <- (mem ebp -4)) ;; pop edi off the stack (restore the old value)
+    (esp += 4)            ;; dealocate stack space
+  )
+  ;; this is the function
+  (:recurse
+    (stackAmnt1 <- 1)
+    (stackAmnt2 <- 3)
+    (esp -= stackAmnt1)            ;; allocate space for one word
+    (esp -= stackAmnt2)
+    ((mem ebp -4) <- edi) ;; push edi to the stack (save the old value)
+
+    (edi -= 2)            ;; decrement by 1
+    (eax <- edi)
+    (eax <- (print eax))  ;; print "1"
+
+    (cjump edi = 1 :done :repeat) ;; if edi == "0", goto done, else recurse
+
+    :repeat
+    (call :recurse)
+
+    :done
+    (edi <- (mem ebp -4)) ;; pop edi off the stack (restore the old value)
+    (esp += stackAmnt2)            ;; dealocate stack space
+    (esp += stackAmnt1)
+
+    (return)
+  )
+)

@@ -1,0 +1,19 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program to test very deep recursion.
+(
+  ;; this is the program entry point
+  (let ([recursionAmnt 100])
+  (let ([eaxv (print recursionAmnt)])        ;; use edi (print "4")
+  (let ([c (:recurse recursionAmnt)]) c)))  ;; call the first function (it calls itself
+                                             ;; until the value hits 0)
+  ;; this is the function
+  (:recurse (x)
+    (let ([y (- x 1)])    ;; decrement by 1
+    (let ([t (print y)])  ;; print the value
+    (let ([d (= y 0)])
+    (if d 0 (:recurse y)))))
+  )
+)

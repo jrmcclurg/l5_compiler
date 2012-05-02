@@ -1,0 +1,22 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program to test backward array iteration
+(
+  ;; this is the program entry point
+  (let ([temp 20])
+  (let ([esiv temp])               ;; store "20" in esiv
+  (let ([eaxv (new-array esiv temp)])
+  (let ([ediv eaxv])
+  (let ([eaxv (print ediv)])
+  (let ([a2 (:iterb ediv temp temp)])
+  (let ([eaxv (print a2)])
+       (print ediv))))))))
+  (:iterb (arr pos len)
+  (let ([p2 (- pos 1)])
+  (let ([c (= p2 -1)])
+  (if c p2 (let ([ap (aref arr p2)])
+  (let ([v (- ap pos)])
+  (let ([t (aset arr p2 v)]) (:iterb arr p2 len))))))))
+)

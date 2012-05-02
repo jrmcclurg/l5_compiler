@@ -1,0 +1,19 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program to test forward array iteration
+(
+  ;; this is the program entry point
+  (let ([temp 20])
+  (let ([esiv temp])               ;; store "20" in esiv
+  (let ([eaxv (new-array esiv 0)])
+  (let ([ediv eaxv])
+  (let ([eaxv (print ediv)])
+  (let ([a2 (:iter ediv 0 temp)])
+  (let ([eaxv (print a2)])
+       (print ediv))))))))
+  (:iter (arr pos len)
+  (let ([c (= pos len)])
+  (if c pos (let ([t (aset arr pos pos)]) (let ([p2 (+ pos 1)]) (:iter arr p2 len))))))
+)
