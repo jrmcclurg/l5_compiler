@@ -1,0 +1,12 @@
+(:begin
+ (ecx <- 20)
+ (eax <- 10)
+ (edx <- eax)
+ (call :foo)
+ (eax <- ebx)
+ (goto :end)
+ :foo
+ (eax <- (print edx))
+ (return)
+ :end
+ )

@@ -1,0 +1,4 @@
+((a *= 52)
+ (a *= 52)
+ (eax <- (array-error a a))
+ (eax <- (array-error 1 2)))

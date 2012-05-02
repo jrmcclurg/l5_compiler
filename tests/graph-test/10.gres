@@ -1,0 +1,19 @@
+
+
+( (eax ebx ecx edi edx esi t1 t2 t3 t4 )
+(ebx eax ecx edi edx esi )
+(ecx eax ebx edi edx esi t1 t2 t3 t4 )
+(edi eax ebx ecx edx esi t1 t2 t3 t4 )
+(edx eax ebx ecx edi esi t1 t2 t3 t4 )
+(esi eax ebx ecx edi edx t1 t2 t3 t4 )
+(t1 eax ecx edi edx esi )
+(t2 eax ecx edi edx esi )
+(t3 eax ecx edi edx esi )
+(t4 eax ecx edi edx esi )
+)
+
+((t1 ebx)
+(t2 ebx)
+(t3 ebx)
+(t4 ebx)
+)
