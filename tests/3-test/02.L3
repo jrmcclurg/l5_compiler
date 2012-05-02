@@ -1,0 +1,48 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program to test function calls
+;; with an argument
+(
+  ;; this is the program entry point
+  (let ([someval 1])
+  (let ([someval2 (* someval 2)])
+  (let ([someval3 (+ someval2 1)])
+  (let ([esiv someval3])
+  (let ([r (:one 1)])
+       (print esiv))))))
+  ;; this is the second function
+  (:two (x)
+    (let ([tempval8 21])
+    (let ([tempval7 19])
+    (let ([tempval6 17])
+    (let ([tempval5 15])
+    (let ([tempval4 13])
+    (let ([tempval3 11])
+    (let ([tempval2 9])
+    (let ([tempval1 7])
+    (let ([tempval x])
+    (let ([esiv tempval])
+    (let ([t (print esiv)])
+    (let ([esiv 3]) esiv))))))))))))
+  )
+  ;; this is the first function
+  (:one (x)
+    (let ([anotherval 21])
+    (let ([anotherval 19])
+    (let ([anotherval 17])
+    (let ([anotherval 15])
+    (let ([anotherval 13])
+    (let ([anotherval 11])
+    (let ([anotherval 9])
+    (let ([anotherval 7])
+    (let ([anotherval 5])
+    (let ([anotherval x])
+    (let ([esiv anotherval])            
+    (let ([eaxv (print esiv)]) ;; print "1"
+    (let ([t (:two 2)])      ;; call the second function
+    (let ([eaxv (print esiv)]) ;; print "1"
+    (let ([esiv 7]) esiv)))))))))))))))
+  )
+)
