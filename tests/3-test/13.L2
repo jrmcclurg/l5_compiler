@@ -1,0 +1,33 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which demos faulty
+;; array access indicated by the array-error function
+(
+  ;; this is the program entry point
+  (
+    (test <- 21)
+    (eax <- (allocate test 1))
+    (edi <- eax)
+
+    (eax <- (print eax))
+
+    (counter <- 1)
+    (edx <- test)
+    (edx += 10)
+    :loop1
+    (cjump counter < edx :continue1 :end1)
+    :continue1
+
+    (cjump counter < test :continue2 :err)
+    :err
+    (eax <- (array-error edi counter))
+
+    :continue2
+
+    (counter += 2)
+    (goto :loop1)
+    :end1
+  )
+)

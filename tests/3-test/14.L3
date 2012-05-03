@@ -1,0 +1,18 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program which does some arithmetic
+(
+  ;; this is the program entry point
+  (let ([count 11])
+  (:loop count 0 1) )
+  (:loop (count counter esiv)
+    (let ([c (<= count counter)])
+    (let ([shifter (* esiv 4)])
+    (let ([temp (print esiv)])
+    (let ([temp (print shifter)])
+    (let ([counter2 (+ counter 1)])
+    (let ([esiv2 (* esiv 2)])
+    (if c 0 (:loop count counter2 esiv2) )))))))))
+)

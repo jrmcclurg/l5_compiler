@@ -1,0 +1,40 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which does some counting
+;; with very large numbers to test numeric
+;; bounds
+(
+  ;; this is the program entry point
+  (
+    (testb <- 2147483637)
+    (eax <- (print testb))
+
+    (counter <- 1)
+    :loop1
+    (cjump counter < 11 :continue1 :end1)
+    :continue1
+    (testb += 2)
+    (eax <- (print testb))
+    (counter += 2)
+    (goto :loop1)
+    :end1
+
+    (testb <- -13)
+    (eax <- (print testb))
+
+    (counter <- 1)
+    :loop2
+    (cjump counter < 21 :continue2 :end2)
+    :continue2
+    (testb += 2)
+    (eax <- (print testb))
+    (counter += 2)
+    (goto :loop2)
+    :end2
+
+    (testb <- -2147483647)
+    (eax <- (print testb))
+  )
+)

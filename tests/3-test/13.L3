@@ -1,0 +1,17 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program which demos faulty
+;; array access indicated by the array-error function
+(
+  ;; this is the program entry point
+  (let ([len 10])
+  (let ([arr (new-array len 0)])
+  (let ([temp (print arr)])
+  (:access arr len 0) ))) 
+  (:access (arr len index)
+    (let ([next (+ index 1)])
+    (let ([c (< len index)])
+    (if c 0 (let ([temp (aset arr index 1)]) (:access arr len next)) ))))
+)

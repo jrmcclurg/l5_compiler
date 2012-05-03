@@ -1,0 +1,29 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which does some arithmetic
+(
+  ;; this is the program entry point
+  (
+    ;; do some stuff with powers of two and left-shift
+    (esi <- 3)
+    (counter <- 0)
+    :loop1
+    (cjump counter < 23 :continue1 :end1)
+    :continue1
+
+    (eax <- (print esi))
+    (shifter <- esi)
+    (shifter -= 1)
+    (shifter <<= 2)
+    (shifter += 1)
+    (eax <- (print shifter))
+
+    (esi *= 2)
+    (esi -= 1)
+    (counter += 2)
+    (goto :loop1)
+    :end1
+  )
+)

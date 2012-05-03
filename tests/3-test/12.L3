@@ -1,0 +1,20 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program which does some counting
+;; with very large numbers to test numeric
+;; bounds
+(
+  ;; this is the program entry point
+  (let ([count 1073741818])
+  (let ([temp (:doIt count 6 1)])
+  (let ([count -1073741824])
+  (let ([temp (:doIt -7 11 1)]) (print count) ))))
+  (:doIt (count num inc)
+    (let ([num2 (- num inc)])
+    (let ([c (= num 1)])
+    (if c (print count)
+          (let ([count2 (+ count inc)])
+          (let ([temp (print count)]) (:doIt count2 num2 inc) ))))))
+)
