@@ -1,0 +1,27 @@
+;; EECS 322 Compiler Construction
+;; Test-2 Assignment (Test Cases for L2)
+;; 5-3-12
+
+;; Simple L3 program to iterate over an array and
+;; allocate arrays based on the values at the various indices
+(
+  ;; this is the program entry point
+  (let ([num 19])
+  (let ([arr (new-array num 0)])
+  (let ([temp (print num)])
+  (let ([temp (:create arr 0)])
+  (let ([temp2 (print temp)])
+  (let ([temp3 (:alloc arr 0)]) (print arr) ))))))
+  (:create (arr index)
+     (let ([next (+ index 1)])
+     (let ([len (alen arr)])
+     (let ([c (= index len)])
+     (if c index (let ([temp (aset arr index index)]) (:create arr next)) )))))
+  (:alloc (arr index)
+     (let ([next (+ index 1)])
+     (let ([len (alen arr)])
+     (let ([c (= index len)])
+     (if c index (let ([temp (new-array index index)])
+                 (let ([temp2 (print temp)]) (:alloc arr next)) ))))))
+  )
+)
