@@ -1,0 +1,16 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which does some tail recursion
+(
+  ;; this is the program entry point
+  (let ([num 6])
+  (let ([temp (print num)])
+  (let ([result (:func num)])
+    (print result) )))
+  (:func (num)
+    (let ([next (- num 1)])
+    (let ([c (< num 0)])
+    (if c num (:func next)) )))
+)

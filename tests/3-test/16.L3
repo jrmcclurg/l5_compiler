@@ -1,0 +1,21 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program which does some gotos
+(
+  ;; this is the program entry point
+  (let ([temp1 7])
+  (let ([temp2 8])
+  (let ([temp3 9])
+  (let ([temp4 10])
+  (let ([temp (:doStuff temp1)])
+  (let ([temp (:doStuff temp3)])
+  (let ([temp (:doStuff temp2)])
+  (let ([temp (:doStuff temp4)])
+  (let ([input (- temp1 1)])
+  (let ([result (:func input)])
+    (print result) ))))))))))
+  (:doStuff (in) (print in))
+  (:func (in) in)
+)

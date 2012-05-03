@@ -1,0 +1,39 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which does some comparisons
+(
+  ;; this is the program entry point
+  (
+    (testa <- 13 < 15)
+    (testa *= 2)
+    (testa += 1)
+    (eax <- (print testa))
+
+    (testa <- 15 < 15)
+    (testa *= 2)
+    (testa += 1)
+    (eax <- (print testa))
+
+    (testa <- 17 < 15)
+    (testa *= 2)
+    (testa += 1)
+    (eax <- (print testa))
+
+    (testb <- 23 <= 15)
+    (testb *= 2)
+    (testb += 1)
+    (eax <- (print testb))
+
+    (testc <- 15 = 15)
+    (testc *= 2)
+    (testc += 1)
+    (eax <- (print testc))
+
+    (testd <- 19 = 15)
+    (testd *= 2)
+    (testd += 1)
+    (eax <- (print testd))
+  )
+)
