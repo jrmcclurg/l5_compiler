@@ -1,0 +1,21 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which exemplifies some weird syntax
+(
+  ;; this is the program entry point
+  (:main
+    (theTemp <- :after_1234)
+    (theTemp <- 27)
+    (goto :after_1234)
+    :_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789
+    (goto :the_end)
+
+    :after_1234
+    (goto :_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789)
+
+    :the_end
+    (eax <- (print theTemp))
+  )
+))

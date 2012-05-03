@@ -31,7 +31,6 @@
 
     :done
     (eax <- (print counter))
-    (eax <- (print edi))
     (call :alloc)
   )
   (:alloc

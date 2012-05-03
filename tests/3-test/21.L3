@@ -1,0 +1,33 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program to simulate map operation over list
+(
+  ;; this is the program entry point
+  (let ([arr (new-array 10 0)])
+  (let ([temp (aset arr 0 5)])
+  (let ([temp (aset arr 1 20)])
+  (let ([temp (aset arr 2 17)])
+  (let ([temp (aset arr 3 19)])
+  (let ([temp (aset arr 4 42)])
+  (let ([temp (aset arr 5 80)])
+  (let ([temp (aset arr 6 2)])
+  (let ([temp (aset arr 7 3)])
+  (let ([temp (aset arr 8 23)])
+  (let ([temp (aset arr 9 4)])
+  (let ([temp (print arr)])
+  (let ([temp (:map :f arr 0)])
+  (print arr) )))))))))))))
+  
+  (:map (f arr k)
+    (let ([len (alen arr)])
+    (let ([c (= k len)])
+    (let ([k2 (+ k 1)])
+    (if c 0 (let ([oldVal (aref arr k)])
+            (let ([newVal (f oldVal)])
+            (let ([temp (aset arr k newVal)])
+            (:map f arr k2) ))) )))))
+
+  (:f (x) (* x 2))
+)

@@ -1,0 +1,18 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program which calls a chain of functions
+(
+  ;; this is the program entry point
+  (:func1 0)
+  (:func1 (x) (:func2 x))
+  (:func2 (x) (:func3 x))
+  (:func3 (x) (:func4 x))
+  (:func4 (x) (:func5 x))
+  (:func5 (x) (:func6 x))
+  (:func6 (x) (:func7 x))
+  (:func7 (x) (:func8 x))
+  (:func8 (x) (:func9 x))
+  (:func9 (x) (print 9))
+)

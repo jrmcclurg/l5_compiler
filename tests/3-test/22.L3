@@ -1,0 +1,19 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which jumps back and forth for a while
+(
+  ;; this is the program entry point
+  (:ping 0 19)
+  (:ping (x max)
+    (let ([c (= x max)])
+    (let ([next (+ x 1)])
+    (if c (print x)
+          (let ([t (print x)]) (:pong next max)) ))))
+  (:pong (x max)
+    (let ([c (= x max)])
+    (let ([next (+ x 1)])
+    (if c (print x)
+          (let ([t (print x)]) (:ping next max)) ))))
+)

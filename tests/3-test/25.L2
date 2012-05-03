@@ -1,0 +1,19 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which demonstrates interesting 
+;; array behavior
+(
+  ;; this is the program entry point
+  (
+    (eax <- (allocate 13 1))
+    (myArray <- eax)
+
+    (eax <- (print myArray))
+
+    ((mem myArray 0) <- 1)
+
+    (eax <- (print myArray))
+  )
+)
