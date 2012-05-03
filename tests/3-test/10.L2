@@ -1,0 +1,32 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program to allocate arrays of increasing and
+;; then decreasing size to form a triangular shape
+(
+  ;; this is the program entry point
+  (
+    (theCount <- 1)                ;; store "0" for initial index
+    (edi <- 1)                ;; store "0" for initial index
+
+    :loop
+    (cjump 0 < theCount :continue :done)
+    :continue
+
+    (eax <- (allocate theCount theCount))
+    (eax <- (print eax))
+    ;; (eax <- (mem ecx 0))
+    ;; ((mem ecx 0) <- theCount)
+    (edi += 2)
+    (cjump edi < 17 :continue2 :done2)
+    :continue2
+    (theCount += 2)
+    (goto :loop)
+    :done2
+    (theCount -= 2)
+    (goto :loop)
+
+    :done
+  )
+)

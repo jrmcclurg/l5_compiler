@@ -1,0 +1,140 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which implements
+;; a dumb n^2 selection sort on an array of numbers
+(
+  ;; this is the program entry point
+  (
+    (init <- 1)               ;; initial array value
+    (len <- 20)               ;; initial length of array
+
+    (twolen <- len)
+    (twolen *= 2)                ;; encode as a number (for call to allocate)
+    (temp <- twolen)
+    (temp += 1)                  ;; (end of encoding as a number)
+    (temp *= 2)                ;; multiply (encoded!) length by two
+    (temp -= 1)
+    (eax <- (allocate temp init)) ;; allocate an array of twice that length
+    (myarray <- eax)              ;; store the array pointer in edi
+
+    ;; put some values in the first half of myarray
+    ((mem myarray 4)  <- 151)
+    ((mem myarray 8)  <- 133)
+    ((mem myarray 12) <- 123)
+    ((mem myarray 16) <- 157)
+    ((mem myarray 20) <- 161)
+    ((mem myarray 24) <- 57)
+    ((mem myarray 28) <- 93)
+    ((mem myarray 32) <- 149)
+    ((mem myarray 36) <- 87)
+    ((mem myarray 40) <- 139)
+    ((mem myarray 44)  <- 119)
+    ((mem myarray 48)  <- 105)
+    ((mem myarray 52) <- 93)
+    ((mem myarray 56) <- 69)
+    ((mem myarray 60) <- 83)
+    ((mem myarray 64) <- 99)
+    ((mem myarray 68) <- 49)
+    ((mem myarray 72) <- 153)
+    ((mem myarray 76) <- 107)
+    ((mem myarray 80) <- 13)
+
+    ;(eax <- (print myarray))
+    ((mem myarray 0) <- len)
+    (eax <- (print myarray))
+    ((mem myarray 0) <- twolen)
+
+    (large <- 201)    ;; a large constant
+    (counter <- 1);
+
+    :outerloop
+    (eax <- (mem myarray 0))
+    (eax += 1)
+    (cjump counter < eax :continue2 :done2)
+    :continue2
+
+    (counter2 <- 1)                ;; store "0" for initial array index
+    (min <- large)                 ;; very large value for the min
+
+    ;;(esp -= 4)
+    ;;((mem ebp -4) <- esi)  ;; put esi on the stack
+
+    (replacepos <- 1)
+
+    :loop
+    (eax <- (mem myarray 0))
+    ;;(eax *= 2)
+    (eax += 1)
+    (cjump counter2 < eax :continue :done)
+    :continue
+
+    (ecx <- counter2)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += myarray)
+    (ecx += 4)
+    (eax <- (mem ecx 0))
+    (cjump eax <= min :update :ignore)
+    :update
+    (min <- eax)
+    (replacepos <- ecx)
+    :ignore
+    (counter2 += 2)
+    (goto :loop)
+
+    :done
+
+    ((mem replacepos 0) <- large)
+
+    ;;(esi <- (mem ebp -4))  ;; pop esi off the stack
+    ;;(esp += 4)
+
+    (eax <- (mem myarray 0))
+    ;;(eax *= 2)
+    ;;(eax += 1)
+    (ecx <- counter)
+    (ecx += eax)
+    (ecx -= 1)
+    (ecx *= 2)
+    (ecx += myarray)
+    (ecx += 4)
+    ((mem ecx 0) <- min)
+
+    (counter += 2)       ;; increment by 1
+    (goto :outerloop)
+
+    :done2
+    (eax <- len)
+    (eax *= 2)
+    (eax += 1)
+    (eax <- (allocate eax init))
+    (result <- eax)
+
+    (index <- len)
+    (index += 1)
+    (index *= 4)
+    (index += myarray)
+
+    (index2 <- result)
+    (index2 += 4)
+
+    (rescount <- 0)
+    :resultloop
+    (cjump rescount < len :resultc :printres)
+    :resultc
+    (eax <- (mem index 0))
+    ((mem index2 0) <- eax)
+    (index += 4)
+    (index2 += 4)
+    (rescount += 1)
+    (goto :resultloop)
+
+    :printres
+    ;(eax <- (mem index 0))
+    ;(eax <- (print eax))
+    (eax <- (print result))
+    :end
+  )
+)

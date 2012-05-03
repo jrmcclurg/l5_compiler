@@ -1,0 +1,18 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L3 program to allocate arrays of increasing and
+;; then decreasing size to form a triangular shape
+(
+  ;; this is the program entry point
+  (:triangle 7 0 0)
+  (:triangle (maxWidth width index)
+    (let ([inc (:getInc maxWidth index)])
+    (let ([next (+ width inc)])
+    (let ([index2 (+ index 1)])
+    (let ([c (< width 0)])
+    (if c index (let ([arr (new-array width width)])
+                (let ([temp (print arr)]) (:triangle maxWidth next index2)))))))))
+  (:getInc (maxWidth index) (let ([c (< index maxWidth)]) (if c 1 -1)))
+)
