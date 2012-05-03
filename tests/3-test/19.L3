@@ -1,0 +1,16 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which computes a factorial
+(
+  ;; this is the program entry point
+  (let ([theNum 7])
+  (let ([result (:factorial theNum 0 1)]) (print result)) )
+
+  (:factorial (num index result)
+    (let ([next (+ index 1)])
+    (let ([c (= index num)])
+    (let ([res2 (* result next)])
+    (if c result (:factorial num next res2) )))))
+)

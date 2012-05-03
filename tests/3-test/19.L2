@@ -1,0 +1,24 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which computes a factorial
+(
+  ;; this is the program entry point
+  (
+    (theNum <- 7)  ;; multiply the first 7 integers
+    (ebx <- 1)
+
+    (theLoopCounter <- 1)
+    :loop
+    (cjump theLoopCounter <= theNum :continue :end)
+    :continue
+    (ebx *= theLoopCounter)
+    (theLoopCounter += 1)
+    (goto :loop)
+    :end
+    (ebx *= 2)
+    (ebx += 1)
+    (eax <- (print ebx))
+  )
+)

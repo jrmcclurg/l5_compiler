@@ -1,0 +1,16 @@
+;; EECS 322 Compiler Construction
+;; Test-3 Assignment (Test Cases for L3)
+;; 5-3-12
+
+;; Simple L2 program which computes a sum
+(
+  ;; this is the program entry point
+  (let ([num 100])
+  (let ([result (:sum num 0 0)])
+  (print result) ))
+  (:sum (num index result)
+    (let ([next (+ index 1)])
+    (let ([c (= index num)])
+    (let ([res2 (+ result index)])
+    (if c result (:sum num next res2) )))))
+)
