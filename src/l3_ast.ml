@@ -15,7 +15,7 @@
 open Utils;;
 
 (* unique prefix for auto-generated variables *)
-let l3_prefix = "<l3>_";; (* TODO XXX - do this for L2 as well!! *)
+let l3_prefix = get_prefix "l3";; (* TODO XXX - do this for L2 as well!! *)
 
 (* data type for L3 programs *)
 type program = Program of pos * exp * func list

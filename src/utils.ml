@@ -96,3 +96,15 @@ let check_int_range (i : int64) =
 let check_int_alignment (i : int64) =
    if ((Int64.rem i 4L) <> 0L) then parse_error "offset must be divisible by 4"
 ;;
+
+let get_prefix (name : string) : string =
+   ("<"^name^">")
+;;
+
+let concat_unique_names (prefix : string) (s : string) : string =
+   (prefix^"_"^s)
+;;
+
+let get_unique_varname (prefix : string) (index : int) : string = 
+   (concat_unique_names prefix (string_of_int index))
+;;

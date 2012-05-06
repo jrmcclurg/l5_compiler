@@ -15,7 +15,7 @@ open L3_code;;
 open Utils;;
 
 (* flags and defaults for command-line args *)
-let do_print_only      = ref true;; (* TODO XXX - change this back *)
+let do_print_only      = ref false;;
 let verbose_mode       = ref false;;
 
 (* program banner text *)
@@ -39,7 +39,7 @@ if !do_print_only then (
    print_program result;
    print_newline()
 ) else (
-   (*let p = compile_program result in
-   L2_ast.print_program p*)
+   let p = compile_program result in
+   L2_ast.print_program p
 );
 exit 0

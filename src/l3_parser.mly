@@ -69,13 +69,7 @@ dexp:
 
 var:
    | IDENT {
-      let raw = $1 in
-      (* TODO - put this somewhere more accessible? *)
-      let regs = ["esi";"edi";"ebp";"esp";"eax";"ecx";"edx";"ebx";
-                  "array-error";"tail-call";"allocate";"return";"cjump";"goto";"mem";"call"] in
-      let name = (try (l3_prefix^(List.find (fun x -> (x = raw)) regs))
-                  with _ -> raw) in
-      Var(get_current_pos (), name)}
+      Var(get_current_pos (), $1)}
 ;
 
 var_list:
