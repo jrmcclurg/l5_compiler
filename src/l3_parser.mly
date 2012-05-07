@@ -47,6 +47,7 @@ func_list:
 
 exp:
    | LPAREN LET LPAREN LBRACK var dexp RBRACK RPAREN exp RPAREN { LetExp(get_current_pos (), $5, $6, $9) }
+   | LPAREN LET LPAREN LPAREN var dexp RPAREN RPAREN exp RPAREN { LetExp(get_current_pos (), $5, $6, $9) }
    | LPAREN IF sval exp exp RPAREN                              { IfExp(get_current_pos (), $3, $4, $5) }
    | dexp                                                       { DExpExp(get_current_pos (), $1) }
 ;
@@ -64,7 +65,7 @@ dexp:
    | LPAREN NEWARRAY sval sval RPAREN      { NewArrayDExp(get_current_pos (), $3, $4) }
    | LPAREN NEWTUPLE sval sval_list RPAREN { NewTupleDExp(get_current_pos (), $3::$4) }
    | LPAREN AREF sval sval RPAREN          { ArefDExp(get_current_pos (), $3, $4) }
-   | LPAREN ASET sval sval RPAREN          { AsetDExp(get_current_pos (), $3, $4) }
+   | LPAREN ASET sval sval sval RPAREN     { AsetDExp(get_current_pos (), $3, $4, $5) }
    | LPAREN ALEN sval RPAREN               { AlenDExp(get_current_pos (), $3) }
    | LPAREN PRINT sval RPAREN              { PrintDExp(get_current_pos (), $3) }
    | LPAREN MAKECLOSURE LABEL sval RPAREN  { MakeClosureDExp(get_current_pos (), $3, $4) }
