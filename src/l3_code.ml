@@ -50,28 +50,34 @@ and compile_exp (e : L3_ast.exp) (first : bool) (prefix : string) : L2_ast.instr
       (* generate the L2 variable *)
       let v2 = compile_var v in
       (* compile the "d" and store the result in the compiled var *)
-      (compile_dexp de v2 (get_unique_varname prefix 0))@
+      (compile_dexp de v2 false (get_unique_varname prefix 0))@
       (* compile the "e" *)
       (compile_exp e first (get_unique_varname prefix 1))
    | IfExp(p,sv,e1,e2) ->
       let tv = L2_ast.get_tval (compile_sval sv) in
       let il1 = (compile_exp e1 first (get_unique_varname prefix 0)) in
       let il2 = (compile_exp e2 first (get_unique_varname prefix 1)) in
-      let tl = "true" in
-      let fl = "false" in
+      let tl = get_unique_varname prefix 2 in
+      let fl = get_unique_varname prefix 3 in
+      let jl = get_unique_varname prefix 4 in
       let i = L2_ast.EqJumpInstr(p,tv,L2_ast.IntTVal(p,1L),fl,tl) in
-      i::(L2_ast.LabelInstr(p,tl))::il1@[L2_ast.LabelInstr(p,fl)]@il2
-   | DExpExp(p,(AppDExp(p2,sv,svl) as de)) -> [] (* TODO XXX *)
+      i::(L2_ast.LabelInstr(p,tl))::il1@
+      [L2_ast.GotoInstr(p,jl);L2_ast.LabelInstr(p,fl)]
+      @il2@[L2_ast.LabelInstr(p,jl);
+      (* we put the (eax <- eax) instruction at the end, because the L2
+       * interpreter complains about functions ending with a label *)
+      L2_ast.AssignInstr(p,L2_ast.EaxReg(p),L2_ast.VarSVal(p,L2_ast.EaxReg(p)))]
    | DExpExp(p,de) -> 
-      (compile_dexp de (L2_ast.EaxReg(p)) (get_unique_varname prefix 0))@
-      [L2_ast.AssignInstr(p,L2_ast.EspReg(p),L2_ast.VarSVal(p,L2_ast.EbpReg(p)));
-       L2_ast.ReturnInstr(p)]
-and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (prefix : string) : L2_ast.instr list = 
-   match de with
+      (compile_dexp de (L2_ast.EaxReg(p)) true (get_unique_varname prefix 0))@
+      (if first then [] else [L2_ast.ReturnInstr(p)]) (* only add (return) instr in main function *)
+and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : string) : L2_ast.instr list = 
+   let (res,src_sv,p)  = (match de with
    | PrintDExp(p,sv) ->
       let tv = L2_ast.get_tval (compile_sval sv) in
-      [L2_ast.PrintInstr(p,tv);L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,L2_ast.EaxReg(p)))]
-   | _ -> [] (* TODO XXX *)
+      ([L2_ast.PrintInstr(p,tv)],L2_ast.VarSVal(p,L2_ast.EaxReg(p)),p)
+   | SValDExp(p,sv) -> ([],compile_sval sv,p)
+   | _ -> ([],L2_ast.VarSVal(NoPos,dest),NoPos) ) in (* TODO XXX *)
+   res@[L2_ast.AssignInstr(p,dest,src_sv)]
 and compile_sval (sv : L3_ast.sval) : L2_ast.sval =
    match sv with
    | VarSVal(p,v) -> L2_ast.VarSVal(p,compile_var v)

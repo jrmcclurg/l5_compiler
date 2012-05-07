@@ -98,7 +98,7 @@ let check_int_alignment (i : int64) =
 ;;
 
 let get_prefix (name : string) : string =
-   ("<"^name^">")
+   ("__"^name^"_")
 ;;
 
 let concat_unique_names (prefix : string) (s : string) : string =
