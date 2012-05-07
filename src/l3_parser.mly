@@ -63,7 +63,7 @@ dexp:
    | LPAREN ARRAYQ sval RPAREN             { ArrayPredDExp(get_current_pos (), $3) }
    | LPAREN sval sval_list RPAREN          { AppDExp(get_current_pos (), $2, $3) (* TODO - can the parens be empty? *) }
    | LPAREN NEWARRAY sval sval RPAREN      { NewArrayDExp(get_current_pos (), $3, $4) }
-   | LPAREN NEWTUPLE sval sval_list RPAREN { NewTupleDExp(get_current_pos (), $3::$4) }
+   | LPAREN NEWTUPLE sval_list RPAREN      { NewTupleDExp(get_current_pos (), $3) }
    | LPAREN AREF sval sval RPAREN          { ArefDExp(get_current_pos (), $3, $4) }
    | LPAREN ASET sval sval sval RPAREN     { AsetDExp(get_current_pos (), $3, $4, $5) }
    | LPAREN ALEN sval RPAREN               { AlenDExp(get_current_pos (), $3) }

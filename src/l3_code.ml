@@ -42,7 +42,7 @@ and compile_func (f : L3_ast.func) (prefix : string) : L2_ast.func =
          let i = L2_ast.AssignInstr(p,compile_var v,L2_ast.VarSVal(p,reg)) in
          (k+1, res@[i])
       ) (0,[]) vl in
-      let il2 = compile_exp e false (get_unique_varname l3_prefix 1) in
+      let il2 = compile_exp e false (get_unique_varname prefix 1) in
       L2_ast.Function(p, Some(name), il1@il2)
 and compile_exp (e : L3_ast.exp) (first : bool) (prefix : string) : L2_ast.instr list = 
    match e with
@@ -68,7 +68,8 @@ and compile_exp (e : L3_ast.exp) (first : bool) (prefix : string) : L2_ast.instr
        * interpreter complains about functions ending with a label *)
       L2_ast.AssignInstr(p,L2_ast.EaxReg(p),L2_ast.VarSVal(p,L2_ast.EaxReg(p)))]
    | DExpExp(p,de) -> 
-      (compile_dexp de (L2_ast.EaxReg(p)) true (get_unique_varname prefix 0))@
+      let tail = (not first) in
+      (compile_dexp de (L2_ast.EaxReg(p)) tail (get_unique_varname prefix 0))@
       (if first then [] else [L2_ast.ReturnInstr(p)]) (* only add (return) instr in main function *)
 and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : string) : L2_ast.instr list = 
    match de with
