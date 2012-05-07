@@ -71,13 +71,33 @@ and compile_exp (e : L3_ast.exp) (first : bool) (prefix : string) : L2_ast.instr
       (compile_dexp de (L2_ast.EaxReg(p)) true (get_unique_varname prefix 0))@
       (if first then [] else [L2_ast.ReturnInstr(p)]) (* only add (return) instr in main function *)
 and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : string) : L2_ast.instr list = 
-   let (res,src_sv,p)  = (match de with
+   match de with
+   | PlusDExp(p,sv1,sv2) ->
+      (* (2a+1)+(2b+1)-1 = 2a+1+2b+1-1 = 2a+2b+1 = 2(a+b)+1  *)
+      let sv1t = compile_sval sv1 in
+      let tv2 = L2_ast.get_tval (compile_sval sv2) in
+      [L2_ast.AssignInstr(p,dest,sv1t);L2_ast.PlusInstr(p,dest,tv2);L2_ast.MinusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+   | MinusDExp(p,sv1,sv2) ->
+      (* (2a+1)-(2b+1)+1 = 2a+1-2b-1+1 = 2a-2b+1 = 2(a-b)+1  *)
+      let sv1t = compile_sval sv1 in
+      let tv2 = L2_ast.get_tval (compile_sval sv2) in
+      [L2_ast.AssignInstr(p,dest,sv1t);L2_ast.MinusInstr(p,dest,tv2);L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+   | TimesDExp(p,sv1,sv2) ->
+      (* ((2a+1)*(2b+1)+3-(2a+1)-(2b+1)) >> 1 = (4ab+2a+2b+1 +1+2-(2a+1)-(2b+1))>>1 = 2(2ab+1)>>1 = 2ab+1 *)
+      let sv1t = compile_sval sv1 in
+      let tv1 = L2_ast.get_tval sv1t in
+      let tv2 = L2_ast.get_tval (compile_sval sv2) in
+      [L2_ast.AssignInstr(p,dest,sv1t);
+       L2_ast.TimesInstr(p,dest,tv2);
+       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,3L));
+       L2_ast.MinusInstr(p,dest,tv1);
+       L2_ast.MinusInstr(p,dest,tv2);
+       L2_ast.SrlInstr(p,dest,L2_ast.IntShVal(p,1L))]
    | PrintDExp(p,sv) ->
       let tv = L2_ast.get_tval (compile_sval sv) in
-      ([L2_ast.PrintInstr(p,tv)],L2_ast.VarSVal(p,L2_ast.EaxReg(p)),p)
-   | SValDExp(p,sv) -> ([],compile_sval sv,p)
-   | _ -> ([],L2_ast.VarSVal(NoPos,dest),NoPos) ) in (* TODO XXX *)
-   res@[L2_ast.AssignInstr(p,dest,src_sv)]
+      [L2_ast.PrintInstr(p,tv);L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,L2_ast.EaxReg(p)))]
+   | SValDExp(p,sv) -> [L2_ast.AssignInstr(p,dest,compile_sval sv)]
+   | _ -> [] (* TODO XXX *)
 and compile_sval (sv : L3_ast.sval) : L2_ast.sval =
    match sv with
    | VarSVal(p,v) -> L2_ast.VarSVal(p,compile_var v)
