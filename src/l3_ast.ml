@@ -23,8 +23,14 @@ type program = Program of pos * exp * func list
  and exp = LetExp of pos * var * dexp * exp
          | IfExp of pos * sval * exp * exp
          | DExpExp of pos * dexp
- and dexp = BiopDExp of pos * biop * sval * sval
-          | PredDExp of pos * pred * sval
+ and dexp = PlusDExp of pos * sval * sval
+          | MinusDExp of pos * sval * sval
+          | TimesDExp of pos * sval * sval
+          | LtDExp of pos * sval * sval
+          | LeqDExp of pos * sval * sval
+          | EqDExp of pos * sval * sval
+          | NumberPredDExp of pos * sval
+          | ArrayPredDExp of pos * sval
           | AppDExp of pos * sval * sval list
           | NewArrayDExp of pos * sval * sval
           | NewTupleDExp of pos * sval list
@@ -40,14 +46,6 @@ type program = Program of pos * exp * func list
           | IntSVal of pos * int64
           | LabelSVal of pos * string
  and var = Var of pos * string (* TODO XXX - eventually we need a symbol table *)
- and biop = PlusBiop of pos
-          | MinusBiop of pos
-          | TimesBiop of pos
-          | LtBiop of pos
-          | LeqBiop of pos
-          | EqBiop of pos
- and pred = NumberPred of pos * int64
-          | VarPred of pos * var
 ;;
 
 (* the output_... functions pretty-print L3 constructs to a specified channel *)
@@ -94,18 +92,48 @@ and output_exp out e = match e with
    | DExpExp(_, de) ->
       output_dexp out de
 and output_dexp out de = match de with
-   | BiopDExp(_,b,sv1,sv2) ->
-      output_string out "(";
-      output_biop out b;
-      output_string out " ";
+   | PlusDExp(_,sv1,sv2) ->
+      output_string out "(+ ";
       output_sval out sv1;
       output_string out " ";
       output_sval out sv2;
       output_string out ")"
-   | PredDExp(_,p,sv) ->
-      output_string out "(";
-      output_pred out p;
+   | MinusDExp(_,sv1,sv2) ->
+      output_string out "(- ";
+      output_sval out sv1;
       output_string out " ";
+      output_sval out sv2;
+      output_string out ")"
+   | TimesDExp(_,sv1,sv2) ->
+      output_string out "(* ";
+      output_sval out sv1;
+      output_string out " ";
+      output_sval out sv2;
+      output_string out ")"
+   | LtDExp(_,sv1,sv2) ->
+      output_string out "(< ";
+      output_sval out sv1;
+      output_string out " ";
+      output_sval out sv2;
+      output_string out ")"
+   | LeqDExp(_,sv1,sv2) ->
+      output_string out "(<= ";
+      output_sval out sv1;
+      output_string out " ";
+      output_sval out sv2;
+      output_string out ")"
+   | EqDExp(_,sv1,sv2) ->
+      output_string out "(= ";
+      output_sval out sv1;
+      output_string out " ";
+      output_sval out sv2;
+      output_string out ")"
+   | NumberPredDExp(_,sv) ->
+      output_string out "(number? ";
+      output_sval out sv;
+      output_string out ")"
+   | ArrayPredDExp(_,sv) ->
+      output_string out "(a? ";
       output_sval out sv;
       output_string out ")"
    | AppDExp(_,sv,svl) ->
@@ -174,16 +202,6 @@ and output_sval out s = match s with
    | VarSVal(_, r) -> output_var out r
    | IntSVal(_, i) -> output_string out (Int64.to_string i)
    | LabelSVal(_,s) -> output_string out (":"^s)
-and output_biop out b = match b with
-   | PlusBiop(_) -> output_string out "+"
-   | MinusBiop(_) -> output_string out "-"
-   | TimesBiop(_) -> output_string out "*"
-   | LtBiop(_) -> output_string out "<"
-   | LeqBiop(_) -> output_string out "<="
-   | EqBiop(_) -> output_string out "="
-and output_pred out p = match p with
-   | NumberPred(_, i) -> output_string out ((Int64.to_string i)^"?")
-   | VarPred(_,v) -> output_var out v; output_string out "?"
 ;;
 
 (* the print_... functions pretty-print L3 constructs to stdout *)
@@ -194,6 +212,4 @@ and print_exp e = output_exp stdout e
 and print_dexp de = output_dexp stdout de
 and print_var r = output_var stdout r
 and print_sval s = output_sval stdout s
-and print_biop b = output_biop stdout b
-and print_pred p = output_pred stdout p
 ;;

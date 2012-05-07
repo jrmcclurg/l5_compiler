@@ -19,11 +19,10 @@
 %token <string> LABEL
 %token <string> IDENT 
 %token CLOSUREPROC CLOSUREVARS MAKECLOSURE NEWARRAY NEWTUPLE PRINT
-%token ASET AREF ALEN
+%token ASET AREF ALEN NUMBERQ ARRAYQ
 %token LET IF
 %token LPAREN RPAREN LBRACK RBRACK
 %token PLUS MINUS TIMES
-%token QUESTION
 %token LEQ LT EQ
 %token EOF
 /* last tokens have highest precedence */
@@ -53,8 +52,14 @@ exp:
 ;
 
 dexp:
-   | LPAREN biop sval sval RPAREN          { BiopDExp(get_current_pos (), $2, $3, $4) }
-   | LPAREN pred sval RPAREN               { PredDExp(get_current_pos (), $2, $3) }
+   | LPAREN PLUS sval sval RPAREN          { PlusDExp(get_current_pos (), $3, $4) }
+   | LPAREN MINUS sval sval RPAREN         { MinusDExp(get_current_pos (), $3, $4) }
+   | LPAREN TIMES sval sval RPAREN         { TimesDExp(get_current_pos (), $3, $4) }
+   | LPAREN LT sval sval RPAREN            { LtDExp(get_current_pos (), $3, $4) }
+   | LPAREN LEQ sval sval RPAREN           { LeqDExp(get_current_pos (), $3, $4) }
+   | LPAREN EQ sval sval RPAREN            { EqDExp(get_current_pos (), $3, $4) }
+   | LPAREN NUMBERQ sval RPAREN            { NumberPredDExp(get_current_pos (), $3) }
+   | LPAREN ARRAYQ sval RPAREN             { ArrayPredDExp(get_current_pos (), $3) }
    | LPAREN sval sval_list RPAREN          { AppDExp(get_current_pos (), $2, $3) (* TODO - can the parens be empty? *) }
    | LPAREN NEWARRAY sval sval RPAREN      { NewArrayDExp(get_current_pos (), $3, $4) }
    | LPAREN NEWTUPLE sval sval_list RPAREN { NewTupleDExp(get_current_pos (), $3::$4) }
@@ -87,16 +92,3 @@ sval_list:
    |                { [] }
    | sval sval_list { $1::$2 }
 ;
-
-biop:
-   | PLUS  { PlusBiop(get_current_pos ()) }
-   | MINUS { MinusBiop(get_current_pos ()) }
-   | TIMES { TimesBiop(get_current_pos ()) }
-   | LT    { LtBiop(get_current_pos ()) }
-   | LEQ   { LeqBiop(get_current_pos ()) }
-   | EQ    { EqBiop(get_current_pos ()) }
-;
-
-pred:
-   | INT QUESTION { NumberPred(get_current_pos (), $1) }
-   | var QUESTION { VarPred(get_current_pos (), $1) }

@@ -35,6 +35,8 @@ rule token = parse
 | "alen"                     { ALEN }
 | "let"                      { LET }                             (* keywords *)
 | "if"                       { IF }
+| "number?"                  { NUMBERQ }                         (* predicates *)
+| "a?"                       { ARRAYQ }
 | '('                        { LPAREN }                          (* parentheses *)
 | ')'                        { RPAREN }
 | '['                        { LBRACK }                          (* brackets *)
@@ -45,7 +47,6 @@ rule token = parse
 | "<="                       { LEQ }                             (* comparison operators *)
 | "<"                        { LT }
 | "="                        { EQ }
-| "?"                        { QUESTION }                        (* predicate operator *)
 | ';' [^'\n']*               { token lexbuf }                    (* single-line comment *)
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'

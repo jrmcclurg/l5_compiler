@@ -308,3 +308,12 @@ and print_sval s = output_sval stdout s
 and print_uval u = output_uval stdout u
 and print_tval t = output_tval stdout t
 ;;
+
+(* "type-cast" functions *)
+
+let get_tval (sv : sval) : tval = 
+   match sv with
+   | VarSVal(p,v) -> VarTVal(p,v)
+   | IntSVal(p,i) -> IntTVal(p,i)
+   | LabelSVal(p,l) -> LabelTVal(p,l)
+;;
