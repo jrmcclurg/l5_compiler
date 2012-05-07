@@ -31,12 +31,12 @@ type program = Program of pos * exp * func list
           | EqDExp of pos * sval * sval
           | NumberPredDExp of pos * sval
           | ArrayPredDExp of pos * sval
-          | AppDExp of pos * sval * sval list
+      (**)    | AppDExp of pos * sval * sval list
           | NewArrayDExp of pos * sval * sval
           | NewTupleDExp of pos * sval list
-          | ArefDExp of pos * sval * sval
-          | AsetDExp of pos * sval * sval
-          | AlenDExp of pos * sval * sval
+      (**)    | ArefDExp of pos * sval * sval
+      (**)    | AsetDExp of pos * sval * sval
+          | AlenDExp of pos * sval
           | PrintDExp of pos * sval
           | MakeClosureDExp of pos * string * sval
           | ClosureProcDExp of pos * sval
@@ -170,11 +170,9 @@ and output_dexp out de = match de with
       output_string out " ";
       output_sval out sv2;
       output_string out ")"
-   | AlenDExp(_,sv1,sv2) ->
+   | AlenDExp(_,sv) ->
       output_string out "(alen ";
-      output_sval out sv1;
-      output_string out " ";
-      output_sval out sv2;
+      output_sval out sv;
       output_string out ")"
    | PrintDExp(_,sv) ->
       output_string out "(print ";

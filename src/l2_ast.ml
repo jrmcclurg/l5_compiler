@@ -317,3 +317,18 @@ let get_tval (sv : sval) : tval =
    | IntSVal(p,i) -> IntTVal(p,i)
    | LabelSVal(p,l) -> LabelTVal(p,l)
 ;;
+
+let get_uval (sv : sval) : uval = 
+   match sv with
+   | VarSVal(p,v) -> VarUVal(p,v)
+   | IntSVal(p,i) -> IntUVal(p,i)
+   | LabelSVal(p,l) -> LabelUVal(p,l)
+;;
+
+let get_var (sv : sval) : var =
+   let msg = "expected a variable, not a constant" in
+   match sv with
+   | VarSVal(p,v) -> v
+   | IntSVal(p,_) -> die_error p msg
+   | LabelSVal(p,_) -> die_error p msg
+;;
