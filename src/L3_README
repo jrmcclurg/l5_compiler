@@ -1,0 +1,64 @@
+#####################################################################
+#  EECS 322 Compiler Construction
+#  Northwestern University
+#  5/7/2012
+#  
+#  L3-to-L2 Compiler
+#  Jedidiah R. McClurg
+#  v. 1.0
+#####################################################################
+
+#####################################################################
+#  DESCRIPTION
+#####################################################################
+
+This is a compiler for the L3 language.  It does does some program
+transformations and outputs an equivalent L2 program.
+
+The project is implemented in OCaml and consists of the following
+files:
+
+L3_README	    - this file
+L3c                 - the L3 compiler binary (64bit Linux)
+Makefile            - GNU makefile for the project
+l3_lexer.mll        - ocamllex lexer specification
+l3_parser.mly       - ocamlyacc parser specification
+l3_main.ml          - program entry-point
+l3_ast.ml           - abstract data types for the L3 AST
+l3_code.ml          - code-generation and compilation utilities
+l2_ast.ml           - abstract data types for the L2 AST
+l2_code.ml          - code-generation and compilation utilities
+utils.ml            - general utilities
+
+#####################################################################
+#  INSTALLATION
+#####################################################################
+
+The project has been built/tested only on 64bit Linux.  Thus,
+the included L3c binary will work only on 64bit systems.
+
+For building the project on other systems, the necessary packages are
+the ocaml package for the OCaml development tools, the gcc package
+for the GNU C compiler development tools, and possibly the
+gcc-multilib package to provide gcc with 32bit support.
+
+To build, simply type
+  make
+
+This should generate the L3 Compiler binary, L3c.  After this,
+typing
+  make clean
+should clear out any intermediate build files.
+
+#####################################################################
+#  USAGE
+#####################################################################
+
+Given an L3 program test.L3, the equivalent L2 code can be generated
+by typing
+  ./L3c test.L3
+
+This should output the L2 code.
+
+If L3c is run with no command-line options, it reads the input
+file from stdin.

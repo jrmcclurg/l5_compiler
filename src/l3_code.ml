@@ -77,14 +77,19 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
       (* (2a+1)+(2b+1)-1 = 2a+1+2b+1-1 = 2a+2b+1 = 2(a+b)+1  *)
       let sv1t = compile_sval sv1 in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.AssignInstr(p,dest,sv1t);L2_ast.PlusInstr(p,dest,tv2);L2_ast.MinusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.AssignInstr(p,dest,sv1t);
+       L2_ast.PlusInstr(p,dest,tv2);
+       L2_ast.MinusInstr(p,dest,L2_ast.IntTVal(p,1L))]
    | MinusDExp(p,sv1,sv2) ->
       (* (2a+1)-(2b+1)+1 = 2a+1-2b-1+1 = 2a-2b+1 = 2(a-b)+1  *)
       let sv1t = compile_sval sv1 in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.AssignInstr(p,dest,sv1t);L2_ast.MinusInstr(p,dest,tv2);L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.AssignInstr(p,dest,sv1t);
+       L2_ast.MinusInstr(p,dest,tv2);
+       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
    | TimesDExp(p,sv1,sv2) ->
-      (* ((2a+1)*(2b+1)+3-(2a+1)-(2b+1)) >> 1 = (4ab+2a+2b+1 +1+2-(2a+1)-(2b+1))>>1 = 2(2ab+1)>>1 = 2ab+1 *)
+      (* ((2a+1)*(2b+1)+3-(2a+1)-(2b+1)) >> 1 =
+         (4ab+2a+2b+1 +1+2-(2a+1)-(2b+1))>>1 = 2(2ab+1)>>1 = 2ab+1 *)
       let sv1t = compile_sval sv1 in
       let tv1 = L2_ast.get_tval sv1t in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
@@ -97,15 +102,21 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
    | LtDExp(p,sv1,sv2) ->
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.LtInstr(p,dest,tv1,tv2);L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.LtInstr(p,dest,tv1,tv2);
+       L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));
+       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
    | LeqDExp(p,sv1,sv2) ->
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.LeqInstr(p,dest,tv1,tv2);L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.LeqInstr(p,dest,tv1,tv2);
+       L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));
+       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
    | EqDExp(p,sv1,sv2) ->
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.EqInstr(p,dest,tv1,tv2);L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.EqInstr(p,dest,tv1,tv2);
+       L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));
+       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
    | NumberPredDExp(p,sv) ->
       let sv1t = compile_sval sv in
       [L2_ast.AssignInstr(p,dest,sv1t);
@@ -145,12 +156,10 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
       let sv1t = (compile_sval sv1) in
       let tv1 = L2_ast.get_tval sv1t in
       let sv2t = (compile_sval sv2) in
-
       let tmp = L2_ast.Var(p,get_unique_varname prefix 0) in
       let tl1 = get_unique_varname prefix 1 in
       let tl2 = get_unique_varname prefix 2 in
       let fl = get_unique_varname prefix 3 in
-
       [L2_ast.AssignInstr(p,dest,sv2t);
        L2_ast.SrlInstr(p,dest,L2_ast.IntShVal(p,1L));
        L2_ast.MemReadInstr(p,tmp,L2_ast.get_var sv1t,0L);
@@ -164,32 +173,16 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
        L2_ast.LabelInstr(p,tl2); (* success label 2 *)
        L2_ast.TimesInstr(p,dest,L2_ast.IntTVal(p,4L));
        L2_ast.PlusInstr(p,dest,tv1);
-       L2_ast.MemReadInstr(p,dest,dest,4L)
-       ]
+       L2_ast.MemReadInstr(p,dest,dest,4L)]
    | AsetDExp(p,sv1,sv2,sv3) ->
       let sv1t = (compile_sval sv1) in
       let tv1 = L2_ast.get_tval sv1t in
       let sv2t = (compile_sval sv2) in
       let sv3t = (compile_sval sv3) in
-
       let tmp = L2_ast.Var(p,get_unique_varname prefix 0) in
       let tl1 = get_unique_varname prefix 1 in
       let tl2 = get_unique_varname prefix 2 in
       let fl = get_unique_varname prefix 3 in
-
-      (*
- `(,x <- ,(encode v2))
-  `(,x >>= 1)
-  `(,tmp <- (mem v1 0))
-  `(cjump ,x < ,tmp  ,bounds-pass-label ,bounds-fail-label)
-  bounds-fail-label
-  `(eax <- (array-error v1 x))
-  bounds-pass-label
-  `(,x *= 4)
-  `(,x += ,v1)
-  `((mem ,x 4) <- ,(encode v3))
-  `(,x <- 1)   ;; put the final result for aset into x (always 0).
-      *)
       [L2_ast.AssignInstr(p,dest,sv2t);
        L2_ast.SrlInstr(p,dest,L2_ast.IntShVal(p,1L));
        L2_ast.MemReadInstr(p,tmp,L2_ast.get_var sv1t,0L);
@@ -204,8 +197,7 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
        L2_ast.TimesInstr(p,dest,L2_ast.IntTVal(p,4L));
        L2_ast.PlusInstr(p,dest,tv1);
        L2_ast.MemWriteInstr(p,dest,4L,sv3t);
-       L2_ast.AssignInstr(p,dest,L2_ast.IntSVal(p,1L))
-       ]
+       L2_ast.AssignInstr(p,dest,L2_ast.IntSVal(p,1L))]
    | AlenDExp(p,sv) ->
       let v = L2_ast.get_var (compile_sval sv) in
       [L2_ast.MemReadInstr(p,dest,v,0L);
@@ -227,7 +219,8 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
 and compile_sval (sv : L3_ast.sval) : L2_ast.sval =
    match sv with
    | VarSVal(p,v) -> L2_ast.VarSVal(p,compile_var v)
-   | IntSVal(p,i) -> L2_ast.IntSVal(p,(Int64.add (Int64.mul i 2L) 1L)) (* TODO - ok to encode here? *)
+   (* here's where we do encoding of integer constants *)
+   | IntSVal(p,i) -> L2_ast.IntSVal(p,(Int64.add (Int64.mul i 2L) 1L))
    | LabelSVal(p,l) -> L2_ast.LabelSVal(p,l)
 and compile_var (v : L3_ast.var) : L2_ast.var = 
    match v with
