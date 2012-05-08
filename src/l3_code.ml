@@ -75,18 +75,22 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
    match de with
    | PlusDExp(p,sv1,sv2) ->
       (* (2a+1)+(2b+1)-1 = 2a+1+2b+1-1 = 2a+2b+1 = 2(a+b)+1  *)
+      let tmpd = L2_ast.Var(p,get_unique_varname prefix 0) in
       let sv1t = compile_sval sv1 in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.AssignInstr(p,dest,sv1t);
-       L2_ast.PlusInstr(p,dest,tv2);
-       L2_ast.MinusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.AssignInstr(p,tmpd,sv1t);
+       L2_ast.PlusInstr(p,tmpd,tv2);
+       L2_ast.MinusInstr(p,tmpd,L2_ast.IntTVal(p,1L));
+       L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,tmpd))]
    | MinusDExp(p,sv1,sv2) ->
       (* (2a+1)-(2b+1)+1 = 2a+1-2b-1+1 = 2a-2b+1 = 2(a-b)+1  *)
+      let tmpd = L2_ast.Var(p,get_unique_varname prefix 0) in
       let sv1t = compile_sval sv1 in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.AssignInstr(p,dest,sv1t);
-       L2_ast.MinusInstr(p,dest,tv2);
-       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.AssignInstr(p,tmpd,sv1t);
+       L2_ast.MinusInstr(p,tmpd,tv2);
+       L2_ast.PlusInstr(p,tmpd,L2_ast.IntTVal(p,1L));
+       L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,tmpd))]
    | TimesDExp(p,sv1,sv2) ->
       (* just decode both, multiply, and then encode *)
       let tmp = L2_ast.Var(p,get_unique_varname prefix 0) in
@@ -100,23 +104,29 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
        L2_ast.TimesInstr(p,dest,L2_ast.IntTVal(p,2L));
        L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
    | LtDExp(p,sv1,sv2) ->
+      let tmpd = L2_ast.Var(p,get_unique_varname prefix 0) in
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.LtInstr(p,dest,tv1,tv2);
-       L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));
-       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.LtInstr(p,tmpd,tv1,tv2);
+       L2_ast.SllInstr(p,tmpd,L2_ast.IntShVal(p,1L));
+       L2_ast.PlusInstr(p,tmpd,L2_ast.IntTVal(p,1L));
+       L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,tmpd))]
    | LeqDExp(p,sv1,sv2) ->
+      let tmpd = L2_ast.Var(p,get_unique_varname prefix 0) in
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.LeqInstr(p,dest,tv1,tv2);
-       L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));
-       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.LeqInstr(p,tmpd,tv1,tv2);
+       L2_ast.SllInstr(p,tmpd,L2_ast.IntShVal(p,1L));
+       L2_ast.PlusInstr(p,tmpd,L2_ast.IntTVal(p,1L));
+       L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,tmpd))]
    | EqDExp(p,sv1,sv2) ->
+      let tmpd = L2_ast.Var(p,get_unique_varname prefix 0) in
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.EqInstr(p,dest,tv1,tv2);
-       L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));
-       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
+      [L2_ast.EqInstr(p,tmpd,tv1,tv2);
+       L2_ast.SllInstr(p,tmpd,L2_ast.IntShVal(p,1L));
+       L2_ast.PlusInstr(p,tmpd,L2_ast.IntTVal(p,1L));
+       L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,tmpd))]
    | NumberPredDExp(p,sv) ->
       let sv1t = compile_sval sv in
       [L2_ast.AssignInstr(p,dest,sv1t);
@@ -143,7 +153,8 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
    | NewArrayDExp(p,sv1,sv2) ->
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.AllocInstr(p,tv1,tv2);L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,L2_ast.EaxReg(p)))]
+      [L2_ast.AllocInstr(p,tv1,tv2);
+       L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,L2_ast.EaxReg(p)))]
    | NewTupleDExp(p,svl) ->
       let len = List.length svl in
       let (_,l2) = List.fold_left (fun (off,res) sv ->
@@ -155,47 +166,49 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
       let sv1t = (compile_sval sv1) in
       let tv1 = L2_ast.get_tval sv1t in
       let sv2t = (compile_sval sv2) in
-      let tmp = L2_ast.Var(p,get_unique_varname prefix 0) in
+      let tmpd = L2_ast.Var(p,get_unique_varname prefix 0) in
+      let tmp = L2_ast.Var(p,get_unique_varname prefix 1) in
       let tl1 = get_unique_varname prefix 1 in
       let tl2 = get_unique_varname prefix 2 in
       let fl = get_unique_varname prefix 3 in
-      [L2_ast.AssignInstr(p,dest,sv2t);
-       L2_ast.SrlInstr(p,dest,L2_ast.IntShVal(p,1L));
+      [L2_ast.AssignInstr(p,tmpd,sv2t);
+       L2_ast.SrlInstr(p,tmpd,L2_ast.IntShVal(p,1L));
        L2_ast.MemReadInstr(p,tmp,L2_ast.get_var sv1t,0L);
-       L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,dest),L2_ast.VarTVal(p,tmp),tl1,fl);
+       L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,tmpd),L2_ast.VarTVal(p,tmp),tl1,fl);
        L2_ast.LabelInstr(p,fl); (* fail label *)
-       L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));
-       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L));
-       L2_ast.ArrayErrorInstr(p,tv1,L2_ast.VarTVal(p,dest));
+       L2_ast.SllInstr(p,tmpd,L2_ast.IntShVal(p,1L));
+       L2_ast.PlusInstr(p,tmpd,L2_ast.IntTVal(p,1L));
+       L2_ast.ArrayErrorInstr(p,tv1,L2_ast.VarTVal(p,tmpd));
        L2_ast.LabelInstr(p,tl1); (* success label 1 *)
-       L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,dest),L2_ast.IntTVal(p,0L),fl,tl2);
+       L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,tmpd),L2_ast.IntTVal(p,0L),fl,tl2);
        L2_ast.LabelInstr(p,tl2); (* success label 2 *)
-       L2_ast.TimesInstr(p,dest,L2_ast.IntTVal(p,4L));
-       L2_ast.PlusInstr(p,dest,tv1);
-       L2_ast.MemReadInstr(p,dest,dest,4L)]
+       L2_ast.TimesInstr(p,tmpd,L2_ast.IntTVal(p,4L));
+       L2_ast.PlusInstr(p,tmpd,tv1);
+       L2_ast.MemReadInstr(p,dest,tmpd,4L)]
    | AsetDExp(p,sv1,sv2,sv3) ->
       let sv1t = (compile_sval sv1) in
       let tv1 = L2_ast.get_tval sv1t in
       let sv2t = (compile_sval sv2) in
       let sv3t = (compile_sval sv3) in
-      let tmp = L2_ast.Var(p,get_unique_varname prefix 0) in
-      let tl1 = get_unique_varname prefix 1 in
-      let tl2 = get_unique_varname prefix 2 in
-      let fl = get_unique_varname prefix 3 in
-      [L2_ast.AssignInstr(p,dest,sv2t);
-       L2_ast.SrlInstr(p,dest,L2_ast.IntShVal(p,1L));
+      let tmpd = L2_ast.Var(p,get_unique_varname prefix 0) in
+      let tmp = L2_ast.Var(p,get_unique_varname prefix 1) in
+      let tl1 = get_unique_varname prefix 2 in
+      let tl2 = get_unique_varname prefix 3 in
+      let fl = get_unique_varname prefix 4 in
+      [L2_ast.AssignInstr(p,tmpd,sv2t);
+       L2_ast.SrlInstr(p,tmpd,L2_ast.IntShVal(p,1L));
        L2_ast.MemReadInstr(p,tmp,L2_ast.get_var sv1t,0L);
-       L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,dest),L2_ast.VarTVal(p,tmp),tl1,fl);
+       L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,tmpd),L2_ast.VarTVal(p,tmp),tl1,fl);
        L2_ast.LabelInstr(p,fl); (* fail label *)
-       L2_ast.SllInstr(p,dest,L2_ast.IntShVal(p,1L));
-       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L));
-       L2_ast.ArrayErrorInstr(p,tv1,L2_ast.VarTVal(p,dest));
+       L2_ast.SllInstr(p,tmpd,L2_ast.IntShVal(p,1L));
+       L2_ast.PlusInstr(p,tmpd,L2_ast.IntTVal(p,1L));
+       L2_ast.ArrayErrorInstr(p,tv1,L2_ast.VarTVal(p,tmpd));
        L2_ast.LabelInstr(p,tl1); (* success label 1 *)
-       L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,dest),L2_ast.IntTVal(p,0L),fl,tl2);
+       L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,tmpd),L2_ast.IntTVal(p,0L),fl,tl2);
        L2_ast.LabelInstr(p,tl2); (* success label 2 *)
-       L2_ast.TimesInstr(p,dest,L2_ast.IntTVal(p,4L));
-       L2_ast.PlusInstr(p,dest,tv1);
-       L2_ast.MemWriteInstr(p,dest,4L,sv3t);
+       L2_ast.TimesInstr(p,tmpd,L2_ast.IntTVal(p,4L));
+       L2_ast.PlusInstr(p,tmpd,tv1);
+       L2_ast.MemWriteInstr(p,tmpd,4L,sv3t);
        L2_ast.AssignInstr(p,dest,L2_ast.IntSVal(p,1L))]
    | AlenDExp(p,sv) ->
       let v = L2_ast.get_var (compile_sval sv) in
