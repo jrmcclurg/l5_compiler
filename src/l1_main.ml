@@ -19,7 +19,7 @@ open L1_code;;
 open Utils;;
 
 (* flags and defaults for command-line args *)
-let assembly_file_name = ref "prog.S";;
+let assembly_file_name = ref (Filename.temp_file ?temp_dir:(Some("")) "prog_" ".S");;
 let runtime_file_name  = ref "runtime.c";;
 let output_file_name   = ref "a.out";;
 let use_32bit_arch     = ref true;;
@@ -68,7 +68,7 @@ if !do_print_only then (
    compile_program out2 result;
    close_out out2;
    (* compile and link everything *)
-   compile_and_link !output_file_name !use_32bit_arch;
+   compile_and_link !output_file_name !assembly_file_name !use_32bit_arch;
    (* if verbose mode is enabled, print a summary *)
    if !verbose_mode then (
       print_string (banner_text^"\n");

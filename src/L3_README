@@ -28,6 +28,8 @@ l3_ast.ml           - abstract data types for the L3 AST
 l3_code.ml          - code-generation and compilation utilities
 l2_ast.ml           - abstract data types for the L2 AST
 l2_code.ml          - code-generation and compilation utilities
+l1_ast.ml           - abstract data types for the L1 AST
+l1_code.ml          - code-generation and compilation utilities
 utils.ml            - general utilities
 
 #####################################################################
@@ -62,3 +64,9 @@ This should output the L2 code.
 
 If L3c is run with no command-line options, it reads the input
 file from stdin.
+
+As a beta functionality, the L3c program can compile a binary using
+the L2 and L1 compiler stages:
+  ./L3c test.L3 -o myapp
+This produces an executable "myapp" using the local GNU compiler/
+linker.

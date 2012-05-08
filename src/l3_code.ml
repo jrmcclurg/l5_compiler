@@ -88,17 +88,17 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
        L2_ast.MinusInstr(p,dest,tv2);
        L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
    | TimesDExp(p,sv1,sv2) ->
-      (* ((2a+1)*(2b+1)+3-(2a+1)-(2b+1)) >> 1 =
-         (4ab+2a+2b+1 +1+2-(2a+1)-(2b+1))>>1 = 2(2ab+1)>>1 = 2ab+1 *)
+      (* just decode both, multiply, and then encode *)
+      let tmp = L2_ast.Var(p,get_unique_varname prefix 0) in
       let sv1t = compile_sval sv1 in
-      let tv1 = L2_ast.get_tval sv1t in
-      let tv2 = L2_ast.get_tval (compile_sval sv2) in
-      [L2_ast.AssignInstr(p,dest,sv1t);
-       L2_ast.TimesInstr(p,dest,tv2);
-       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,3L));
-       L2_ast.MinusInstr(p,dest,tv1);
-       L2_ast.MinusInstr(p,dest,tv2);
-       L2_ast.SrlInstr(p,dest,L2_ast.IntShVal(p,1L))]
+      let sv2t = compile_sval sv2 in
+      [L2_ast.AssignInstr(p,tmp,sv1t);
+       L2_ast.SrlInstr(p,tmp,L2_ast.IntShVal(p,1L));
+       L2_ast.AssignInstr(p,dest,sv2t);
+       L2_ast.SrlInstr(p,dest,L2_ast.IntShVal(p,1L));
+       L2_ast.TimesInstr(p,dest,L2_ast.VarTVal(p,tmp));
+       L2_ast.TimesInstr(p,dest,L2_ast.IntTVal(p,2L));
+       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1L))]
    | LtDExp(p,sv1,sv2) ->
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
       let tv2 = L2_ast.get_tval (compile_sval sv2) in

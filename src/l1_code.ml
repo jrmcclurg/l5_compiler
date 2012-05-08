@@ -559,11 +559,11 @@ and compile_label (o : out_channel) (l : string) : unit =
  *
  * returns unit
  *)
-let compile_and_link (filename : string) (use_32bit : bool) : unit =
+let compile_and_link (filename : string) (assembly_file_name : string) (use_32bit : bool) : unit =
    let arch = if use_32bit then 32 else 64 in
-   let r1c = ("as --"^(string_of_int arch)^" -o prog.o prog.S") in
-   let r2c = ("gcc -m"^(string_of_int arch)^" -c -O2 -o runtime.o runtime.c") in
-   let r3c = ("gcc -m"^(string_of_int arch)^" -o "^filename^" prog.o runtime.o") in
+   let r1c = ("as --"^(string_of_int arch)^" -o "^assembly_file_name^".o "^assembly_file_name) in
+   let r2c = "" (*("gcc -m"^(string_of_int arch)^" -c -O2 -o runtime.o runtime.c")*) in
+   let r3c = ("gcc -m"^(string_of_int arch)^" -o "^filename^" "^assembly_file_name^".o runtime.o") in
    let r1 = Sys.command (r1c^" 2> /dev/null")  in
    let r2 = Sys.command (r2c^" 2> /dev/null") in
    let r3 = Sys.command (r3c^" 2> /dev/null") in

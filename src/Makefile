@@ -22,15 +22,14 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L3c
-#all:			L1c spill liveness graph L2c L3c
+all:			L1c spill liveness graph L2c L3c
 
 ### L3 compiler ###
 
-L3c:	utils.cmx l3_ast.cmx l2_ast.cmx l3_code.cmx l3_parser.cmx l3_lexer.cmx l3_main.cmx
-	ocamlopt -o L3c str.cmxa utils.cmx l3_ast.cmx l2_ast.cmx l3_code.cmx l3_parser.cmx l3_lexer.cmx l3_main.cmx
+L3c:	utils.cmx l3_ast.cmx l2_ast.cmx l1_ast.cmx l3_code.cmx l2_code.cmx l1_code.cmx l3_parser.cmx l3_lexer.cmx l3_main.cmx
+	ocamlopt -o L3c str.cmxa utils.cmx l3_ast.cmx l2_ast.cmx l1_ast.cmx l3_code.cmx l2_code.cmx l1_code.cmx l3_parser.cmx l3_lexer.cmx l3_main.cmx
 
-l3_main.cmx:	l3_main.ml l3_parser.cmx l3_lexer.cmx l3_ast.cmx l2_ast.cmx l2_code.cmx utils.cmx
+l3_main.cmx:	l3_main.ml l3_parser.cmx l3_lexer.cmx l3_ast.cmx l2_ast.cmx l2_code.cmx l1_code.cmx utils.cmx
 		ocamlopt -c l3_main.ml
 
 l3_parser.cmx:	l3_parser.ml l3_parser.cmi utils.cmx
@@ -207,7 +206,7 @@ l2c_tarball:		graph clean
 			tar -cvzf mcclurg.2.tar.gz L2* Makefile l2* l1_code.ml l1_ast.ml utils.ml
 
 l3c_tarball:		graph clean
-			tar -cvzf mcclurg.3.tar.gz L3* Makefile l3* l2_code.ml l2_ast.ml utils.ml
+			tar -cvzf mcclurg.3.tar.gz L3* Makefile l3* l2_code.ml l1_code.ml l2_ast.ml l1_ast.ml utils.ml
 
 wc:		
 		wc -l *.m*
