@@ -147,11 +147,10 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) (prefix : 
    | NewTupleDExp(p,svl) ->
       let len = List.length svl in
       let (_,l2) = List.fold_left (fun (off,res) sv ->
-         ((off+4),res@[L2_ast.MemWriteInstr(p,dest,Int64.of_int off,compile_sval sv)])
+         ((off+4),res@[L2_ast.MemWriteInstr(p,L2_ast.EaxReg(p),Int64.of_int off,compile_sval sv)])
       ) (4,[]) svl in
-      [L2_ast.AllocInstr(p,L2_ast.IntTVal(p,Int64.of_int (2*len+1)),L2_ast.IntTVal(p,0L));
-       L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,L2_ast.EaxReg(p)))]@
-      l2
+      [L2_ast.AllocInstr(p,L2_ast.IntTVal(p,Int64.of_int (2*len+1)),L2_ast.IntTVal(p,0L))]@l2@
+      [L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,L2_ast.EaxReg(p)))]
    | ArefDExp(p,sv1,sv2) ->
       let sv1t = (compile_sval sv1) in
       let tv1 = L2_ast.get_tval sv1t in
