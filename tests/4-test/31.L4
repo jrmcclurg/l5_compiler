@@ -1,0 +1,2 @@
+;; test nested "if" expressions
+((let ([x (if (if (< 1 2) 10 0) (if (< 100 200) 1000 0) (if 1 123 345))]) (print x)))

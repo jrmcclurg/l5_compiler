@@ -1,0 +1,6 @@
+(
+(let ([_temp0 (< 1 2)]) 
+ (if _temp0 (let ([_temp1 10]) (let ([_temp2 (< 100 200)]) (if _temp1 (if _temp2 (print 1000) (print 0)) (if 1 (print 123) (print 345)))) )
+            (let ([_temp1 0])  (let ([_temp2 (< 100 200)]) (if _temp1 (if _temp2 (print 1000) (print 0)) (if 1 (print 123) (print 345)))) ))
+ )
+)
