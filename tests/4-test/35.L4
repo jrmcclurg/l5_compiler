@@ -1,0 +1,4 @@
+;; test nested arrays
+((let ([a (:recursive 5)]) (print a))
+ (:recursive (x) (if (<= x 0) 1 (let ([a (new-array x (* x x))]) (let ([temp (print a)]) (let ([y (:recursive (- x 1))]) (begin (:setall a y 0) a))))))
+ (:setall (ar val i) (if (<= (alen ar) i) 0 (begin (aset ar i val) (:setall ar val (+ i 1))))))

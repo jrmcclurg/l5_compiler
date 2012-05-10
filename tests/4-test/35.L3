@@ -1,0 +1,3 @@
+((let ([a (:recursive 5)]) (print a))
+ (:recursive (x) (let ([_temp0 (<= x 0)]) (if _temp0 1 (let ([_temp1 (* x x)]) (let ([a (new-array x _temp1)]) (let ([temp (print a)]) (let ([_temp2 (- x 1)]) (let ([y (:recursive _temp2)]) (let ([_temp3 (:setall a y 0)]) a)))))))))
+ (:setall (ar val i) (let ([_temp0 (alen ar)]) (let ([_temp1 (<= _temp0 i)]) (if _temp1 0 (let ([_temp2 (aset ar i val)]) (let ([_temp3 (+ i 1)]) (:setall ar val _temp3))))))))
