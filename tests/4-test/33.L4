@@ -1,0 +1,7 @@
+;; test sequencing via "begin"
+((begin (print 10)
+        (begin (print 11)
+               (begin (print 12)
+                      (begin (print 13)
+                             (begin (print 14) (:func))))))
+ (:func () (let ([x (begin (begin 12 13) (begin 14 15))]) (print x))))
