@@ -1,0 +1,2 @@
+((let ([x 20]) (let ([y (:recursive x)]) (print y)))
+ (:recursive (x) (let ([_temp1 (<= x 0)]) (if _temp1 1 (let ([_temp2 (- x 1)]) (let ([_temp3 (:recursive _temp2)]) (+ _temp3 _temp3)))))))

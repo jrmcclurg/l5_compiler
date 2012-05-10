@@ -1,0 +1,3 @@
+;; test lots of recursion
+((let ([x 20]) (let ([y (:recursive x)]) (print y)))
+ (:recursive (x) (if (<= x 0) 1 (+ (:recursive (- x 1)) (:recursive (- x 1))))))
