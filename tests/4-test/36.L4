@@ -1,0 +1,5 @@
+;; test first-class functions
+((let ([x (:getfn 1)]) (let ([y (:getfn 2)]) (begin (x 123) (y 345 567))))
+ (:getfn (n) (if (<= n 1) :one :two))
+ (:one (a) (print a))
+ (:two (a b) (print (+ a b))))

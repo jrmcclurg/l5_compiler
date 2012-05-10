@@ -1,0 +1,4 @@
+((let ([x (:getfn 1)]) (let ([y (:getfn 2)]) (let ([_temp1 (x 123)]) (y 345 567))))
+ (:getfn (n) (let ([_temp1 (<= n 1)]) (if _temp1 :one :two)))
+ (:one (a) (print a))
+ (:two (a b) (let ([_temp1 (+ a b)]) (print _temp1))))
