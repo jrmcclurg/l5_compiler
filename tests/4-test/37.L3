@@ -1,0 +1,1 @@
+((let ([arr (new-array 4 789)]) (let ([_temp1 (aset arr 1 345)]) (let ([_temp3 (aset arr 2 567)]) (let ([_temp2 (aset arr _temp3 123)]) (print arr))))))

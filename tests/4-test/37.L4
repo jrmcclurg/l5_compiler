@@ -1,0 +1,2 @@
+;; test aset
+((let ([arr (new-array 4 789)]) (begin (aset arr 1 345) (begin (aset arr (aset arr 2 567) 123) (print arr)))))
