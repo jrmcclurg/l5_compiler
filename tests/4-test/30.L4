@@ -1,0 +1,4 @@
+;; test some function calling
+((let ([x (:one 5)]) (print x))
+ (:one (x) (if (< x 0) 0 (let ([temp (print x)]) (:two (- x 1)))))
+ (:two (x) (if (< x 0) 0 (let ([temp (print x)]) (:one (- x 1))))) )

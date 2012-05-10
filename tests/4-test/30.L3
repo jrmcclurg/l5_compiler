@@ -1,0 +1,3 @@
+((let ([x (:one 5)]) (print x))
+ (:one (x) (let ([_temp1 (< x 0)]) (if _temp1 0 (let ([temp (print x)]) (let ([_temp2 (- x 1)]) (:two _temp2))))))
+ (:two (x) (let ([_temp1 (< x 0)]) (if _temp1 0 (let ([temp (print x)]) (let ([_temp2 (- x 1)]) (:one _temp2)))))) )
