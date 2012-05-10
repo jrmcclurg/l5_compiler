@@ -1,0 +1,2 @@
+;; test nested "let" expressions
+((let ([x (let ([x (let ([x (let ([x (let ([x (let ([x 13]) (+ x 1))]) (+ x 1))]) (+ x 1))]) (+ x 1))]) (+ x 1))]) (print x)))

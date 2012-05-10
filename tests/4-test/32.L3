@@ -1,0 +1,9 @@
+;; test nested "let" expressions
+(
+(let ([x 13])
+  (let ([_temp1 (+ x 1)])
+    (let ([x _temp1]) (let ([_temp2 (+ x 1)])
+      (let ([x _temp2]) (let ([_temp3 (+ x 1)])
+        (let ([x _temp3]) (let ([_temp4 (+ x 1)])
+          (let ([x _temp4]) (let ([_temp5 (+ x 1)])
+            (let ([x _temp5]) (print x)))))))))))))
