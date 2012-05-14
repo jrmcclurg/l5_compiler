@@ -43,9 +43,9 @@ let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let result = L4_parser.main L4_lexer.token lexbuf in (* run the parser, producing AST *)
 (* if we only need to print the parsed L1 code, do so *)
 if !do_compile_only then (
-   let p3 = compile_program result in          (* compile from L4 to L3 *)
+   let p3 = compile_program result in      (* compile from L4 to L3 *)
    let p2 = L3_code.compile_program p3 in  (* compile from L3 to L2 *)
-   let p1 = L2_code.compile_program p2 in      (* compile from L2 to L1 *)
+   let p1 = L2_code.compile_program p2 in  (* compile from L2 to L1 *)
    L1_code.generate_binary p1 !binary_file_name
 ) else (
    let out_stream = (match !out_file_name with
