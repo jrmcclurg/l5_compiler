@@ -74,8 +74,7 @@ dexp:
    | sval                                  { SValDExp(get_current_pos (), $1) }
 
 var:
-   | IDENT {
-      Var(get_current_pos (), $1)}
+   | IDENT { update_max_ident $1; Var(get_current_pos (), $1) }
 ;
 
 var_list:
@@ -86,7 +85,7 @@ var_list:
 sval:
    | var   { VarSVal(get_current_pos(), $1) }
    | INT   { IntSVal(get_current_pos(), $1) }
-   | LABEL { LabelSVal(get_current_pos(), $1) }
+   | LABEL { update_max_ident $1; LabelSVal(get_current_pos(), $1) }
 ;
 
 sval_list:

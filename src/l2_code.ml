@@ -1150,7 +1150,7 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
       let nameop = List.fold_left (fun res vl -> 
          match (List.hd vl) with
          (* only look at variables we haven't already spilled *)
-	 | Var(_,s) -> if (not ((String.get s 0) = '<')) then Some(s) else None
+	 | Var(_,s) -> if (not ((String.get s 0) = '<')) then Some(s) else None (* TODO - this is a bit ugly *)
 	 | _ -> res
       ) None at in
       (* spill and try again *)

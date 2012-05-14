@@ -18,36 +18,52 @@ open Parsing;;
 type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
 
 exception Parse_error;;
+exception Lexing_error;;
 
-(* die_error p s
+(* do_error p s
  *
- * Print error message and exit
+ * Print error message
  *
  * p - the location of the error
  * s - the error message
  *
  * returns unit
  *)
-let die_error (p : pos) (s : string) =
-   print_string "Parse error";
+let do_error (p : pos) (s : string) : unit =
+   print_string "Error";
    print_string (match p with
    | NoPos -> ""
    | Pos(file_name,line_num,col_num) -> (" in '"^file_name^
     "' on line "^(string_of_int line_num)^" col "^(string_of_int
     col_num))
    );
-   print_string (": "^s^"\n");
-   exit 1
+   print_string (": "^s^"\n")
 ;;
 
-(* dies with a parse error s *)
-let parse_error (s : string) = 
-   let p         = symbol_end_pos ()  in
+let die_error (p : pos) (s : string) =
+   do_error p s;
+   exit 1;
+;;
+
+(* dies with a general position-based error *)
+let pos_error (s : string) (p : position) = 
    let file_name = p.Lexing.pos_fname in
    let line_num  = p.Lexing.pos_lnum  in
    let col_num   = (p.Lexing.pos_cnum-p.Lexing.pos_bol+1) in
    let ps        = Pos(file_name,line_num,col_num) in
-   die_error ps s
+   do_error ps s
+;;
+
+(* dies with a parse error s *)
+let parse_error (s : string) = 
+   pos_error s (symbol_end_pos ());
+   raise Parse_error
+;;
+
+(* dies with a lexing error *)
+let lex_error (s : string) (lexbuf : Lexing.lexbuf) = 
+   pos_error s (Lexing.lexeme_end_p lexbuf);
+   raise Lexing_error
 ;;
 
 (* gets a pos data structure using the current lexing pos *)
@@ -66,8 +82,6 @@ let get_pos (p : Lexing.position) =
    let col_num   = (p.Lexing.pos_cnum-p.Lexing.pos_bol+1) in
    Pos(file_name,line_num,col_num)
 ;;
-
-exception Lexing_error;;
 
 (* updates the lexer position to the next line
  * (this is used since we skip newlines in the
@@ -97,14 +111,30 @@ let check_int_alignment (i : int64) =
    if ((Int64.rem i 4L) <> 0L) then parse_error "offset must be divisible by 4"
 ;;
 
-let get_prefix (name : string) : string =
-   ("__"^name^"_")
+let prefix_chr = "0";;
+let unique_counter = ref 0;;
+let max_prefix = ref "";;
+
+let rec update_max_ident (s : string) : unit =
+   if (String.length s >= String.length (!max_prefix)) then (
+      max_prefix := (!max_prefix^prefix_chr);
+      update_max_ident s
+   )
 ;;
 
-let concat_unique_names (prefix : string) (s : string) : string =
-   (prefix^"_"^s)
+let get_unique_ident (prefix : string) : string =
+   let result = (prefix^(!max_prefix)^(string_of_int !unique_counter)) in
+   if !unique_counter >= Pervasives.max_int then (
+      (* if we have run out of unique integers, wrap back to zero
+       * and increase the length of the alphabetical part of the prefix *)
+      unique_counter := 0;
+      max_prefix := (!max_prefix^prefix_chr)
+   ) else (
+     unique_counter := (!unique_counter + 1)
+   );
+   result
 ;;
 
-let get_unique_varname (prefix : string) (index : int) : string = 
-   (concat_unique_names prefix (string_of_int index))
+let make_ident_unique (prefix : string) (s : string) : string =
+   (prefix^s^(!max_prefix))
 ;;

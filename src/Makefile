@@ -9,6 +9,7 @@
 # Graph Test
 # L2-to-L1 Compiler
 # L3-to-L2 Compiler
+# L4-to-L3 Compiler
 # Jedidiah R. McClurg
 # v. 1.0
 #
@@ -17,12 +18,46 @@
 # compiler.
 #
 # make         - builds the project (L1c, spill, liveness,
-#                                    graph, L2c, L3c binary)
+#                                    graph, L2c, L3c, L4c
+#                                    binary)
 # make clean   - deletes all intermediate build files
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L1c spill liveness graph L2c L3c
+#all:			L4c
+all:			L1c spill liveness graph L2c L3c L4c
+
+### L4 compiler ###
+
+L4c:	l4_main.cmx l4_parser.cmx l4_lexer.cmx l4_ast.cmx l3_ast.cmx l2_ast.cmx l1_ast.cmx l4_code.cmx l3_code.cmx l2_code.cmx l1_code.cmx utils.cmx
+	ocamlopt -o L4c str.cmxa utils.cmx l1_ast.cmx l2_ast.cmx l3_ast.cmx l4_ast.cmx l1_code.cmx l2_code.cmx l3_code.cmx l4_code.cmx l4_parser.cmx l4_lexer.cmx l4_main.cmx
+
+l4_main.cmx:	l4_main.ml l4_parser.cmx l4_lexer.cmx l4_ast.cmx l3_ast.cmx l4_code.cmx l3_code.cmx l2_code.cmx l1_code.cmx utils.cmx
+		ocamlopt -c l4_main.ml
+
+l4_parser.cmx:	l4_parser.ml l4_parser.cmi l4_ast.cmx utils.cmx
+		ocamlopt -c l4_parser.ml
+
+l4_lexer.cmx:	l4_lexer.ml l4_parser.cmx l4_ast.cmx utils.cmx
+		ocamlopt -c l4_lexer.ml
+
+l4_code.cmx:	l4_code.ml l4_ast.cmx l3_ast.cmx utils.cmx
+		ocamlopt -c l4_code.ml
+
+l4_parser.cmi:	l4_parser.mli l4_ast.cmx utils.cmx
+		ocamlopt -c l4_parser.mli
+
+l4_ast.cmx:	l4_ast.ml utils.cmx
+		ocamlopt -c l4_ast.ml
+
+l4_parser.ml:	l4_parser.mly
+		ocamlyacc l4_parser.mly
+
+l4_parser.mli:	l4_parser.mly
+		ocamlyacc l4_parser.mly
+
+l4_lexer.ml:	l4_lexer.mll
+		ocamllex l4_lexer.mll
 
 ### L3 compiler ###
 
@@ -44,7 +79,7 @@ l3_code.cmx:	l3_code.ml l3_ast.cmx l2_ast.cmx utils.cmx
 l3_parser.cmi:	l3_parser.mli l3_ast.cmx utils.cmx
 		ocamlopt -c l3_parser.mli
 
-l3_ast.cmx:	l3_ast.ml utils.ml
+l3_ast.cmx:	l3_ast.ml utils.cmx
 		ocamlopt -c l3_ast.ml
 
 l3_parser.ml:	l3_parser.mly
@@ -118,8 +153,8 @@ spill_lexer.ml:		spill_lexer.mll
 
 ### L2 compiler ###
 
-L2c:	utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
-	ocamlopt -o L2c str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
+L2c:	utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx l1_code.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
+	ocamlopt -o L2c str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx l1_code.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
 
 l2_main.cmx:	l2_main.ml l2_parser.cmx l2_lexer.cmx l2_ast.cmx l1_ast.cmx l1_code.cmx utils.cmx
 		ocamlopt -c l2_main.ml
@@ -136,7 +171,7 @@ l2_code.cmx:	l2_code.ml l2_ast.cmx l1_ast.cmx utils.cmx
 l2_parser.cmi:	l2_parser.mli l2_ast.cmx utils.cmx
 		ocamlopt -c l2_parser.mli
 
-l2_ast.cmx:	l2_ast.ml utils.ml
+l2_ast.cmx:	l2_ast.ml utils.cmx
 		ocamlopt -c l2_ast.ml
 
 l2_parser.ml:	l2_parser.mly
@@ -167,7 +202,7 @@ l1_code.cmx:	l1_code.ml l1_ast.cmx utils.cmx
 l1_parser.cmi:	l1_parser.mli l1_ast.cmx utils.cmx
 		ocamlopt -c l1_parser.mli
 
-l1_ast.cmx:	l1_ast.ml utils.ml
+l1_ast.cmx:	l1_ast.ml utils.cmx
 		ocamlopt -c l1_ast.ml
 
 l1_parser.ml:	l1_parser.mly
@@ -208,7 +243,11 @@ l2c_tarball:		graph clean
 l3c_tarball:		graph clean
 			tar -cvzf mcclurg.3.tar.gz L3* Makefile l3* l2_code.ml l1_code.ml l2_ast.ml l1_ast.ml utils.ml
 
+l4c_tarball:		graph clean
+			tar -cvzf mcclurg.4.tar.gz L4* Makefile l4* l3_code.ml l2_code.ml l1_code.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml
+
 wc:		
+		make clean
 		wc -l *.m*
 
 # use the "-ccopt -static" ocamlopt switch to statically link

@@ -549,21 +549,19 @@ and compile_label (o : out_channel) (l : string) : unit =
 ;;
 
 (*
- * compile_and_link filename use_32bit
+ * compile_and_link filename
  *
  * Issues the system calls for compile/link of the generated
  * C and assembly code.
  *
  * filename  - the filename of the output binary
- * use_32bit - whether to generate a 32bit binary (rather than 64bit)
  *
  * returns unit
  *)
-let compile_and_link (filename : string) (assembly_file_name : string) (use_32bit : bool) : unit =
-   let arch = if use_32bit then 32 else 64 in
-   let r1c = ("as --"^(string_of_int arch)^" -o "^assembly_file_name^".o "^assembly_file_name) in
-   let r2c = "" (*("gcc -m"^(string_of_int arch)^" -c -O2 -o runtime.o runtime.c")*) in
-   let r3c = ("gcc -m"^(string_of_int arch)^" -o "^filename^" "^assembly_file_name^".o runtime.o") in
+let compile_and_link (filename : string) (assembly_file_name : string) : unit =
+   let r1c = ("as --32 -o "^assembly_file_name^".o "^assembly_file_name) in
+   let r2c = ("gcc -m32 -c -O2 -o runtime.o runtime.c") in
+   let r3c = ("gcc -m32 -o "^filename^" "^assembly_file_name^".o runtime.o") in
    let r1 = Sys.command (r1c^" 2> /dev/null")  in
    let r2 = Sys.command (r2c^" 2> /dev/null") in
    let r3 = Sys.command (r3c^" 2> /dev/null") in
@@ -667,4 +665,26 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "  go();   // call into the generated code\n";
    output_string o " return 0;\n";
    output_string o "}\n";
+;;
+
+(* this dumps the binary, given a program AST *)
+let generate_binary (result : program) (output_file_name : string) : unit = 
+   let runtime_file_name = "runtime.c" in
+   let assembly_file_name = (Filename.temp_file ?temp_dir:(Some("")) "prog_" ".S") in
+   (* generate the C runtime *)
+   let out1 = (try (open_out runtime_file_name)
+      with _ -> die_system_error ("can't write to file: "^
+         (Sys.getcwd ())^"/"^(runtime_file_name))
+   ) in
+   generate_runtime out1;
+   close_out out1;
+   (* generate the assembly code *)
+   let out2 = (try (open_out assembly_file_name)
+      with _ -> die_system_error ("can't write to file: "^
+      (Sys.getcwd ())^"/"^(assembly_file_name))
+   ) in
+   compile_program out2 result;
+   close_out out2;
+   (* compile and link everything *)
+   compile_and_link output_file_name assembly_file_name
 ;;
