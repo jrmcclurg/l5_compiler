@@ -58,8 +58,8 @@ if !do_compile_only then (
       output_program out_stream result;
       output_string out_stream "\n"
    ) else (
-      let p = compile_program result in
-      L3_ast.output_program out_stream p
+      let p = compile_program result in ()
+      (*L3_ast.output_program out_stream p*)
    )
 );
 exit 0
