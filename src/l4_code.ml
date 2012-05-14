@@ -105,6 +105,55 @@ let flatten_exp (e : L4_ast.exp) (x : L4_ast.var) (extracted: L4_ast.exp) : (L4_
    | LabelExp(p,s) ->          e
 ;;
 
+let min = 0;;
+(* returns created variable, pulled out exp, modified environment, and level *)
+let rec get_first_exp (e : L4_ast.exp) (n : int) : (L4_ast.var option * L4_ast.exp option * L4_ast.exp * int) =
+   match e with
+   | LetExp(p,v,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,LetExp(p,v,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,LetExp(p,v,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | IfExp(p,e1,e2,e3) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      let (v3,let3,env3,num3) = get_first_exp e3 (n+1) in
+      if num1 > 0 then (v1,let1,IfExp(p,env1,e2,e3),num1) else
+      if num2 > 0 then (v2,let2,IfExp(p,e1,env2,e3),num2) else
+      if num3 > 0 then (v3,let3,IfExp(p,e1,e2,env3),num3) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | AppExp(p,ex,el) -> 
+      let (v1,let1,env1,num1) = get_first_exp ex (n+1) in
+      let (v2,let2,env2,num2,b) = List.fold_left (fun (v2,let2,env2,num2,b) e ->
+            let (v3,let3,env3,num3) = get_first_exp e (n+1) in
+            if b then (v2,let2,env2@[e],num2,b) else
+            if num3 > 0 then (v3,let3,env2@[env3],num2,true) else
+            (v2,let2,env2@[e],num2,b)
+      ) (None,None,[],0,false) el in
+      if num1 > 0 then (v1,let1,AppExp(p,env1,el),num1) else
+      if num2 > 0 then (v2,let2,AppExp(p,ex,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | PlusExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,PlusExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,PlusExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | VarExp(p,s) ->    (None,None,e,0)
+   | IntExp(p,i) ->    (None,None,e,0)
+   | LabelExp(p,s) ->  (None,None,e,0)
+;;
+
+
 (* 
  * Checks if an expression is flat, and if not, returns a
  * fresh variable to be used as a replacement for the expression)

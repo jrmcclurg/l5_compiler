@@ -58,7 +58,21 @@ if !do_compile_only then (
       output_program out_stream result;
       output_string out_stream "\n"
    ) else (
-      let p = compile_program result in ()
+      match result with
+      | Program(_,e,_) ->
+      let (vo,eo,test,i) = get_first_exp e 0 in
+      print_string "Here is the expression\n";
+      print_exp e;
+      print_string "\nNow here is the env:\n";
+      print_exp test;
+      print_string "\nHere is the pulled out expr:\n";
+      (match eo with
+      | None -> ()
+      | Some(ex) -> print_exp ex);
+      print_string "\nNow here is the i:\n";
+      print_int i;
+      print_string "\n";
+      (*let p = compile_program result in ()*)
       (*L3_ast.output_program out_stream p*)
    )
 );
