@@ -78,6 +78,9 @@ let rec replace_in_exp (ex : L4_ast.exp) (target : L4_ast.var) (repl : L4_ast.ex
  * and bad is the thing to extract (b,x are returned by check_extraction)
 *)
 let flatten_exp (e : L4_ast.exp) (x : L4_ast.var) (extracted: L4_ast.exp) : (L4_ast.exp) =
+   print_string ("The environment is the following: ");
+   print_exp e;
+   print_string "\n";
    match extracted with
    | LetExp(p,v,e1,e2) -> L4_ast.LetExp(p,x,e1,replace_in_exp (replace_in_exp e x e2) v (VarExp(p,x)))
    | IfExp(p,e1,e2,e3) -> L4_ast.IfExp(p,e1,replace_in_exp e x e2,replace_in_exp e x e3)
@@ -487,17 +490,18 @@ and compile_exp (the_exp : L4_ast.exp) : L3_ast.exp =
    (*| LetExp(p,v,e1,e2) -> L3_ast.LetExp(p, compile_var v, compile_exp_to_dexp e1, compile_exp e2)*)
 
    | LetExp(p,v,e1,e2) -> 
-      let el = [e1] in
-      let (xo,eo,el2) = get_first_flattenable el true in
-      let p2 = LetExp(p,v,List.nth el2 0,e2) in
+      let (xo,eo,env,i) = get_first_exp e1 0 in
+      print_string "ENV:\n";
+      print_exp env;
       (match (xo,eo) with
-      | (Some(x),Some(e)) -> compile_exp (flatten_exp p2 x e)
-      | _ ->
+      | (Some(x),Some(e)) -> compile_exp (flatten_exp env x e)
+      | _ -> 
          print_string "Returning to the user: \"";
          let result = L3_ast.LetExp(p,compile_var v, compile_exp_to_dexp e1,compile_exp e2) in
          L3_ast.print_exp result;
          print_string "\"\n";
          result)
+
    (*| IfExp(p,e1,e2,e3) -> 
    | AppExp(p,e,el) -> 
    | NewArrayExp(p,e1,e2) -> 
@@ -510,12 +514,26 @@ and compile_exp (the_exp : L4_ast.exp) : L3_ast.exp =
    | MakeClosureExp(p,s,e) ->
    | ClosureProcExp(p,e) -> *)
    | PlusExp(p,e1,e2) ->
-      let el = [e1;e2] in
+      let (xo,eo,env,i) = get_first_exp e1 0 in
+      (match (xo,eo) with
+      | (Some(x),Some(e)) -> compile_exp (flatten_exp env x e)
+      | _ -> 
+      let (xo,eo,env,i) = get_first_exp e2 0 in
+      (match (xo,eo) with
+      | (Some(x),Some(e)) -> compile_exp (flatten_exp env x e)
+      | _ -> 
+         print_string "Returning to the user: \"";
+         let result = L3_ast.DExpExp(p,L3_ast.PlusDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2)) in
+         L3_ast.print_exp result;
+         print_string "\"\n";
+         result) )
+
+      (*let el = [e1;e2] in
       let (xo,eo,el2) = get_first_flattenable el false in
       let p2 = PlusExp(p,List.nth el2 0,List.nth el2 1) in
       (match (xo,eo) with
       | (Some(x),Some(e)) -> compile_exp (flatten_exp p2 x e)
-      | _ -> L3_ast.DExpExp(p,L3_ast.PlusDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2)))
+      | _ -> L3_ast.DExpExp(p,L3_ast.PlusDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2)))*)
    (*| MinusExp(p,e1,e2) -> 
    | TimesExp(p,e1,e2) -> 
    | LtExp(p,e1,e2) -> 

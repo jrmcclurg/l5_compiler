@@ -72,7 +72,21 @@ if !do_compile_only then (
       print_string "\nNow here is the i:\n";
       print_int i;
       print_string "\n";
-      (*let p = compile_program result in ()*)
+      let (xo,eo,env,i) = get_first_exp e 0 in
+      print_string "ENV:\n";
+      print_exp env;
+      (match (xo,eo) with
+      | (Some(x),Some(e)) -> print_exp (flatten_exp env x e) ; ()
+      | _ -> 
+         print_string "Returning to the user: \""; );
+
+      print_string "ENV:\n";
+      print_exp env;
+      (match (xo,eo) with
+      | (Some(x),Some(e)) -> print_exp (flatten_exp env x e) ; ()
+      | _ -> 
+         print_string "Returning to the user: \""; );
+      (*let p = compile_program result in () *)
       (*L3_ast.output_program out_stream p*)
    )
 );
