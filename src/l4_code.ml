@@ -140,11 +140,138 @@ let rec get_first_exp (e : L4_ast.exp) (n : int) : (L4_ast.var option * L4_ast.e
       if n <= 0 then (None,None,e,0) else (
          let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
          (Some(uv), Some(e), VarExp(p,uv), n) )
+   | NewArrayExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,NewArrayExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,NewArrayExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | NewTupleExp(p,el) -> 
+      let (v2,let2,env2,num2,b) = List.fold_left (fun (v2,let2,env2,num2,b) e ->
+            let (v3,let3,env3,num3) = get_first_exp e (n+1) in
+            if b then (v2,let2,env2@[e],num2,b) else
+            if num3 > 0 then (v3,let3,env2@[env3],num2,true) else
+            (v2,let2,env2@[e],num2,b)
+      ) (None,None,[],0,false) el in
+      if num2 > 0 then (v2,let2,NewTupleExp(p,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | ArefExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,ArefExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,ArefExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | AsetExp(p,e1,e2,e3) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      let (v3,let3,env3,num3) = get_first_exp e3 (n+1) in
+      if num1 > 0 then (v1,let1,AsetExp(p,env1,e2,e3),num1) else
+      if num2 > 0 then (v2,let2,AsetExp(p,e1,env2,e3),num2) else
+      if num3 > 0 then (v3,let3,AsetExp(p,e1,e2,env3),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | AlenExp(p,e1) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      if num1 > 0 then (v1,let1,AlenExp(p,env1),num1) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | BeginExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,BeginExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,BeginExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | PrintExp(p,e1) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      if num1 > 0 then (v1,let1,PrintExp(p,env1),num1) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | MakeClosureExp(p,s,e1) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      if num1 > 0 then (v1,let1,MakeClosureExp(p,s,env1),num1) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | ClosureProcExp(p,e1) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      if num1 > 0 then (v1,let1,ClosureProcExp(p,env1),num1) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | ClosureVarsExp(p,e1) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      if num1 > 0 then (v1,let1,ClosureVarsExp(p,env1),num1) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
    | PlusExp(p,e1,e2) -> 
       let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
       let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
       if num1 > 0 then (v1,let1,PlusExp(p,env1,e2),num1) else
       if num2 > 0 then (v2,let2,PlusExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | MinusExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,MinusExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,MinusExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | TimesExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,TimesExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,TimesExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | LtExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,LtExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,LtExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | LeqExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,LeqExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,LeqExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | EqExp(p,e1,e2) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      let (v2,let2,env2,num2) = get_first_exp e2 (n+1) in
+      if num1 > 0 then (v1,let1,EqExp(p,env1,e2),num1) else
+      if num2 > 0 then (v2,let2,EqExp(p,e1,env2),num2) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | NumberPredExp(p,e1) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      if num1 > 0 then (v1,let1,NumberPredExp(p,env1),num1) else
+      if n <= 0 then (None,None,e,0) else (
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (Some(uv), Some(e), VarExp(p,uv), n) )
+   | ArrayPredExp(p,e1) -> 
+      let (v1,let1,env1,num1) = get_first_exp e1 (n+1) in
+      if num1 > 0 then (v1,let1,ArrayPredExp(p,env1),num1) else
       if n <= 0 then (None,None,e,0) else (
          let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
          (Some(uv), Some(e), VarExp(p,uv), n) )
