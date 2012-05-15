@@ -60,7 +60,7 @@ if !do_compile_only then (
    ) else (
       match result with
       | Program(_,e,_) ->
-      let (vo,eo,test,i) = get_first_exp e 0 in
+      (*let (vo,eo,test,i) = get_first_exp e 0 in
       print_string "Here is the expression\n";
       print_exp e;
       print_string "\nNow here is the env:\n";
@@ -85,8 +85,15 @@ if !do_compile_only then (
       (match (xo,eo) with
       | (Some(x),Some(e)) -> print_exp (flatten_exp env x e) ; ()
       | _ -> 
-         print_string "Returning to the user: \""; );
-      (*let p = compile_program result in () *)
+         print_string "Returning to the user: \""; );*)
+      (*let p = compile_program result in () ;*)
+      print_string "Starting with: ";
+      print_exp e;
+      print_string "\n";
+      let result = test_func e in ();
+      print_string "Final result:\n";
+      print_exp result;
+      print_string "\n";
       (*L3_ast.output_program out_stream p*)
    )
 );
