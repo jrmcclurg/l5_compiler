@@ -107,7 +107,9 @@ let rec flatten_exp (e2 : L4_ast.exp) (extr : (L4_ast.var * L4_ast.exp) list) : 
          print_string "\n";*)
          L4_ast.LetExp(p,cv,e1,LetExp(p,x,(replace_in_exp e2 v (VarExp(p,cv))),env))
       | IfExp(p,e1,e2,e3) ->    L4_ast.IfExp(p,e1,replace_in_exp env x e2,replace_in_exp env x e3)
-      | BeginExp(p,e1,e2) ->    L4_ast.LetExp(p,x,e1,L4_ast.BeginExp(p,e2,env)) 
+      | BeginExp(p,e1,e2) ->    
+         let cv = Var(p,get_unique_ident l4_prefix) in
+         L4_ast.LetExp(p,cv,e1,L4_ast.LetExp(p,x,e2,env)) 
       | AppExp(p,e,el) ->    L4_ast.LetExp(p,x,extracted,env) 
       | NewArrayExp(p,e1,e2) ->    L4_ast.LetExp(p,x,extracted,env) 
       | NewTupleExp(p,el) ->    L4_ast.LetExp(p,x,extracted,env) 
@@ -202,6 +204,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | NewTupleExp(p,el) -> 
+      (*print_string "Checking in tuple: ";
+      print_exp e;
+      print_string "\n";*)
       let (pull2,env2,num2,b) = List.fold_left (fun (pull2,env2,num2,b) e ->
             let (pull3,env3,num3) = lift_one e (n+1) SValEnv in
             if b then (pull2,env2@[e],num2,b) else
@@ -229,12 +234,15 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | AsetExp(p,e1,e2,e3) -> 
+      (*print_string "Looking at Aset: ";
+      print_exp e;
+      print_string "\n";*)
       let (pull1,env1,num1) = lift_one e1 (n+1) SValEnv in
       let (pull2,env2,num2) = lift_one e2 (n+1) SValEnv in
       let (pull3,env3,num3) = lift_one e3 (n+1) SValEnv in
       if num1 > 0 then (pull1,AsetExp(p,env1,e2,e3),num1) else
       if num2 > 0 then (pull2,AsetExp(p,e1,env2,e3),num2) else
-      if num3 > 0 then (pull3,AsetExp(p,e1,e2,env3),num2) else (
+      if num3 > 0 then (pull3,AsetExp(p,e1,e2,env3),num3) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
          (*print_string "generating unique #10: ";
@@ -487,6 +495,7 @@ and compile_exp_to_dexp (e : L4_ast.exp) : L3_ast.dexp =
    | PrintExp(p,e) -> L3_ast.PrintDExp(p,compile_exp_to_sval e)
    | MakeClosureExp(p,s,e) -> L3_ast.MakeClosureDExp(p,s,compile_exp_to_sval e)
    | ClosureProcExp(p,e) -> L3_ast.ClosureProcDExp(p,compile_exp_to_sval e)
+   | ClosureVarsExp(p,e) -> L3_ast.ClosureVarsDExp(p,compile_exp_to_sval e)
    | PlusExp(p,e1,e2) -> L3_ast.PlusDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2)
    | MinusExp(p,e1,e2) -> L3_ast.MinusDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2)
    | TimesExp(p,e1,e2) -> L3_ast.TimesDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2)
