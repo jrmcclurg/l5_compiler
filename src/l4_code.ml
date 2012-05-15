@@ -102,9 +102,12 @@ let rec flatten_exp (e2 : L4_ast.exp) (extr : (L4_ast.var * L4_ast.exp) list) : 
       (*| LetExp(p,v,e1,e2) -> L4_ast.LetExp(p,x,e1,replace_in_exp (replace_in_exp e x e2) v (VarExp(p,x)))*)
       | LetExp(p,v,e1,e2) -> 
          let cv = Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #1: ";
+         print_var cv;
+         print_string "\n";*)
          L4_ast.LetExp(p,cv,e1,LetExp(p,x,(replace_in_exp e2 v (VarExp(p,cv))),env))
       | IfExp(p,e1,e2,e3) ->    L4_ast.IfExp(p,e1,replace_in_exp env x e2,replace_in_exp env x e3)
-      | BeginExp(p,e1,e2) ->    L4_ast.BeginExp(p,e1,L4_ast.BeginExp(p,e2,env)) 
+      | BeginExp(p,e1,e2) ->    L4_ast.LetExp(p,x,e1,L4_ast.BeginExp(p,e2,env)) 
       | AppExp(p,e,el) ->    L4_ast.LetExp(p,x,extracted,env) 
       | NewArrayExp(p,e1,e2) ->    L4_ast.LetExp(p,x,extracted,env) 
       | NewTupleExp(p,el) ->    L4_ast.LetExp(p,x,extracted,env) 
@@ -139,14 +142,25 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num1 > 0 then (pull1,LetExp(p,v,env1,e2),num1) else (
       match en with
       | ExpEnv -> ([],e,0) 
-      | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
-             ([(v,e1);(uv,e2)], VarExp(p,uv), n) ) (* TODO - changed the e2 here from "e" and that broke things *)
+      | _ ->
+         let v2 = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #2: ";
+         print_var v2;
+         print_string "\n";*)
+         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #3: ";
+         print_var uv;
+         print_string "\n";*)
+             ([(v2,e1);(uv,(replace_in_exp e2 v (VarExp(p,v2))))], VarExp(p,uv), n) )
    | IfExp(p,e1,e2,e3) -> 
       let (pull1,env1,num1) = lift_one e1 (n+1) SValEnv in
       if num1 > 0 then (pull1,IfExp(p,env1,e2,e3),num1) else (
       match en with
       | ExpEnv -> ([],e,0) 
       | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #4: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n) )
    | BeginExp(p,e1,e2) -> 
       let (pull1,env1,num1) = lift_one e1 (n+1) DExpEnv in
@@ -154,6 +168,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       match en with
       | ExpEnv -> ([],e,0)
       | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #5: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n) )
    | AppExp(p,ex,el) -> 
       let (pull1,env1,num1) = lift_one ex (n+1) SValEnv in
@@ -167,6 +184,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,AppExp(p,ex,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #6: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | NewArrayExp(p,e1,e2) -> 
@@ -176,6 +196,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,NewArrayExp(p,e1,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #7: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | NewTupleExp(p,el) -> 
@@ -188,6 +211,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,NewTupleExp(p,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #8: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | ArefExp(p,e1,e2) -> 
@@ -197,6 +223,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,ArefExp(p,e1,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #9: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | AsetExp(p,e1,e2,e3) -> 
@@ -208,6 +237,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num3 > 0 then (pull3,AsetExp(p,e1,e2,env3),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #10: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | AlenExp(p,e1) -> 
@@ -215,6 +247,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num1 > 0 then (pull1,AlenExp(p,env1),num1) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #11: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | PrintExp(p,e1) -> 
@@ -222,6 +257,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num1 > 0 then (pull1,PrintExp(p,env1),num1) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #12: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | MakeClosureExp(p,s,e1) -> 
@@ -229,6 +267,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num1 > 0 then (pull1,MakeClosureExp(p,s,env1),num1) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #13: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | ClosureProcExp(p,e1) -> 
@@ -236,6 +277,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num1 > 0 then (pull1,ClosureProcExp(p,env1),num1) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #14: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | ClosureVarsExp(p,e1) -> 
@@ -243,6 +287,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num1 > 0 then (pull1,ClosureVarsExp(p,env1),num1) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #15: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | PlusExp(p,e1,e2) -> 
@@ -252,6 +299,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,PlusExp(p,e1,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #16: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | MinusExp(p,e1,e2) -> 
@@ -261,6 +311,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,MinusExp(p,e1,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #17: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | TimesExp(p,e1,e2) -> 
@@ -270,6 +323,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,TimesExp(p,e1,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #18: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | LtExp(p,e1,e2) -> 
@@ -279,6 +335,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,LtExp(p,e1,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #19: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | LeqExp(p,e1,e2) -> 
@@ -288,6 +347,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,LeqExp(p,e1,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #20: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | EqExp(p,e1,e2) -> 
@@ -297,6 +359,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num2 > 0 then (pull2,EqExp(p,e1,env2),num2) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #21: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | NumberPredExp(p,e1) -> 
@@ -304,6 +369,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num1 > 0 then (pull1,NumberPredExp(p,env1),num1) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #22: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | ArrayPredExp(p,e1) -> 
@@ -311,6 +379,9 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       if num1 > 0 then (pull1,ArrayPredExp(p,env1),num1) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #23: ";
+         print_var uv;
+         print_string "\n";*)
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | VarExp(p,s) ->    ([],e,0)
@@ -320,7 +391,7 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
 
 (* puts an L4 program into L3 form *)
 let rec normalize_exp (the_exp : L4_ast.exp) : L4_ast.exp =
-      (*print_string "Lifting: ";
+      (*print_string "Normalizing: ";
       print_exp the_exp;
       print_string "\n";*)
       let (pull,env,i) = lift_one the_exp 0 ExpEnv in
@@ -343,8 +414,15 @@ let rec normalize_exp (the_exp : L4_ast.exp) : L4_ast.exp =
          print_exp e;
          print_string ")\n";
       ) pull;*)
-      let f = flatten_exp (normalize_exp env) pull in
-      (*print_string "Flattened: ";
+      let n = normalize_exp env in
+      (*print_string "Normalized: ";
+      print_exp n;
+      print_string "\n";*)
+      let f = flatten_exp n pull in
+      (*print_string "Received: ";
+      print_exp the_exp;
+      print_string "\n";
+      print_string "Flattened: ";
       print_exp f;
       print_string "\n";*)
       f
@@ -378,6 +456,9 @@ and compile_exp (e : L4_ast.exp) : L3_ast.exp =
    | AlenExp(p,e1) -> L3_ast.DExpExp(p,L3_ast.AlenDExp(p,compile_exp_to_sval e1))
    | BeginExp(p,e1,e2) ->
       let v = L3_ast.Var(p,get_unique_ident l4_prefix) in
+         (*print_string "generating unique #24: ";
+         L3_ast.print_var v;
+         print_string "\n";*)
       L3_ast.LetExp(p,v,compile_exp_to_dexp e1,compile_exp e2)
    | PrintExp(p,e) -> L3_ast.DExpExp(p,L3_ast.PrintDExp(p,compile_exp_to_sval e)) 
    | MakeClosureExp(p,s,e) -> L3_ast.DExpExp(p,L3_ast.MakeClosureDExp(p,s,compile_exp_to_sval e))
