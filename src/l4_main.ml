@@ -87,14 +87,15 @@ if !do_compile_only then (
       | _ -> 
          print_string "Returning to the user: \""; );*)
       (*let p = compile_program result in () ;*)
-      print_string "Starting with: ";
+      (*print_string "Starting with: ";
       print_exp e;
       print_string "\n";
-      let result = test_func e in ();
+      let result = normalize_exp e in ();
       print_string "Final result:\n";
       print_exp result;
-      print_string "\n";
-      (*L3_ast.output_program out_stream p*)
+      print_string "\n";*)
+      let p = compile_program result in
+      L3_ast.output_program out_stream p
    )
 );
 exit 0

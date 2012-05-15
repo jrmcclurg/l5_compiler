@@ -78,7 +78,7 @@ and output_exp out e = match e with
       output_var out v;
       output_string out " ";
       output_dexp out de;
-      output_string out "]) ";
+      output_string out "])\n  ";
       output_exp out e;
       output_string out ")"
    | IfExp(_, sv, e1, e2) ->

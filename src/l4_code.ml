@@ -84,7 +84,7 @@ let rec replace_in_exp (ex : L4_ast.exp) (target : L4_ast.var) (repl : L4_ast.ex
  * and bad is the thing to extract (b,x are returned by check_extraction)
 *)
 let rec flatten_exp (e2 : L4_ast.exp) (extr : (L4_ast.var * L4_ast.exp) list) : (L4_ast.exp) =
-   print_string "Flattening:\n   env = ";
+   (*print_string "Flattening:\n   env = ";
    print_exp e2;
    List.iter (fun (x,e3) ->
       print_string "\n   extr = (";
@@ -93,7 +93,7 @@ let rec flatten_exp (e2 : L4_ast.exp) (extr : (L4_ast.var * L4_ast.exp) list) : 
       print_exp e3;
       print_string ")";
    ) extr;
-   print_string "\n";
+   print_string "\n";*)
    match extr with
    | [] -> e2
    | (x,extracted)::more ->
@@ -103,17 +103,14 @@ let rec flatten_exp (e2 : L4_ast.exp) (extr : (L4_ast.var * L4_ast.exp) list) : 
       | LetExp(p,v,e1,e2) -> 
          let cv = Var(p,get_unique_ident l4_prefix) in
          L4_ast.LetExp(p,cv,e1,LetExp(p,x,(replace_in_exp e2 v (VarExp(p,cv))),env))
-      | IfExp(p,e1,e2,e3) ->
-         let cv1 = Var(p,get_unique_ident l4_prefix) in
-         let cv2 = Var(p,get_unique_ident l4_prefix) in
-         L4_ast.IfExp(p,e1,replace_in_exp env x e2,replace_in_exp env x e3)
+      | IfExp(p,e1,e2,e3) ->    L4_ast.IfExp(p,e1,replace_in_exp env x e2,replace_in_exp env x e3)
+      | BeginExp(p,e1,e2) ->    L4_ast.BeginExp(p,e1,L4_ast.BeginExp(p,e2,env)) 
       | AppExp(p,e,el) ->    L4_ast.LetExp(p,x,extracted,env) 
       | NewArrayExp(p,e1,e2) ->    L4_ast.LetExp(p,x,extracted,env) 
       | NewTupleExp(p,el) ->    L4_ast.LetExp(p,x,extracted,env) 
       | ArefExp(p,e1,e2) ->    L4_ast.LetExp(p,x,extracted,env) 
       | AsetExp(p,e1,e2,e3) ->    L4_ast.LetExp(p,x,extracted,env) 
       | AlenExp(p,e1) ->    L4_ast.LetExp(p,x,extracted,env) 
-      | BeginExp(p,e1,e2) ->    L4_ast.LetExp(p,x,extracted,env) 
       | PrintExp(p,e) ->    L4_ast.LetExp(p,x,extracted,env) 
       | MakeClosureExp(p,s,e) ->    L4_ast.LetExp(p,x,extracted,env) 
       | ClosureProcExp(p,e) ->    L4_ast.LetExp(p,x,extracted,env) 
@@ -162,7 +159,7 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       let (pull2,env2,num2,b) = List.fold_left (fun (pull2,env2,num2,b) e ->
             let (pull3,env3,num3) = lift_one e (n+1) SValEnv in
             if b then (pull2,env2@[e],num2,b) else
-            if num3 > 0 then (pull3,env2@[env3],num2,true) else
+            if num3 > 0 then (pull3,env2@[env3],num3,true) else
             (pull2,env2@[e],num2,b)
       ) ([],[],0,false) el in
       if num1 > 0 then (pull1,AppExp(p,env1,el),num1) else
@@ -184,7 +181,7 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       let (pull2,env2,num2,b) = List.fold_left (fun (pull2,env2,num2,b) e ->
             let (pull3,env3,num3) = lift_one e (n+1) SValEnv in
             if b then (pull2,env2@[e],num2,b) else
-            if num3 > 0 then (pull3,env2@[env3],num2,true) else
+            if num3 > 0 then (pull3,env2@[env3],num3,true) else
             (pull2,env2@[e],num2,b)
       ) ([],[],0,false) el in
       if num2 > 0 then (pull2,NewTupleExp(p,env2),num2) else (
@@ -220,16 +217,14 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
    | BeginExp(p,e1,e2) -> 
-      print_string "PROCESSING A BEGIN\n";
       let (pull1,env1,num1) = lift_one e1 (n+1) DExpEnv in
       let (pull2,env2,num2) = lift_one e2 (n+1) ExpEnv in
-      let v = L4_ast.Var(p,get_unique_ident l4_prefix) in
-      if num1 > 0 then (pull1,LetExp(p,v,env1,e2),num1) else (* NOTE: actually returns a Let here *)
-      if num2 > 0 then (pull2,LetExp(p,v,e1,env2),num2) else (
+      if num1 > 0 then (pull1,BeginExp(p,env1,e2),num1) else
+      if num2 > 0 then (pull2,BeginExp(p,e1,env2),num2) else (
       match en with
-      | ExpEnv -> ([],LetExp(p,v,e1,e2),0)
+      | ExpEnv -> ([],e,0)
       | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
-             ([(uv,LetExp(p,v,e1,e2))], VarExp(p,uv), n) )
+             ([(uv,e)], VarExp(p,uv), n) )
    | PrintExp(p,e1) -> 
       let (pull1,env1,num1) = lift_one e1 (n+1) SValEnv in
       if num1 > 0 then (pull1,PrintExp(p,env1),num1) else (
@@ -331,192 +326,34 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
    | LabelExp(p,s) ->  ([],e,0)
 ;;
 
-
-(* 
- * Checks if an expression is flat, and if not, returns a
- * fresh variable to be used as a replacement for the expression)
- *)
-let rec is_flattenable (e : L4_ast.exp) (stop_d : bool) : (L4_ast.var option) =
-   match e with
-   | LetExp(p,v,e1,e2) -> Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | IfExp(p,e1,e2,e3) -> Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | AppExp(p,e,el) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None (e::el)
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | NewArrayExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | NewTupleExp(p,el) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None el
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | ArefExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | AsetExp(p,e1,e2,e3) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2;e3]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | AlenExp(p,e1) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | BeginExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | PrintExp(p,e) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | MakeClosureExp(p,s,e) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | ClosureProcExp(p,e) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | ClosureVarsExp(p,e) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | PlusExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | MinusExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | TimesExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | LtExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | LeqExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | EqExp(p,e1,e2) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e1;e2]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | NumberPredExp(p,e) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | ArrayPredExp(p,e) ->
-      if stop_d then (
-         List.fold_left (fun r e -> 
-            match r with
-            | Some(_) -> r
-            | _ -> is_flattenable e stop_d
-         ) None [e]
-      ) else Some(L4_ast.Var(p,get_unique_ident l4_prefix))
-   | VarExp(p,s) -> None
-   | IntExp(p,i) -> None
-   | LabelExp(p,s) -> None
-;;
-
-(* 
- * Given a list like (a b c (+ (1 2) (3 4)) e f), returns the tuple
- * X, (+ (1 2) (3 4)), (a b c X e f)  where X is a fresh variable
- * if stop_d is true, dexp will not be reduced to variables
- *)
-let get_first_flattenable (el : L4_ast.exp list) (stop_d : bool) : (L4_ast.var option * L4_ast.exp option * L4_ast.exp list) =
-   List.fold_left (fun (vt,et,elt) e -> 
-      print_string "Checking flattenable: ";
-      print_exp e;
-      match vt with
-      | None ->
-         let vo = is_flattenable e stop_d in
-         (match vo with
-         | None -> (vt,et,elt@[e])
-         | Some((Var(p,s)) as vr) -> print_string "YES!"; (Some(vr),Some(e),elt@[VarExp(p,vr)]))
-      | _ -> (vt,et,elt@[e])
-   ) (None,None,[]) el
+(* puts an L4 program into L3 form *)
+let rec normalize_exp (the_exp : L4_ast.exp) : L4_ast.exp =
+      (*print_string "Lifting: ";
+      print_exp the_exp;
+      print_string "\n";*)
+      let (pull,env,i) = lift_one the_exp 0 ExpEnv in
+      match pull with
+      | [] -> env
+      | _ ->
+      (*print_string "  Returned env: ";
+      print_exp env;
+      print_string "\n";
+      List.iter (fun (x,e) ->
+         print_string "  Pulled out: (";
+         print_var x;
+         print_string ", ";
+         print_exp e;
+         print_string ")\n";
+      ) pull;*)
+      let f = flatten_exp (normalize_exp env) pull in
+      (*print_string "Flattened: ";
+      print_exp f;
+      print_string "\n";*)
+      f
 ;;
 
 (* compile an L4 program into an L3 program *)
+(* the program must be normalized first, or runtime errors will occur *)
 
 let rec compile_program (pr : L4_ast.program) : L3_ast.program =
    match pr with
@@ -526,59 +363,39 @@ and compile_func (f : L4_ast.func) : L3_ast.func =
    match f with
    | Function(p,name,vl,e) -> L3_ast.Function(p, name, List.map (fun v -> compile_var v) vl, compile_exp e)
 
-and test_func (the_exp : L4_ast.exp) : L4_ast.exp =
-      print_string "Lifting: ";
-      print_exp the_exp;
-      print_string "\n";
-      let (pull,env,i) = lift_one the_exp 0 ExpEnv in
-      match pull with
-      | [] -> env
-      | _ ->
-      print_string "  Returned env: ";
-      print_exp env;
-      print_string "\n";
-      List.iter (fun (x,e) ->
-         print_string "  Pulled out: (";
-         print_var x;
-         print_string ", ";
-         print_exp e;
-         print_string ")\n";
-      ) pull;
-      let f = flatten_exp (test_func env) pull in
-      print_string "Flattened: ";
-      print_exp f;
-      print_string "\n";
-      f
-
-and compile_exp (the_exp : L4_ast.exp) : L3_ast.exp = 
-   print_string "COMPILING: ";
-   print_exp the_exp;
-   print_string "\n";
-   L3_ast.DExpExp(NoPos,L3_ast.SValDExp(NoPos,L3_ast.IntSVal(NoPos,0L)));
-   (*match the_exp with
-   | LetExp(p,v,e1,e2) -> 
-   | IfExp(p,e1,e2,e3) -> 
-   | AppExp(p,e,el) -> 
-   | NewArrayExp(p,e1,e2) -> 
-   | NewTupleExp(p,el) -> 
-   | ArefExp(p,e1,e2) ->
+and compile_exp (e : L4_ast.exp) : L3_ast.exp = 
+   (*L3_ast.DExpExp(NoPos,L3_ast.SValDExp(NoPos,L3_ast.IntSVal(NoPos,0L)));*)
+   let the_exp = normalize_exp e in
+   match the_exp with
+   | LetExp(p,v,e1,e2) -> L3_ast.LetExp(p,compile_var v,compile_exp_to_dexp e1,compile_exp e2)
+   | IfExp(p,e1,e2,e3) -> L3_ast.IfExp(p,compile_exp_to_sval e1,compile_exp e2,compile_exp e3)
+   | AppExp(p,e,el) ->
+      L3_ast.DExpExp(p,L3_ast.AppDExp(p,compile_exp_to_sval e, List.map (fun e -> compile_exp_to_sval e) el))
+   | NewArrayExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.NewArrayDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2))
+   | NewTupleExp(p,el) ->
+      L3_ast.DExpExp(p,L3_ast.NewTupleDExp(p,List.map (fun e -> compile_exp_to_sval e) el))
+   | ArefExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.ArefDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2))
    | AsetExp(p,e1,e2,e3) ->
-   | AlenExp(p,e1) ->
-   | BeginExp(p,e1,e2) -> 
-   | PrintExp(p,e) -> 
-   | MakeClosureExp(p,s,e) ->
-   | ClosureProcExp(p,e) ->
-   | PlusExp(p,e1,e2) ->
-   | MinusExp(p,e1,e2) -> 
-   | TimesExp(p,e1,e2) -> 
-   | LtExp(p,e1,e2) -> 
-   | LeqExp(p,e1,e2) -> 
-   | EqExp(p,e1,e2) -> 
-   | NumberPredExp(p,e) -> 
-   | ArrayPredExp(p,e) -> 
-   | VarExp(p,v) -> 
-   | IntExp(p,i) -> 
-   | LabelExp(p,s) ->*)
+      L3_ast.DExpExp(p,L3_ast.AsetDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2,compile_exp_to_sval e3))
+   | AlenExp(p,e1) -> L3_ast.DExpExp(p,L3_ast.AlenDExp(p,compile_exp_to_sval e1))
+   | BeginExp(p,e1,e2) ->
+      let v = L3_ast.Var(p,get_unique_ident l4_prefix) in
+      L3_ast.LetExp(p,v,compile_exp_to_dexp e1,compile_exp e2)
+   | PrintExp(p,e) -> L3_ast.DExpExp(p,L3_ast.PrintDExp(p,compile_exp_to_sval e)) 
+   | MakeClosureExp(p,s,e) -> L3_ast.DExpExp(p,L3_ast.MakeClosureDExp(p,s,compile_exp_to_sval e))
+   | ClosureProcExp(p,e) -> L3_ast.DExpExp(p,L3_ast.ClosureProcDExp(p,compile_exp_to_sval e))
+   | ClosureVarsExp(p,e) -> L3_ast.DExpExp(p,L3_ast.ClosureVarsDExp(p,compile_exp_to_sval e))
+   | PlusExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.PlusDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2))
+   | MinusExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.MinusDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2)) 
+   | TimesExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.TimesDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2)) 
+   | LtExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.LtDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2)) 
+   | LeqExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.LeqDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2)) 
+   | EqExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.EqDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2)) 
+   | NumberPredExp(p,e) -> L3_ast.DExpExp(p,L3_ast.NumberPredDExp(p,compile_exp_to_sval e)) 
+   | ArrayPredExp(p,e) -> L3_ast.DExpExp(p,L3_ast.ArrayPredDExp(p,compile_exp_to_sval e)) 
+   | VarExp(p,v) -> L3_ast.DExpExp(p,L3_ast.SValDExp(p,L3_ast.VarSVal(p,compile_var v))) 
+   | IntExp(p,i) -> L3_ast.DExpExp(p,L3_ast.SValDExp(p,L3_ast.IntSVal(p,i))) 
+   | LabelExp(p,s) -> L3_ast.DExpExp(p,L3_ast.SValDExp(p,L3_ast.LabelSVal(p,s)))
 
 and compile_exp_to_dexp (e : L4_ast.exp) : L3_ast.dexp =
    match e with
