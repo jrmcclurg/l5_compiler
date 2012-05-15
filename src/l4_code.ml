@@ -136,22 +136,23 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
    match e with
    | LetExp(p,v,e1,e2) -> 
       let (pull1,env1,num1) = lift_one e1 (n+1) DExpEnv in
-      let (pull2,env2,num2) = lift_one e2 (n+1) ExpEnv in
-      if num1 > 0 then (pull1,LetExp(p,v,env1,e2),num1) else
-      if num2 > 0 then ((v,e1)::pull2,env2,num2) else (
+      if num1 > 0 then (pull1,LetExp(p,v,env1,e2),num1) else (
       match en with
       | ExpEnv -> ([],e,0) 
       | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
              ([(v,e1);(uv,e2)], VarExp(p,uv), n) ) (* TODO - changed the e2 here from "e" and that broke things *)
    | IfExp(p,e1,e2,e3) -> 
       let (pull1,env1,num1) = lift_one e1 (n+1) SValEnv in
-      let (pull2,env2,num2) = lift_one e2 (n+1) ExpEnv in
-      let (pull3,env3,num3) = lift_one e3 (n+1) ExpEnv in
-      if num1 > 0 then (pull1,IfExp(p,env1,e2,e3),num1) else
-      if num2 > 0 then (pull2,IfExp(p,e1,env2,e3),num2) else
-      if num3 > 0 then (pull3,IfExp(p,e1,e2,env3),num3) else (
+      if num1 > 0 then (pull1,IfExp(p,env1,e2,e3),num1) else (
       match en with
       | ExpEnv -> ([],e,0) 
+      | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+             ([(uv,e)], VarExp(p,uv), n) )
+   | BeginExp(p,e1,e2) -> 
+      let (pull1,env1,num1) = lift_one e1 (n+1) DExpEnv in
+      if num1 > 0 then (pull1,BeginExp(p,env1,e2),num1) else (
+      match en with
+      | ExpEnv -> ([],e,0)
       | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
              ([(uv,e)], VarExp(p,uv), n) )
    | AppExp(p,ex,el) -> 
@@ -216,15 +217,6 @@ let rec lift_one (e : L4_ast.exp) (n : int) (en : environment) :
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
              ([(uv,e)], VarExp(p,uv), n)
       | _ -> ([],e,0) )
-   | BeginExp(p,e1,e2) -> 
-      let (pull1,env1,num1) = lift_one e1 (n+1) DExpEnv in
-      let (pull2,env2,num2) = lift_one e2 (n+1) ExpEnv in
-      if num1 > 0 then (pull1,BeginExp(p,env1,e2),num1) else
-      if num2 > 0 then (pull2,BeginExp(p,e1,env2),num2) else (
-      match en with
-      | ExpEnv -> ([],e,0)
-      | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
-             ([(uv,e)], VarExp(p,uv), n) )
    | PrintExp(p,e1) -> 
       let (pull1,env1,num1) = lift_one e1 (n+1) SValEnv in
       if num1 > 0 then (pull1,PrintExp(p,env1),num1) else (
@@ -333,7 +325,13 @@ let rec normalize_exp (the_exp : L4_ast.exp) : L4_ast.exp =
       print_string "\n";*)
       let (pull,env,i) = lift_one the_exp 0 ExpEnv in
       match pull with
-      | [] -> env
+      | [] -> (
+        match env with
+        | LetExp(p,v,e1,e2) -> LetExp(p,v,e1,normalize_exp e2)
+        | IfExp(p,e1,e2,e3) -> IfExp(p,e1,normalize_exp e2,normalize_exp e3)
+        | BeginExp(p,e1,e2) -> BeginExp(p,e1,normalize_exp e2)
+        | _ -> env 
+        )
       | _ ->
       (*print_string "  Returned env: ";
       print_exp env;
