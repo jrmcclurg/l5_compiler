@@ -68,7 +68,7 @@ let rec replace_in_exp (ex : L4_ast.exp) (target : L4_ast.var) (repl : L4_ast.ex
       (* if this equals the target variable, do the replacement *)
       let ts = (match target with
                 | Var(_,s1) -> s1) in
-      if (ts = s) then ex else (VarExp(p,target))
+      if (ts <> s) then ex else repl
    | IntExp(_,_) -> ex
    | LabelExp(_,_) -> ex
 ;;
@@ -87,7 +87,10 @@ let flatten_exp (e : L4_ast.exp) (x : L4_ast.var) (extracted: L4_ast.exp) : (L4_
    print_string "\n";
    match extracted with
    | LetExp(p,v,e1,e2) -> L4_ast.LetExp(p,x,e1,replace_in_exp (replace_in_exp e x e2) v (VarExp(p,x)))
-   | IfExp(p,e1,e2,e3) -> L4_ast.IfExp(p,e1,replace_in_exp e x e2,replace_in_exp e x e3)
+   | IfExp(p,e1,e2,e3) ->
+      let cv1 = Var(p,get_unique_ident l4_prefix) in
+      let cv2 = Var(p,get_unique_ident l4_prefix) in
+      L4_ast.IfExp(p,e1,replace_in_exp e x e2,replace_in_exp e x e3)
    | AppExp(p,e,el) ->    L4_ast.LetExp(p,x,extracted,e) 
    | NewArrayExp(p,e1,e2) ->    L4_ast.LetExp(p,x,extracted,e) 
    | NewTupleExp(p,el) ->    L4_ast.LetExp(p,x,extracted,e) 
