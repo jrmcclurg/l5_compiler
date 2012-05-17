@@ -9,9 +9,9 @@ void  print_content(void**, int);
 int  *gc_copy(int*);
 void  gc();
 
-//#define HEAP_SIZE 1048576  // one megabyte
-#define HEAP_SIZE 22  // twelve bytes
-#define ENABLE_GC
+#define HEAP_SIZE 1048576  // one megabyte
+//#define HEAP_SIZE 20  // twenty-two bytes
+//#define ENABLE_GC
 
 void** heap;           // the current heap
 void** heap2;          // the heap for copying
@@ -22,7 +22,7 @@ int words_allocated=0;
 int *stack; // pointer to the bottom of the stack (i.e. value
             // upon program startup)
 
-#define MAX_ATTEMPTS 1
+#define MAX_ATTEMPTS 2
 int tries = 0; // number of attempts at allocation
 
 /*
