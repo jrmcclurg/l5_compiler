@@ -10,8 +10,8 @@ int  *gc_copy(int*);
 void  gc();
 
 //#define HEAP_SIZE 1048576  // one megabyte
-#define HEAP_SIZE 12  // twenty bytes
-//#define ENABLE_GC
+#define HEAP_SIZE 12  // twelve bytes
+#define ENABLE_GC
 
 void** heap;           // the current heap
 void** heap2;          // the heap for copying
@@ -77,22 +77,27 @@ int *gc_copy(int *old) {
    if((void**)old >= heap && (void**)old < (heap+HEAP_SIZE)) {
       // get the size of the object
       size = old[0];
-      // go through the object's data, and recursively
-      // copy them into the empty heap
-      for(i = 1; i < size; i++) { // TODO changed the 1 from 0
-         temp = (int*)old[i];
-         test = gc_copy(temp);
-         if(test != 0) {
-            old[i] = (int)test;
+      // if this object has not already been copied...
+      if(size >= 0) {
+         // use the allocate function to update the
+         // heap allocation position
+         the_new = allocate((size<<1)+1, (void*)0);
+         // go through the object's data, and recursively
+         // copy them into the empty heap
+         for(i = 1; i < size; i++) {
+            temp = (int*)old[i];
+            test = gc_copy(temp);
+            if(test != 0) {
+               old[i] = (int)test;
+            }
          }
+         // actually copy the memory from old heap to new heap
+         memcpy(the_new,(void*)old,size+1);
+         old[0] = -1; // mark this object as copied
+         return the_new;
+      } else {
+         return 0;
       }
-      // use the allocate function to update the
-      // heap allocation position
-      the_new = allocate((size<<1)+1, (void*)0);
-      // actually copy the memory from old heap to new heap
-      memcpy(the_new,(void*)old,size+1);
-      //memcpy(the_new+1,(void*)old,size); // TODO
-      return the_new;
    } else {
       return 0;
    }
