@@ -10,7 +10,7 @@ int  *gc_copy(int*);
 void  gc();
 
 //#define HEAP_SIZE 1048576  // one megabyte
-#define HEAP_SIZE 12  // twelve bytes
+#define HEAP_SIZE 22  // twelve bytes
 #define ENABLE_GC
 
 void** heap;           // the current heap
@@ -22,6 +22,7 @@ int words_allocated=0;
 int *stack; // pointer to the bottom of the stack (i.e. value
             // upon program startup)
 
+#define MAX_ATTEMPTS 1
 int tries = 0; // number of attempts at allocation
 
 /*
@@ -71,20 +72,25 @@ int *gc_copy(int *old) {
    int *test;
    void *the_new;
 
+   //printf("gc_copy(%p) mod = %d heap = %p - %p\n",old, (int)old % 4, heap2, heap2+HEAP_SIZE);
+
    // if the value actually references into the heap,
    // we know it's a real pointer, since raw numeric
    // values should ALWAYS have the least-significant-bit set
-   if((void**)old >= heap && (void**)old < (heap+HEAP_SIZE)) {
+   if((int)old % 4 == 0 && (void**)old >= heap2 && (void**)old < (heap2+HEAP_SIZE)) {
       // get the size of the object
       size = old[0];
       // if this object has not already been copied...
-      if(size >= 0) {
+      if(old[size+1] == 0) {
          // use the allocate function to update the
          // heap allocation position
-         the_new = allocate((size<<1)+1, (void*)0);
+         the_new = (void*)allocptr;
+         //the_new = allocate((size<<1)+1, (void*)0);
+         allocptr+=(size+2);
+         words_allocated+=(size+2);
          // go through the object's data, and recursively
          // copy them into the empty heap
-         for(i = 1; i < size; i++) {
+         for(i = 1; i <= size; i++) {
             temp = (int*)old[i];
             test = gc_copy(temp);
             if(test != 0) {
@@ -92,11 +98,13 @@ int *gc_copy(int *old) {
             }
          }
          // actually copy the memory from old heap to new heap
-         memcpy(the_new,(void*)old,size+1);
-         old[0] = -1; // mark this object as copied
+         memcpy(the_new,(void*)old,size+2);
+         old[size+1] = (int)the_new; // mark this object as copied
          return the_new;
       } else {
-         return 0;
+         // otherwise, if the object has been copied, just return its
+         // new address
+         return (int*)old[size+1];
       }
    } else {
       return 0;
@@ -106,7 +114,7 @@ int *gc_copy(int *old) {
 /*
  * Initiates garbage collection
  */
-void gc() {
+inline void gc() {
    size_t i;
    int *test;
    int *esp;
@@ -170,13 +178,13 @@ void gc() {
         :         // outputs (none)
         :"r"(registers[0]), "r"(registers[1])
         // ,"r"(registers[2]), "r"(registers[3]), "r"(registers[4]), "r"(registers[5]) // inputs
-        :         // clobbered registers (none)
+        :"%edi","%esi"         // clobbered registers
    );
 
    // finally, we need to copy anything pointed at
    // by the stack into our empty heap
    for(i = 0; i <= num; i++) {
-      //printf("   %d / %d\n", i, num);
+      //printf("   %d / %d = %p\n", i, num, esp[i]);
       test = gc_copy((int*)esp[i]);
       if(test != 0) {
          esp[i] = (int)test; // update the stack
@@ -189,8 +197,10 @@ void gc() {
  */
 void* allocate(int fw_size, void *fw_fill) {
    int size = fw_size >> 1;
-   void** ret = (void**)allocptr;
+   void** ret;
    int i;
+
+   //printf("allocate(%d,%p)\n",fw_size,fw_fill);
 
    if (!(fw_size&1)) {
       printf("allocate called with size input that was not an encoded integer, %i\n",
@@ -201,32 +211,38 @@ void* allocate(int fw_size, void *fw_fill) {
       exit(-1);
    }
 
-   allocptr+=(size+1);
-   words_allocated+=(size+1);
+   while(tries <= MAX_ATTEMPTS) {
+      //printf("Trying %d\n", tries);
+      size = fw_size >> 1;
+      ret = (void**)allocptr;
+      // we add a space at the the beginning for the list length,
+      // and a space at the end for the copying GC to store
+      // the updated pointer
+      allocptr+=(size+2);
+      words_allocated+=(size+2);
 
-   if (words_allocated < HEAP_SIZE) {
-     *((int*)ret)=size;
-     void** data = ret+1;
-     for (i=0;i<size;i++) {
-        *data = fw_fill;
-        data++;
-     }
-     tries = 0;
-     return ret;
-   }
+      if (words_allocated < HEAP_SIZE) {
+        *((int*)ret)=size;     // store the length
+        ((int*)ret)[size+1] = (int*)0; // store a NULL value for the GC updated ptr
+        void** data = ret+1;
+        for (i=0;i<size;i++) {
+           *data = fw_fill;
+           data++;
+        }
+        tries = 0;
+        return ret;
+      }
+
 #ifdef ENABLE_GC
-   // if we failed to allocate, do a garbage collection
-   else if(tries < 1) {
       ++tries;
-      //printf("Garbage collecting!\n");
       gc();
-      return allocate(fw_size, fw_fill);
-   }
+#else
+      break;
 #endif
-   else {
-      printf("out of memory");
-      exit(-1);
    }
+
+   printf("out of memory");
+   exit(-1);
 }
 
 /*
