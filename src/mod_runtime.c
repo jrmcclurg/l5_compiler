@@ -2,16 +2,17 @@
 #include <string.h>
 #include <stdlib.h>
 
-void *allocate(int, void*);
+extern void *allocate(int, void*);
+void *allocate_helper(int, void*, int*,int*,int*);
 int   print(void*);
 int   print_error(int*, int);
 void  print_content(void**, int);
 int  *gc_copy(int*);
-void  gc();
+void  gc(int *esp);
 
-#define HEAP_SIZE 1048576  // one megabyte
-//#define HEAP_SIZE 20  // twenty-two bytes
-//#define ENABLE_GC
+//#define HEAP_SIZE 1048576  // one megabyte
+#define HEAP_SIZE 50       // small heap size for testing
+#define ENABLE_GC            // uncomment this to enable GC
 
 void** heap;           // the current heap
 void** heap2;          // the heap for copying
@@ -88,6 +89,7 @@ int *gc_copy(int *old) {
          //the_new = allocate((size<<1)+1, (void*)0);
          allocptr+=(size+2);
          words_allocated+=(size+2);
+         old[size+1] = (int)the_new; // mark this object as copied
          // go through the object's data, and recursively
          // copy them into the empty heap
          for(i = 1; i <= size; i++) {
@@ -95,11 +97,12 @@ int *gc_copy(int *old) {
             test = gc_copy(temp);
             if(test != 0) {
                old[i] = (int)test;
+	       // TODO - just use the_new[i] here instead of old[i],
+               // and get rid of the memcpy
             }
          }
          // actually copy the memory from old heap to new heap
          memcpy(the_new,(void*)old,size+2);
-         old[size+1] = (int)the_new; // mark this object as copied
          return the_new;
       } else {
          // otherwise, if the object has been copied, just return its
@@ -114,23 +117,15 @@ int *gc_copy(int *old) {
 /*
  * Initiates garbage collection
  */
-inline void gc() {
+inline void gc(int *esp) {
    size_t i;
    int *test;
-   int *esp;
    size_t num;
-
-   // grab the esp (top-of-stack) register
-   asm ("movl %%esp, %0;"
-        :"=r"(esp)        /* output */
-        :         /* input */
-        :         /* clobbered register */
-   );  
 
    // calculate the stack size
    num = stack-esp;
 
-   //printf("Garbage collection: stack=%p, esp=%p, num=%d\n", stack, esp, num);
+   printf("Garbage collection: stack=%d, esp=%p, num=%d\n", stack, esp, num);
 
    // swap in the empty heap to use for storing
    // compacted objects
@@ -192,13 +187,57 @@ inline void gc() {
    }
 }
 
+asm(
+   "   .globl	allocate\n"
+   "   .type	allocate, @function\n"
+   "allocate:\n"
+   "# grab the arguments (into eax,edx)\n"
+   "popl %ecx\n"
+   "popl %eax\n"
+   "popl %edx\n"
+   "\n"
+   "# (put them back on stack)\n"
+   "pushl %edx\n"
+   "pushl %eax\n"
+   "pushl %ecx\n"
+   "# save the original esp (into ecx)\n"
+   "movl %esp, %ecx\n"
+   "# save the caller's base pointer (so that LEAVE works)\n"
+   "push %ebp\n"
+   "movl %esp, %ebp\n"
+   "# body begins with base and\n"
+   "# stack pointers equal\n"
+   "# call the real alloc\n"
+   "subl $8, %esp\n"
+   "subl $4, %ebp\n"
+   "movl %esi, (%ebp)\n"
+   "pushl %ebp\n"
+   "subl $4, %ebp\n"
+   "movl %edi, (%ebp)\n"
+   "pushl %ebp\n"
+   "addl $8, %ebp\n"
+   "pushl %ecx\n"
+   "pushl %edx\n"
+   "pushl %eax\n"
+   "call allocate_helper\n"
+   "addl	$20, %esp\n"
+   "addl	$8, %esp\n"
+   "\n"
+   "leave\n"
+   "ret\n" 
+);
+
 /*
  * The "allocate" runtime function
  */
-void* allocate(int fw_size, void *fw_fill) {
+void* allocate_helper(int fw_size, void *fw_fill, int *esp, int *edi, int *esi) {
    int size = fw_size >> 1;
    void** ret;
    int i;
+
+   printf("In alloc2: %d, %d, %d, edi=%d, esi=%d : words_alloc = %d, allocptr = %p\n",fw_size,fw_fill,esp,*edi,*esi,words_allocated,allocptr);
+
+   //return allocptr;
 
    //printf("allocate(%d,%p)\n",fw_size,fw_fill);
 
@@ -212,9 +251,11 @@ void* allocate(int fw_size, void *fw_fill) {
    }
 
    while(tries <= MAX_ATTEMPTS) {
-      //printf("Trying %d\n", tries);
+      printf("Trying %d\n", tries);
       size = fw_size >> 1;
+      printf("Size: %d\n",size);
       ret = (void**)allocptr;
+      printf("Ret: %p\n",ret);
       // we add a space at the the beginning for the list length,
       // and a space at the end for the copying GC to store
       // the updated pointer
@@ -226,6 +267,7 @@ void* allocate(int fw_size, void *fw_fill) {
         ((int*)ret)[size+1] = (int*)0; // store a NULL value for the GC updated ptr
         void** data = ret+1;
         for (i=0;i<size;i++) {
+           printf("Trying to fill: %d / %d\n",i,size);
            *data = fw_fill;
            data++;
         }
@@ -235,7 +277,7 @@ void* allocate(int fw_size, void *fw_fill) {
 
 #ifdef ENABLE_GC
       ++tries;
-      gc();
+      gc(esp);
 #else
       break;
 #endif
@@ -258,20 +300,25 @@ int print_error(int* array, int fw_x) {
  * Program entry-point
  */
 int main() {
-   // move esp into the bottom-of-stack pointer
-   asm ("movl %%esp, %0;"
-      : "=r"(stack) // outputs
-      :             // inputs (none)
-      :             // clobbered registers (none)
-   );  
-
    heap = (void*)malloc(HEAP_SIZE*sizeof(void*));
    heap2 = (void*)malloc(HEAP_SIZE*sizeof(void*));
-   if (!heap || !heap2) {
+   allocptr = heap;
+   if (!allocptr || !heap2) {
       printf("malloc failed\n");
       exit(-1);
    }
-   allocptr = heap;
-   go();   // call into the generated code
+   // TODO - set callee save here and set esp properly
+   // (instead of going it at the beginning of main
+   // move esp into the bottom-of-stack pointer
+   asm ("movl %%esp, %%eax;"
+        "subl $24, %%eax;" // 6 * 4
+        "movl %%eax, %0;"
+        "call go;"
+      : "=m"(stack) // outputs
+      :             // inputs (none)
+      : "%eax"      // clobbered registers (none)
+   );  
+   printf("Main got stack : %d\n", stack);
+
    return 0;
 }
