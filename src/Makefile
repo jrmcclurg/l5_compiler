@@ -24,8 +24,8 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L4c
-#all:			L1c spill liveness graph L2c L3c L4c
+#all:			L4c
+all:			L1c spill liveness graph L2c L3c L4c
 
 ### L4 compiler ###
 
@@ -218,7 +218,7 @@ utils.cmx:	utils.ml
 		ocamlopt -c utils.ml
 
 clean:		
-		rm -rf *.c *.S *.s *.out *.cm* *.o *.mli *_parser.ml *_lexer.ml
+		rm -rf *.S *.s *.out *.cm* *.o *.mli *_parser.ml *_lexer.ml
 
 binary:		
 		as --32 -o prog.o prog.S

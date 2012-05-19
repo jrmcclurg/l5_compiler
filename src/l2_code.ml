@@ -1110,8 +1110,8 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    match f with
    | Function(p,so,il) -> 
    (* TODO XXX - this is a hack to make it work with my wrong
-    * test cases.  It can be changed to 0L for normal behavior *)
-   let init_offset = 6L in (* number of spots on the stack to allow *)
+    * test cases.  It can be changed to 1L for normal behavior *)
+   let init_offset = 1L in (* number of spots on the stack to allow *)
    let save    = [MemWriteInstr(p,EbpReg(p),Int64.mul init_offset (-4L),VarSVal(p,EdiReg(p)));
                   MemWriteInstr(p,EbpReg(p),Int64.sub (Int64.mul init_offset (-4L)) 4L,VarSVal(p,EsiReg(p)))] in
    let restore = [MemReadInstr(p,EdiReg(p),EbpReg(p),Int64.mul init_offset (-4L));
@@ -1127,7 +1127,7 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
     * (presumably the other functions end with return) *)
    let il2 = if first then il2t@restore else il2t in
    (* increase the initial stack size by 2 instructions (for edi/esi save) *)
-   let initial = (Int64.add 2L init_offset) in
+   let initial = (Int64.add 1L init_offset) in
    (* compile the instructions to L1 instructions *)
    let (il3,num_spilled) = compile_instr_list il2 initial count in
    (* add the stack size adjustment to the beginning of each function *)
