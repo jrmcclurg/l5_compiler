@@ -1,0 +1,79 @@
+#####################################################################
+#  EECS 322 Compiler Construction
+#  Northwestern University
+#  5/21/2012
+#  
+#  L5-to-L4 Compiler
+#  Jedidiah R. McClurg
+#  v. 1.0
+#####################################################################
+
+#####################################################################
+#  DESCRIPTION
+#####################################################################
+
+This is a compiler for the L5 language.  It does does some program
+transformations and outputs an equivalent L4 program.
+
+The project is implemented in OCaml and consists of the following
+files:
+
+L5_README	    - this file
+L5c                 - the L4 compiler binary (64bit Linux)
+Makefile            - GNU makefile for the project
+l5_lexer.mll        - ocamllex lexer specification
+l5_parser.mly       - ocamlyacc parser specification
+l5_main.ml          - program entry-point
+l5_ast.ml           - abstract data types for the L4 AST
+l5_code.ml          - code-generation and compilation utilities
+l4_ast.ml           - abstract data types for the L4 AST
+l4_code.ml          - code-generation and compilation utilities
+l3_ast.ml           - abstract data types for the L3 AST
+l3_code.ml          - code-generation and compilation utilities
+l2_ast.ml           - abstract data types for the L2 AST
+l2_code.ml          - code-generation and compilation utilities
+l1_ast.ml           - abstract data types for the L1 AST
+l1_code.ml          - code-generation and compilation utilities
+utils.ml            - general utilities
+
+#####################################################################
+#  INSTALLATION
+#####################################################################
+
+The project has been built/tested only on 64bit Linux.  Thus,
+the included L5c binary will work only on 64bit systems.
+
+For building the project on other systems, the necessary packages are
+the ocaml package for the OCaml development tools, the gcc package
+for the GNU C compiler development tools, and possibly the
+gcc-multilib package to provide gcc with 32bit support.
+
+To build, simply type
+  make
+
+This should generate the L5 Compiler binary, L5c.  After this,
+typing
+  make clean
+should clear out any intermediate build files.
+
+#####################################################################
+#  USAGE
+#####################################################################
+
+Given an L5 program test.L5, the equivalent L4 code can be generated
+by typing
+  ./L5c test.L5
+
+This should output the L4 code immediately.
+
+If L5c is run with no filename on the command line, it reads the input
+file from stdin.
+
+The "-o" switch can be used to direct the output to a file, e.g.:
+   ./L5c -o out.L4 test.L5
+
+As a beta functionality, the L5c program can compile a binary using
+the L4, L3, L2, and L1 compiler stages:
+  ./L5c -compile -o myapp test.L5
+This produces an executable "myapp" using the local GNU compiler/
+linker.  If the output filename is not specified, "a.out" is used.

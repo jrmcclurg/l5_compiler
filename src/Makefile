@@ -10,6 +10,7 @@
 # L2-to-L1 Compiler
 # L3-to-L2 Compiler
 # L4-to-L3 Compiler
+# L5-to-L4 Compiler
 # Jedidiah R. McClurg
 # v. 1.0
 #
@@ -18,14 +19,46 @@
 # compiler.
 #
 # make         - builds the project (L1c, spill, liveness,
-#                                    graph, L2c, L3c, L4c
-#                                    binary)
+#                                    graph, L2c, L3c, L4c,
+#                                    L5c binary)
 # make clean   - deletes all intermediate build files
 # make wc      - counts the number of lines of code
 ###########################################################
 
-#all:			L4c
-all:			L1c spill liveness graph L2c L3c L4c
+#all:			L5c
+all:			L1c spill liveness graph L2c L3c L4c L5c
+
+### L5 compiler ###
+
+L5c:	l5_main.cmx l5_parser.cmx l5_lexer.cmx l5_ast.cmx l4_ast.cmx l3_ast.cmx l2_ast.cmx l1_ast.cmx l5_code.cmx l4_code.cmx l3_code.cmx l2_code.cmx l1_code.cmx utils.cmx
+	ocamlopt -o L5c str.cmxa utils.cmx l1_ast.cmx l2_ast.cmx l3_ast.cmx l4_ast.cmx l5_ast.cmx l1_code.cmx l2_code.cmx l3_code.cmx l4_code.cmx l5_code.cmx l5_parser.cmx l5_lexer.cmx l5_main.cmx
+
+l5_main.cmx:	l5_main.ml l5_parser.cmx l5_lexer.cmx l5_ast.cmx l4_ast.cmx l5_code.cmx l4_code.cmx l3_code.cmx l2_code.cmx l1_code.cmx utils.cmx
+		ocamlopt -c l5_main.ml
+
+l5_parser.cmx:	l5_parser.ml l5_parser.cmi l5_ast.cmx utils.cmx
+		ocamlopt -c l5_parser.ml
+
+l5_lexer.cmx:	l5_lexer.ml l5_parser.cmx l5_ast.cmx utils.cmx
+		ocamlopt -c l5_lexer.ml
+
+l5_code.cmx:	l5_code.ml l5_ast.cmx l4_ast.cmx utils.cmx
+		ocamlopt -c l5_code.ml
+
+l5_parser.cmi:	l5_parser.mli l5_ast.cmx utils.cmx
+		ocamlopt -c l5_parser.mli
+
+l5_ast.cmx:	l5_ast.ml utils.cmx
+		ocamlopt -c l5_ast.ml
+
+l5_parser.ml:	l5_parser.mly
+		ocamlyacc l5_parser.mly
+
+l5_parser.mli:	l5_parser.mly
+		ocamlyacc l5_parser.mly
+
+l5_lexer.ml:	l5_lexer.mll
+		ocamllex l5_lexer.mll
 
 ### L4 compiler ###
 
@@ -245,6 +278,9 @@ l3c_tarball:		graph clean
 
 l4c_tarball:		graph clean
 			tar -cvzf mcclurg.4.tar.gz L4* Makefile l4* l3_code.ml l2_code.ml l1_code.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml
+
+l5c_tarball:		graph clean
+			tar -cvzf mcclurg.5.tar.gz L5* Makefile l5* l4_code.ml l3_code.ml l2_code.ml l1_code.ml l4_ast.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml
 
 wc:		
 		make clean

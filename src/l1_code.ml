@@ -478,6 +478,15 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       output_string o ("\t"^"call"^"\t"^"print"^"\n");
       (* addl $8, %esp *)
       output_string o ("\t"^"addl"^"\t"^"$4, %esp"^"\n")
+   | PrintStrInstr(ps,tv) ->
+      (* pushl tv *)
+      output_string o ("\t"^"pushl"^"\t");
+      compile_tval o tv;
+      output_string o "\n";
+      (* call print *)
+      output_string o ("\t"^"call"^"\t"^"print_str"^"\n");
+      (* addl $8, %esp *)
+      output_string o ("\t"^"addl"^"\t"^"$4, %esp"^"\n")
    | AllocInstr(ps,tv1,tv2) ->
       (* pushl tv2 *)
       output_string o ("\t"^"pushl"^"\t");
@@ -491,6 +500,24 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       output_string o ("\t"^"call"^"\t"^"allocate"^"\n");
       (* addl $8, %esp *)
       output_string o ("\t"^"addl"^"\t"^"$8, %esp"^"\n")
+   | StringInstr(ps,s) ->
+      let len = String.length s in
+      let elen = Int64.add (Int64.mul (Int64.of_int len) 2L) 1L in
+      let tv1 = IntTVal(ps,elen) in
+      let tv2 = IntTVal(ps,Int64.of_int 1) in
+      (* pushl tv2 *)
+      output_string o ("\t"^"pushl"^"\t");
+      compile_tval o tv2;
+      output_string o "\n";
+      (* pushl tv1 *)
+      output_string o ("\t"^"pushl"^"\t");
+      compile_tval o tv1;
+      output_string o "\n";
+      (* call allocate *)
+      output_string o ("\t"^"call"^"\t"^"allocate"^"\n");
+      (* addl $8, %esp *)
+      output_string o ("\t"^"addl"^"\t"^"$8, %esp"^"\n");
+      compile_strlit o s ps first j k
    | ArrayErrorInstr(ps,tv1,tv2) ->
       (* pushl tv2 *)
       output_string o ("\t"^"pushl"^"\t");
@@ -546,6 +573,14 @@ and compile_tval (o : out_channel) (t : tval) : unit = match t with
 (* compiles an L1 label l into x86 assembly *)
 and compile_label (o : out_channel) (l : string) : unit = 
    output_string o ("_"^l^":\n") ;
+and compile_strlit (o : out_channel) (s : string) (p : pos) (first : bool) (j : int) (k : int) : unit =
+   let cl = explode s in
+   let _ = List.fold_left (fun k c -> 
+      let v = encode_int (Char.code c) in
+      let i = MemWriteInstr(p,CallerSaveReg(p,EaxReg(p)),Int64.of_int k,IntSVal(p,v)) in
+      compile_instr o i first j k;
+      (k + 4)
+   ) 4 cl in ()
 ;;
 
 (*
@@ -560,8 +595,8 @@ and compile_label (o : out_channel) (l : string) : unit =
  *)
 let compile_and_link (filename : string) (assembly_file_name : string) : unit =
    let r1c = ("as --32 -o "^assembly_file_name^".o "^assembly_file_name) in
-   let r2c = ("gcc -m32 -c -O2 -o runtime.o runtime.c") in
-   let r3c = ("gcc -m32 -o "^filename^" "^assembly_file_name^".o runtime.o") in
+   let r2c = ("gcc -m32 -g -c -O2 -o runtime.o runtime.c") in
+   let r3c = ("gcc -m32 -g -o "^filename^" "^assembly_file_name^".o runtime.o") in
    let r1 = Sys.command (r1c^" 2> /dev/null")  in
    let r2 = Sys.command (r2c^" 2> /dev/null") in
    let r3 = Sys.command (r3c^" 2> /dev/null") in
@@ -672,12 +707,13 @@ let generate_binary (result : program) (output_file_name : string) : unit =
    let runtime_file_name = "runtime.c" in
    let assembly_file_name = (Filename.temp_file ?temp_dir:(Some("")) "prog_" ".S") in
    (* generate the C runtime *)
-   let out1 = (try (open_out runtime_file_name)
+   (* TODO XXX print_string "NOT GENERATING THE C RUNTIME!!! FIXME!!!\n"; *)
+   (*let out1 = (try (open_out runtime_file_name)
       with _ -> die_system_error ("can't write to file: "^
          (Sys.getcwd ())^"/"^(runtime_file_name))
    ) in
    generate_runtime out1;
-   close_out out1;
+   close_out out1; *)
    (* generate the assembly code *)
    let out2 = (try (open_out assembly_file_name)
       with _ -> die_system_error ("can't write to file: "^

@@ -138,3 +138,24 @@ let get_unique_ident (prefix : string) : string =
 let make_ident_unique (prefix : string) (s : string) : string =
    (prefix^s^(!max_prefix))
 ;;
+
+let rec explode (s : string) : (char list) =
+  let len = String.length s in
+  if len == 0 then []
+  else if len == 1 then [String.get s 0]
+  else (
+     let c = String.get s 0 in
+     let rest = String.sub s 1 (len-1) in
+     c::(explode rest)
+  )
+;;
+
+let rec implode (cl : char list) : string =
+   match cl with
+   | [] -> ""
+   | c::more -> ((String.make 1 c)^(implode more))
+;;
+
+let encode_int (i : int) : int64 =
+   Int64.add (Int64.mul (Int64.of_int i) 2L) 1L
+;;

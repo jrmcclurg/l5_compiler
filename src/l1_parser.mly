@@ -15,9 +15,10 @@
    open L1_ast;;
    open Utils;;
 %}
+%token <string> STRING
 %token <int64> INT
 %token <string> LABEL
-%token ARRAYERR TAILCALL ALLOC RETURN PRINT CJUMP GOTO MEM CALL
+%token ARRAYERR TAILCALL ALLOC RETURN PRINT PRINTSTR CJUMP GOTO MEM CALL
 %token ESI EDI EBP ESP
 %token EAX ECX EDX EBX
 %token LPAREN RPAREN
@@ -88,11 +89,21 @@ instr:
                                                                 | CallerSaveReg(_,EaxReg(_)) -> ()
                                                                 | _ -> parse_error "destination must be eax");
                                                                PrintInstr(get_current_pos (), $6) }
+   | LPAREN reg GETS LPAREN PRINTSTR tval RPAREN RPAREN      { let r = $2 in
+                                                               (match r with
+                                                                | CallerSaveReg(_,EaxReg(_)) -> ()
+                                                                | _ -> parse_error "destination must be eax");
+                                                               PrintStrInstr(get_current_pos (), $6) }
    | LPAREN reg GETS LPAREN ALLOC tval tval RPAREN RPAREN    { let r = $2 in
                                                                (match r with
                                                                 | CallerSaveReg(_,EaxReg(_)) -> ()
                                                                 | _ -> parse_error "destination must be eax");
                                                                AllocInstr(get_current_pos (), $6, $7) }
+   | LPAREN reg GETS STRING RPAREN                           { let r = $2 in
+                                                               (match r with
+                                                                | CallerSaveReg(_,EaxReg(_)) -> ()
+                                                                | _ -> parse_error "destination must be eax");
+                                                               StringInstr(get_current_pos (), $4) }
    | LPAREN reg GETS LPAREN ARRAYERR tval tval RPAREN RPAREN { let r = $2 in
                                                                (match r with
                                                                 | CallerSaveReg(_,EaxReg(_)) -> ()

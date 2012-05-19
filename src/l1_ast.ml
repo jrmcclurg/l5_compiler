@@ -39,7 +39,9 @@ type program = Program of pos * func list
            | TailCallInstr of pos * uval
            | ReturnInstr of pos
            | PrintInstr of pos * tval
+           | PrintStrInstr of pos * tval
            | AllocInstr of pos * tval * tval
+           | StringInstr of pos * string
            | ArrayErrorInstr of pos * tval * tval
  and reg = EsiReg of pos
          | EdiReg of pos
@@ -220,12 +222,20 @@ and output_instr out i = match i with
       output_string out "(eax <- (print ";
       output_tval out tv;
       output_string out "))";
+   | PrintStrInstr(_, tv) ->
+      output_string out "(eax <- (print-string ";
+      output_tval out tv;
+      output_string out "))";
    | AllocInstr(_, tv1, tv2) ->
       output_string out "(eax <- (allocate ";
       output_tval out tv1;
       output_string out " ";
       output_tval out tv2;
       output_string out "))";
+   | StringInstr(_, s) ->
+      output_string out "(eax <- ";
+      output_stringlit out (Printf.sprintf "%S" s);
+      output_string out ")";
    | ArrayErrorInstr(_, tv1, tv2) ->
       output_string out "(eax <- (array-error ";
       output_tval out tv1;
@@ -258,6 +268,8 @@ and output_tval out t = match t with
    | RegTVal(_,r) -> output_reg out r
    | IntTVal(_,i) -> output_string out (Int64.to_string i)
    | LabelTVal(_,s) -> output_string out (":"^s)
+and output_stringlit out s =
+   output_string out s (* TODO - encode special chars *)
 ;;
 
 (* the print_... functions pretty-print L1 constructs to stdout *)
@@ -271,6 +283,7 @@ and print_sreg sr = output_sreg stdout sr
 and print_sval s = output_sval stdout s
 and print_uval u = output_uval stdout u
 and print_tval t = output_tval stdout t
+and print_stringlit s = output_stringlit stdout s
 ;;
 
 (* "casts" a reg to a creg *)

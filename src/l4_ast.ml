@@ -59,7 +59,7 @@ let rec output_program out (p : program) = match p with
         output_func out f;
         true
      ) false fl in ();
-     output_string out "\n)"
+     output_string out "\n)\n"
 and output_func out (f : func) = match f with
   | Function(_,n,vl,e) ->
      output_string out ("  (:"^n^" (");

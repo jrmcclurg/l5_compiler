@@ -23,8 +23,9 @@ rule token = parse
 | ['\n']                     { do_newline lexbuf; token lexbuf } (* skip newlines (but count them) *)
 | (['-']? ['0'-'9']+) as s   { let i = Int64.of_string s in
                                check_int_range i;
-                               INT(Int64.of_string s) }            (* pos/neg integers *)
-| "array-error"              { ARRAYERR }                        (* keywords *)
+                               INT(Int64.of_string s) }          (* pos/neg integers *)
+| "print-string"             { PRINTSTR }                        (* keywords *)
+| "array-error"              { ARRAYERR }
 | "tail-call"                { TAILCALL }
 | "allocate"                 { ALLOC }
 | "return"                   { RETURN }
@@ -57,11 +58,7 @@ rule token = parse
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'
        '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
+| '"' ([^ '"']*) '"' as s    { let s2 = Scanf.sscanf s "%S" (fun x -> x) in
+                               STRING(s2) }
 | eof { EOF }
-| _ { let p = Lexing.lexeme_end_p lexbuf in
-      let file_name = p.Lexing.pos_fname in
-      let line_num = p.Lexing.pos_lnum in
-      let col_num = (p.Lexing.pos_cnum-p.Lexing.pos_bol) in
-      print_string ("Lexical error in '"^file_name^
-   "' on line "^(string_of_int line_num)^" col "^(string_of_int
-   col_num)^"!\n"); raise Lexing_error }
+| _ { lex_error "Lexing error" lexbuf }
