@@ -102,7 +102,7 @@ graph_main.cmx:		graph_main.ml liveness_parser.cmx liveness_lexer.cmx l2_code.cm
 ### liveness test ###
 
 liveness:		utils.cmx l2_ast.cmx l1_ast.ml l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
-			ocamlopt -o liveness str.cmxa utils.cmx l2_ast.cmx l1_ast.ml l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
+			ocamlopt -o liveness str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
 
 liveness_main.cmx:	liveness_main.ml liveness_parser.cmx liveness_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
 			ocamlopt -c liveness_main.ml
