@@ -224,6 +224,48 @@ let get_alen_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
+let rec var_list_contains (vl : L5_ast.var list) (s : string) : bool =
+   match vl with
+   | [] -> false
+   | (Var(_,s2))::more -> ((s2 = s) || (var_list_contains more s))
+;;
+
+let rec get_free_vars (e : L5_ast.exp) (vl : L5_ast.var list) : (L5_ast.var list) =
+   match e with
+   | LambdaExp(_,vl2,e) -> get_free_vars e (vl@vl2)
+   | VarExp(_, (Var(_,s) as v)) -> if var_list_contains vl s then [] else [v]
+   | LetExp(_, v, e1, e2) ->
+      let l = (get_free_vars e1 (v::vl)) in
+      l@(get_free_vars e2 (v::l@vl))
+   | LetRecExp(_, v, e1, e2) ->
+      let l = (get_free_vars e1 (v::vl)) in
+      l@(get_free_vars e2 (v::l@vl))
+   | IfExp(_, e1, e2, e3) ->
+      let l1 = get_free_vars e1 vl in
+      let l2 = get_free_vars e2 l1@vl in
+      let l3 = get_free_vars e3 l1@l2@vl in
+      (l1@l2@l3)
+   | NewTupleExp(_,el) ->
+      let (ret,_) = List.fold_left (fun (l,vlx) e ->
+         let l2 = get_free_vars e vlx in
+         (l2@l, l2@vlx)
+      ) ([],vl) el in
+      ret
+   | BeginExp(_,e1,e2) ->
+      let l1 = get_free_vars e1 vl in
+      let l2 = get_free_vars e2 l1@vl in
+      l1@l2
+   | AppExp(_,e,el) ->
+      let l1 = get_free_vars e vl in
+      let (ret,_) = List.fold_left (fun (l,vlx) e ->
+         let l2 = get_free_vars e vlx in
+         (l2@l, l2@vlx)
+      ) (l1,l1@vl) el in
+      ret
+   | PrimExp(_, p) -> []
+   | IntExp(_, i) -> []
+;;
+
 (*
  * These functions compile an L5 program into an L4 program
  *)
@@ -240,7 +282,7 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
       let name = get_unique_ident l5_prefix in
       let fparam = get_unique_ident l5_prefix in
       let bparam = get_unique_ident l5_prefix in
-      let free_vars = [Var(p,"m1");Var(p,"m2")] in (*get_free_vars e vl in*)
+      let free_vars = (*[Var(p,"m1");Var(p,"m2")]*) get_free_vars e vl in
       let (e2,fl) = compile_exp e in
       let (e3,_) = List.fold_right (fun v (ex,k) ->
          (L4_ast.LetExp(p,compile_var v,L4_ast.ArefExp(p,L4_ast.VarExp(p,L4_ast.Var(p,bparam)),

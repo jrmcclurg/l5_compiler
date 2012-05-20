@@ -141,8 +141,8 @@ let make_ident_unique (prefix : string) (s : string) : string =
 
 let rec explode (s : string) : (char list) =
   let len = String.length s in
-  if len == 0 then []
-  else if len == 1 then [String.get s 0]
+  if len = 0 then []
+  else if len = 1 then [String.get s 0]
   else (
      let c = String.get s 0 in
      let rest = String.sub s 1 (len-1) in
