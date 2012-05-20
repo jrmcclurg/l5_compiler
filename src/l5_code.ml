@@ -226,7 +226,7 @@ let get_alen_func (p : pos) : (string * string * L4_ast.func list) =
 
 let rec var_list_contains (vl : L5_ast.var list) (s : string) : bool =
    match vl with
-   | [] -> false
+   | []-> false
    | (Var(_,s2))::more -> ((s2 = s) || (var_list_contains more s))
 ;;
 
@@ -236,6 +236,26 @@ let print_var_list (vl : L5_ast.var list) =
    print_string "]\n"
 ;;
 
+let rec replace_in_exp (e : L5_ast.exp) (target : L5_ast.var) (repl : L5_ast.exp) : L5_ast.exp =
+   let name = (match target with
+   | Var(_,s) -> s) in
+   let result = (match e with
+   | LambdaExp(p,vl2,e) -> if (var_list_contains vl2 name) then e else LambdaExp(p,vl2,replace_in_exp e target repl)
+   | VarExp(p, Var(p2,s)) -> if (name = s) then repl else e
+   | LetExp(p, (Var(p2,s) as v), e1, e2) -> LetExp(p,v,replace_in_exp e1 target repl,
+                                            if (name = s) then e2 else replace_in_exp e2 target repl)
+   | LetRecExp(p, (Var(p2,s) as v), e1, e2) -> LetRecExp(p,v,replace_in_exp e1 target repl,
+                                               if (name = s) then e2 else replace_in_exp e2 target repl)
+   | IfExp(p, e1, e2, e3) -> IfExp(p,replace_in_exp e1 target repl,replace_in_exp e2 target repl,
+                                     replace_in_exp e3 target repl)
+   | NewTupleExp(p,el) -> NewTupleExp(p,List.map (fun e -> replace_in_exp e target repl) el)
+   | BeginExp(p,e1,e2) -> BeginExp(p,replace_in_exp e1 target repl,replace_in_exp e2 target repl)
+   | AppExp(p,e,el) -> AppExp(p,replace_in_exp e target repl,
+                                List.map (fun e -> replace_in_exp e target repl) el)
+   | PrimExp(p, pr) -> e
+   | IntExp(p, i) -> e ) in
+   result
+;;
 let rec get_free_vars (e : L5_ast.exp) (vl : L5_ast.var list) : (L5_ast.var list) =
    (*print_string "get_free_vars: ";
    print_exp e;
@@ -319,17 +339,62 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
       let (e2n,fl2) = compile_exp e2 in
       (L4_ast.LetExp(p,compile_var v,e1n,e2n),fl1@fl2)
    | LetRecExp(p,v,e1,e2) ->
+      (*print_string ("LETREC compiling ");
+      print_exp e1;
+      print_string ", ";
+      print_exp e2;
+      print_string "\n";*)
+      let x = VarExp(p,v) in
+      let zero = IntExp(p,0L) in
+      let arf = AppExp(p,PrimExp(p,ArefPrim(p)),[x;zero]) in
+      let e1_rep = replace_in_exp e1 v arf in
+      let e2_rep = replace_in_exp e2 v arf in
+      (*print_string "REPLACING: ";
+      print_exp e1;
+      print_string " -> ";
+      print_exp e1_rep;
+      print_string "\n";
+      print_string "REPLACING: ";
+      print_exp e2;
+      print_string " -> ";
+      print_exp e2_rep;
+      print_string "\n";*)
       let v2 = compile_var v in
-      let (e1n,fl1) = compile_exp e1 in
-      let (e2n,fl2) = compile_exp e2 in
-      let x = L4_ast.VarExp(p,v2) in
-      let zero = L4_ast.IntExp(p,0L) in
-      let arf = L4_ast.ArefExp(p,x,zero) in
-      let e1n_rep = L4_code.replace_in_exp e1n v2 arf in
-      let e2n_rep = L4_code.replace_in_exp e2n v2 arf in
+      let (e1n,fl1n) = compile_exp e1_rep in
+      let (e2n,fl2n) = compile_exp e2_rep in
+      let fl1 = fl1n in
+      let fl2 = fl2n in
+      (*let fl1 = List.map (fun (L4_ast.Function(p,s,vl,e)) ->
+         let e2 = if L4_code.var_list_contains vl v2 then e
+         else (
+            print_string "REPLACE in";
+            L4_ast.print_exp e;
+            print_string ", ";
+            L4_ast.print_var v2;
+            print_string ", ";
+            L4_ast.print_exp arf;
+            print_string "\n";
+            L4_code.replace_in_exp e v2 arf) in
+         L4_ast.Function(p,s,vl,e2)
+      ) fl1n in
+      let fl2 = List.map (fun (L4_ast.Function(p,s,vl,e)) ->
+         let e2 = if L4_code.var_list_contains vl v2 then e
+         else (
+            print_string "REPLACE in";
+            L4_ast.print_exp e;
+            print_string ", ";
+            L4_ast.print_var v2;
+            print_string ", ";
+            L4_ast.print_exp arf;
+            print_string "\n";
+            L4_code.replace_in_exp e v2 arf) in
+         L4_ast.Function(p,s,vl,e2)
+      ) fl2n in*)
+      let (zero2,_) = compile_exp zero in
+      let (x2,_) = compile_exp x in
       (L4_ast.LetExp(p,v2,
-         L4_ast.NewTupleExp(p,[zero]),
-         L4_ast.BeginExp(p,L4_ast.AsetExp(p,x,zero,e1n_rep),e2n_rep)),fl1@fl2)
+         L4_ast.NewTupleExp(p,[zero2]),
+         L4_ast.BeginExp(p,L4_ast.AsetExp(p,x2,zero2,e1n),e2n)),fl1@fl2)
    | IfExp(p,e1,e2,e3) ->
       let (e1n,fl1) = compile_exp e1 in
       let (e2n,fl2) = compile_exp e2 in
