@@ -230,40 +230,58 @@ let rec var_list_contains (vl : L5_ast.var list) (s : string) : bool =
    | (Var(_,s2))::more -> ((s2 = s) || (var_list_contains more s))
 ;;
 
+let print_var_list (vl : L5_ast.var list) = 
+   print_string "[";
+   List.iter (fun v -> print_var v; print_string " ") vl;
+   print_string "]\n"
+;;
+
 let rec get_free_vars (e : L5_ast.exp) (vl : L5_ast.var list) : (L5_ast.var list) =
-   match e with
+   (*print_string "get_free_vars: ";
+   print_exp e;
+   print_string ", ";
+   print_var_list vl;*)
+   let result = (match e with
    | LambdaExp(_,vl2,e) -> get_free_vars e (vl@vl2)
-   | VarExp(_, (Var(_,s) as v)) -> if var_list_contains vl s then [] else [v]
+   | VarExp(_, (Var(_,s) as v)) -> 
+      let b = var_list_contains vl s in
+      (*print_var_list vl;
+      if (not b) then print_string "NOT";
+      print_string " contains\n";*)
+      if b then [] else [v]
    | LetExp(_, v, e1, e2) ->
       let l = (get_free_vars e1 (v::vl)) in
-      l@(get_free_vars e2 (v::l@vl))
+      l@(get_free_vars e2 (v::(l@vl)))
    | LetRecExp(_, v, e1, e2) ->
       let l = (get_free_vars e1 (v::vl)) in
       l@(get_free_vars e2 (v::l@vl))
    | IfExp(_, e1, e2, e3) ->
       let l1 = get_free_vars e1 vl in
-      let l2 = get_free_vars e2 l1@vl in
-      let l3 = get_free_vars e3 l1@l2@vl in
+      let l2 = get_free_vars e2 (l1@vl) in
+      let l3 = get_free_vars e3 (l1@l2@vl) in
       (l1@l2@l3)
    | NewTupleExp(_,el) ->
       let (ret,_) = List.fold_left (fun (l,vlx) e ->
          let l2 = get_free_vars e vlx in
-         (l2@l, l2@vlx)
+         ((l2@l), (l2@vlx))
       ) ([],vl) el in
       ret
    | BeginExp(_,e1,e2) ->
       let l1 = get_free_vars e1 vl in
-      let l2 = get_free_vars e2 l1@vl in
+      let l2 = get_free_vars e2 (l1@vl) in
       l1@l2
    | AppExp(_,e,el) ->
       let l1 = get_free_vars e vl in
       let (ret,_) = List.fold_left (fun (l,vlx) e ->
          let l2 = get_free_vars e vlx in
-         (l2@l, l2@vlx)
-      ) (l1,l1@vl) el in
+         ((l2@l), (l2@vlx))
+      ) (l1,(l1@vl)) el in
       ret
    | PrimExp(_, p) -> []
-   | IntExp(_, i) -> []
+   | IntExp(_, i) -> [] ) in
+   (*print_string " = ";
+   print_var_list result;*)
+   result
 ;;
 
 (*
@@ -292,13 +310,26 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
          (L4_ast.LetExp(p,compile_var v,L4_ast.ArefExp(p,L4_ast.VarExp(p,L4_ast.Var(p,fparam)),
                                            L4_ast.IntExp(p,Int64.of_int k)),ex), k-1)
       ) free_vars (e3,(List.length free_vars)-1) in
-      (L4_ast.MakeClosureExp(p,name,L4_ast.NewTupleExp(p,List.map (fun f -> L4_ast.VarExp(p,compile_var f)) free_vars)),
+      (L4_ast.MakeClosureExp(p,name,
+         L4_ast.NewTupleExp(p,List.map (fun f -> L4_ast.VarExp(p,compile_var f)) free_vars)),
        (L4_ast.Function(p,name,[L4_ast.Var(p,fparam);L4_ast.Var(p,bparam)],e4))::fl)
    | VarExp(p,v) -> (L4_ast.VarExp(p,compile_var v), [])
    | LetExp(p,v,e1,e2) ->
       let (e1n,fl1) = compile_exp e1 in
       let (e2n,fl2) = compile_exp e2 in
       (L4_ast.LetExp(p,compile_var v,e1n,e2n),fl1@fl2)
+   | LetRecExp(p,v,e1,e2) ->
+      let v2 = compile_var v in
+      let (e1n,fl1) = compile_exp e1 in
+      let (e2n,fl2) = compile_exp e2 in
+      let x = L4_ast.VarExp(p,v2) in
+      let zero = L4_ast.IntExp(p,0L) in
+      let arf = L4_ast.ArefExp(p,x,zero) in
+      let e1n_rep = L4_code.replace_in_exp e1n v2 arf in
+      let e2n_rep = L4_code.replace_in_exp e2n v2 arf in
+      (L4_ast.LetExp(p,v2,
+         L4_ast.NewTupleExp(p,[zero]),
+         L4_ast.BeginExp(p,L4_ast.AsetExp(p,x,zero,e1n_rep),e2n_rep)),fl1@fl2)
    | IfExp(p,e1,e2,e3) ->
       let (e1n,fl1) = compile_exp e1 in
       let (e2n,fl2) = compile_exp e2 in
@@ -331,6 +362,7 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
             [L4_ast.ClosureVarsExp(p,L4_ast.VarExp(p,f));L4_ast.NewTupleExp(p,el2)])),fl1@fl2) )
    | PrimExp(p,pr) -> compile_prim pr true
    | IntExp(p,i) -> (L4_ast.IntExp(p,i), [])
+
 and compile_prim (pr : L5_ast.prim) (closure : bool) : (L4_ast.exp * L4_ast.func list) =
    let (name,fname,fn,p) = (match pr with
    | PlusPrim(p) ->
@@ -363,6 +395,7 @@ and compile_prim (pr : L5_ast.prim) (closure : bool) : (L4_ast.exp * L4_ast.func
    let ret = if closure then L4_ast.MakeClosureExp(p,name,L4_ast.NewTupleExp(p,[]))
              else L4_ast.LabelExp(p,fname) in
    (ret,fn)
+
 and compile_var (v : L5_ast.var) : L4_ast.var = 
    match v with
    | Var(p,s) -> L4_ast.Var(p,s)

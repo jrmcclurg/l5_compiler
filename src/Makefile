@@ -42,7 +42,7 @@ l5_parser.cmx:	l5_parser.ml l5_parser.cmi l5_ast.cmx utils.cmx
 l5_lexer.cmx:	l5_lexer.ml l5_parser.cmx l5_ast.cmx utils.cmx
 		ocamlopt -c l5_lexer.ml
 
-l5_code.cmx:	l5_code.ml l5_ast.cmx l4_ast.cmx utils.cmx
+l5_code.cmx:	l5_code.ml l5_ast.cmx l4_code.cmx l4_ast.cmx utils.cmx
 		ocamlopt -c l5_code.ml
 
 l5_parser.cmi:	l5_parser.mli l5_ast.cmx utils.cmx
