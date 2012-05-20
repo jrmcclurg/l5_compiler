@@ -202,7 +202,7 @@ let get_aset_func (p : pos) : (string * string * L4_ast.func list) =
       (name,fname,[L4_ast.Function(p,name,vars,
              L4_ast.AsetExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
                               L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,3L))));
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,2L))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.AsetExp(p,L4_ast.VarExp(p,List.nth fvars 0),
                               L4_ast.VarExp(p,List.nth fvars 1),
@@ -238,37 +238,40 @@ let print_var_list (vl : L5_ast.var list) =
 
 let rec replace_in_exp (e : L5_ast.exp) (target : L5_ast.var) (repl : L5_ast.exp) : L5_ast.exp =
    let name = (match target with
-   | Var(_,s) -> s) in
+     | Var(_,s) -> s) in
    let result = (match e with
-   | LambdaExp(p,vl2,e) -> if (var_list_contains vl2 name) then e else LambdaExp(p,vl2,replace_in_exp e target repl)
-   | VarExp(p, Var(p2,s)) -> if (name = s) then repl else e
-   | LetExp(p, (Var(p2,s) as v), e1, e2) -> LetExp(p,v,replace_in_exp e1 target repl,
-                                            if (name = s) then e2 else replace_in_exp e2 target repl)
-   | LetRecExp(p, (Var(p2,s) as v), e1, e2) -> LetRecExp(p,v,replace_in_exp e1 target repl,
-                                               if (name = s) then e2 else replace_in_exp e2 target repl)
-   | IfExp(p, e1, e2, e3) -> IfExp(p,replace_in_exp e1 target repl,replace_in_exp e2 target repl,
-                                     replace_in_exp e3 target repl)
-   | NewTupleExp(p,el) -> NewTupleExp(p,List.map (fun e -> replace_in_exp e target repl) el)
-   | BeginExp(p,e1,e2) -> BeginExp(p,replace_in_exp e1 target repl,replace_in_exp e2 target repl)
-   | AppExp(p,e,el) -> AppExp(p,replace_in_exp e target repl,
-                                List.map (fun e -> replace_in_exp e target repl) el)
-   | PrimExp(p, pr) -> e
-   | IntExp(p, i) -> e ) in
+      | LambdaExp(p,vl2,e2) ->
+         if (var_list_contains vl2 name) then e
+         else LambdaExp(p,vl2,replace_in_exp e2 target repl)
+      | VarExp(p, Var(p2,s)) ->
+         if (name = s) then repl else e
+      | LetExp(p, (Var(p2,s) as v), e1, e2) ->
+         LetExp(p,v,replace_in_exp e1 target repl,
+                    if (name = s) then e2 else replace_in_exp e2 target repl)
+      | LetRecExp(p, (Var(p2,s) as v), e1, e2) ->
+         LetRecExp(p,v,replace_in_exp e1 target repl,
+                       if (name = s) then e2 else replace_in_exp e2 target repl)
+      | IfExp(p, e1, e2, e3) ->
+         IfExp(p,replace_in_exp e1 target repl,
+                 replace_in_exp e2 target repl,
+                 replace_in_exp e3 target repl)
+      | NewTupleExp(p,el) ->
+         NewTupleExp(p,List.map (fun e -> replace_in_exp e target repl) el)
+      | BeginExp(p,e1,e2) ->
+         BeginExp(p,replace_in_exp e1 target repl,replace_in_exp e2 target repl)
+      | AppExp(p,e,el) ->
+         AppExp(p,replace_in_exp e target repl,
+                  List.map (fun e -> replace_in_exp e target repl) el)
+      | PrimExp(p, pr) -> e
+      | IntExp(p, i) -> e ) in
    result
 ;;
+
 let rec get_free_vars (e : L5_ast.exp) (vl : L5_ast.var list) : (L5_ast.var list) =
-   (*print_string "get_free_vars: ";
-   print_exp e;
-   print_string ", ";
-   print_var_list vl;*)
-   let result = (match e with
+   match e with
    | LambdaExp(_,vl2,e) -> get_free_vars e (vl@vl2)
    | VarExp(_, (Var(_,s) as v)) -> 
-      let b = var_list_contains vl s in
-      (*print_var_list vl;
-      if (not b) then print_string "NOT";
-      print_string " contains\n";*)
-      if b then [] else [v]
+      if (var_list_contains vl s) then [] else [v]
    | LetExp(_, v, e1, e2) ->
       let l = (get_free_vars e1 (v::vl)) in
       l@(get_free_vars e2 (v::(l@vl)))
@@ -298,10 +301,7 @@ let rec get_free_vars (e : L5_ast.exp) (vl : L5_ast.var list) : (L5_ast.var list
       ) (l1,(l1@vl)) el in
       ret
    | PrimExp(_, p) -> []
-   | IntExp(_, i) -> [] ) in
-   (*print_string " = ";
-   print_var_list result;*)
-   result
+   | IntExp(_, i) -> []
 ;;
 
 (*
