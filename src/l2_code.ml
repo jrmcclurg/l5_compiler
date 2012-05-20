@@ -53,7 +53,7 @@ let rec list_contains (vl : var list) (v : var) : bool =
 
 (* sorts a var list *)
 let sort_vars (vl : var list) : var list =
-  List.sort compare_var vl
+  List.sort compare_var vl (* XXX *)
 ;;
       
 (* compares two var lists (returns true iff equal) *)
@@ -94,13 +94,13 @@ let rec find_target_ins_helper (il : (instr * var list * var list) list) (s1 : s
  * (resulting list is SORTED) *)
 and find_target_ins (il : (instr * var list * var list) list) (s1 : string) (s2o : string option) : (var list) =
    let l = find_target_ins_helper il s1 s2o in
-   sort_vars l
+   sort_vars l (* XXX *)
 ;;
 
 (* adds a var to the list, and sorts the resulting list *)
 let add_and_sort (vl : var list) (v : var) = 
    let r = if (not (list_contains vl v)) then v::vl else vl in
-   sort_vars r
+   sort_vars r (* XXX *)
 ;;
 
 (* given instruction i, returns (gens, kills) *)
@@ -205,7 +205,7 @@ let compute_ins (gens : var list) (kills : var list) (outs : var list) : var lis
       if ((not (list_contains kills o)) && (not (list_contains l o))) then o::l else l
    ) outs gens in (* the initial value "gens" here gets added to (outs - kills),
                    * which is computed during the fold operation *)
-   sort_vars result (* sort the result *)
+   sort_vars result (* XXX sort the result *)
 ;;
 
 (*
@@ -242,8 +242,9 @@ let rec liveness_helper (il : (instr * var list * var list) list) :
       (* prev_ins is maintained as the successor instrution's "ins" list *)
       | _ -> prev_ins) in
       (* compare new_ins with ins and new_outs with outs to determine if anything changed *)
-      (ins,(i,new_ins,new_outs)::res,flag || (not (compare_lists ins new_ins))
-                                          || (not (compare_lists outs new_outs)))
+      let result = (ins,(i,new_ins,new_outs)::res,flag || (not (compare_lists ins new_ins))
+                                          || (not (compare_lists outs new_outs))) in
+      result
    ) il ([],[],false) in
    (* if the "ins" or "outs" changed, process again, otherwise we're done *)
    if change then liveness_helper result else result
@@ -468,26 +469,44 @@ let rec compute_adjacency_table (il : (instr * var list * var list) list)
 let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) =
    (* perform the liveness analysis based on the instruction list *)
    let nl = List.map (fun i -> (i,[],[])) il in
+   (*print_string ("   liveness helper: "^(string_of_int (List.length nl))^"... ");
+   flush stdout;*)
    let il2 = liveness_helper nl in
+   (*print_string ("   done.\n");
+   flush stdout;*)
    (* make sure all of the usable registers are connected *)
    let l1 = [EaxReg(NoPos);EbxReg(NoPos);EcxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
    (* create an empty hashtable for the graph *)
    let h = ((Hashtbl.create (List.length l1)) : (string, (var * (string,var) Hashtbl.t)) Hashtbl.t) in
    (* add edges between all the usable registers *)
+   (*print_string ("   adding all edges: "^(string_of_int (List.length l1))^"... ");
+   flush stdout;*)
    add_all_edges l1 l1 None h;
+   (*print_string ("   done.\n");
+   flush stdout;*)
    (* populate h with the conflict graph *)
+   (*print_string ("   computing adj table: "^(string_of_int (List.length il2))^"... ");
+   flush stdout;*)
    compute_adjacency_table il2 h true;
+   (*print_string ("   done.\n");
+   flush stdout;*)
    (* find all the source vertices in graph h *)
    let keys = Hashtbl.fold (fun k (v,_) res -> 
       k::res
    ) h [] in
    (* sort the source vertices by name *)
-   let keys2 = List.sort String.compare keys in
+   (*print_string ("   sorting keys: "^(string_of_int (List.length keys))^"... ");
+   flush stdout;*)
+   let keys2 = List.sort String.compare keys in (* XXX *)
+   (*print_string ("   done.\n");
+   flush stdout;*)
    (* now we do the heuristic graph coloring *)
    (* create a hashtable for mapping variable names to their register (color) assignments *)
    let assignments = ((Hashtbl.create (List.length l1)) : (string,var) Hashtbl.t) in
    (* go through the graph (via the sorted keys2 list)
     * and compute the return values (ag,colors,ok) *)
+   (*print_string ("   folding: "^(string_of_int (List.length keys2))^"... ");
+   flush stdout;*)
    let (ag,colors,ok) = List.fold_left (fun (r2,r3,flag) x -> 
       (* find the current source variable "x" in the graph
        * (v is the corresponding var data structure, and 
@@ -558,6 +577,8 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
        * color properly *)
       (r2@[(v::(sort_vars tbl))],newl,f && flag)
    ) ([],[],true) keys2 in
+   (*print_string ("   done.\n");
+   flush stdout;*)
    (ag,colors,ok)
 ;;
 
@@ -1141,9 +1162,13 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
 (* this is a fixpoint operator where i is the current number of spilled vars *)
 and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
                                                               (L1_ast.instr list * int64) =
-   (* if (num > 50L) then parse_error "register allocation took too long"; *)
    (* try to do the register allocation *)
+   (*print_string "compile_instr_list: coloring: ";
+   flush stdout;*)
    let (at,colors,ok) = graph_color il in
+   (*print_string ((Int64.to_string num)^", table size = "^(string_of_int (List.length at))^" : ");
+   flush stdout;*)
+   if (num > 40L) then parse_error "register allocation took too long"; (* TODO XXX *)
    (* if the graph coloring failed... *)
    if (not ok) then (
       (* just pick any old variable to spill *)
@@ -1163,7 +1188,11 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
 	 let spill_name = ("<s_"^(string_of_int count)^"_"^(Int64.to_string num)^">") in
          (*print_string ("spilling: "^name^" to "^spill_name^"\n");*)
          (* do the spilling *)
+         (*print_string "spilling... ";
+         flush stdout;*)
          let il2 = spill il name (Int64.mul (-4L) (Int64.add num (1L))) spill_name in
+         (*print_string "done.\n";
+         flush stdout;*)
          (* try to compile again *)
          compile_instr_list il2 (Int64.add num (1L)) count
    )
