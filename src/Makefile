@@ -25,8 +25,8 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
-#all:			L5c
-all:			L1c spill liveness graph L2c L3c L4c L5c
+all:			L2c
+#all:			L1c spill liveness graph L2c L3c L4c L5c
 
 ### L5 compiler ###
 

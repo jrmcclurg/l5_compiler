@@ -53,7 +53,8 @@ let rec list_contains (vl : var list) (v : var) : bool =
 
 (* sorts a var list *)
 let sort_vars (vl : var list) : var list =
-  List.sort compare_var vl (* XXX *)
+  vl
+  (*List.sort compare_var vl*) (* XXX *)
 ;;
       
 (* compares two var lists (returns true iff equal) *)
@@ -467,10 +468,10 @@ let rec compute_adjacency_table (il : (instr * var list * var list) list)
  * "ok" is true iff the graph was able to be colored properly
  *)
 let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) =
+   print_string ("   graph color: "^(string_of_int (List.length il))^"... ");
+   flush stdout;
    (* perform the liveness analysis based on the instruction list *)
    let nl = List.map (fun i -> (i,[],[])) il in
-   (*print_string ("   liveness helper: "^(string_of_int (List.length nl))^"... ");
-   flush stdout;*)
    let il2 = liveness_helper nl in
    (*print_string ("   done.\n");
    flush stdout;*)
@@ -491,13 +492,14 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
    (*print_string ("   done.\n");
    flush stdout;*)
    (* find all the source vertices in graph h *)
-   let keys = Hashtbl.fold (fun k (v,_) res -> 
-      k::res
+   let keys = Hashtbl.fold (fun k (v,tab) res -> 
+      (k,tab)::res
    ) h [] in
    (* sort the source vertices by name *)
    (*print_string ("   sorting keys: "^(string_of_int (List.length keys))^"... ");
    flush stdout;*)
-   let keys2 = List.sort String.compare keys in (* XXX *)
+   let keyst = List.sort (fun (a,at) (b,bt) -> compare (Hashtbl.length at) (Hashtbl.length bt)) keys in (* XXX *)
+   let keys2 = List.map (fun (k,tab) -> k) keyst in
    (*print_string ("   done.\n");
    flush stdout;*)
    (* now we do the heuristic graph coloring *)
@@ -508,6 +510,7 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
    (*print_string ("   folding: "^(string_of_int (List.length keys2))^"... ");
    flush stdout;*)
    let (ag,colors,ok) = List.fold_left (fun (r2,r3,flag) x -> 
+      print_string ("Examinng key: "^x^"\n");
       (* find the current source variable "x" in the graph
        * (v is the corresponding var data structure, and 
        * tb is the hashtable of destinations) *)
@@ -516,6 +519,7 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
       let tbl = Hashtbl.fold (fun _ vr res2 ->
          vr::res2
       ) tb [] in
+      print_string ("   "^(string_of_int (List.length tbl))^" conflicts\n");
       (* go through all of the usable registers l1, 
        * and compute an optional color (register)
        * assignment l2 *)
@@ -548,6 +552,11 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
              * table of assignments) *)
             else (
                Hashtbl.add assignments x l3;
+      print_string "   Computed assignment: ";
+      print_string x;
+      print_string " -> ";
+      print_var l3;
+      print_string "\n";
                (Some(l3))
             )
          (* if "r" already contains a coloring, just use that one *)
@@ -577,8 +586,8 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
        * color properly *)
       (r2@[(v::(sort_vars tbl))],newl,f && flag)
    ) ([],[],true) keys2 in
-   (*print_string ("   done.\n");
-   flush stdout;*)
+   print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
+   flush stdout;
    (ag,colors,ok)
 ;;
 
@@ -1163,15 +1172,16 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
 and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
                                                               (L1_ast.instr list * int64) =
    (* try to do the register allocation *)
-   (*print_string "compile_instr_list: coloring: ";
-   flush stdout;*)
+   print_string ("compile_instr_list: "^(Int64.to_string num)^"\n");
+   flush stdout;
    let (at,colors,ok) = graph_color il in
    (*print_string ((Int64.to_string num)^", table size = "^(string_of_int (List.length at))^" : ");
    flush stdout;*)
-   if (num > 40L) then parse_error "register allocation took too long"; (* TODO XXX *)
+   if (num > 50L) then parse_error "register allocation took too long"; (* TODO XXX *)
    (* if the graph coloring failed... *)
    if (not ok) then (
       (* just pick any old variable to spill *)
+      print_string ("Looking through: "^(string_of_int (List.length at))^"\n");
       let nameop = List.fold_left (fun res vl -> 
          match (List.hd vl) with
          (* only look at variables we haven't already spilled *)
@@ -1186,11 +1196,12 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) :
          (* pick a unique name for the spill variable (it starts with "<" to prevent
           * collisions with normal varialbes) *)
 	 let spill_name = ("<s_"^(string_of_int count)^"_"^(Int64.to_string num)^">") in
-         (*print_string ("spilling: "^name^" to "^spill_name^"\n");*)
+         print_string ("spilling: "^name^" to "^spill_name^"\n");
          (* do the spilling *)
          (*print_string "spilling... ";
          flush stdout;*)
          let il2 = spill il name (Int64.mul (-4L) (Int64.add num (1L))) spill_name in
+         (*List.iter (fun i -> print_instr i; print_string "\n") il2;*)
          (*print_string "done.\n";
          flush stdout;*)
          (* try to compile again *)
