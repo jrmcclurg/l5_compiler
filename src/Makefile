@@ -25,31 +25,36 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
-all:			L2c
+# OCAMLC = ocamlcp -p a
+OCAMLC = ocamlopt -p -g
+CMO = cmx
+CMA = cmxa
+
+all:			L1c L2c
 #all:			L1c spill liveness graph L2c L3c L4c L5c
 
 ### L5 compiler ###
 
-L5c:	l5_main.cmx l5_parser.cmx l5_lexer.cmx l5_ast.cmx l4_ast.cmx l3_ast.cmx l2_ast.cmx l1_ast.cmx l5_code.cmx l4_code.cmx l3_code.cmx l2_code.cmx l1_code.cmx utils.cmx
-	ocamlopt -o L5c str.cmxa utils.cmx l1_ast.cmx l2_ast.cmx l3_ast.cmx l4_ast.cmx l5_ast.cmx l1_code.cmx l2_code.cmx l3_code.cmx l4_code.cmx l5_code.cmx l5_parser.cmx l5_lexer.cmx l5_main.cmx
+L5c:	l5_main.$(CMO) l5_parser.$(CMO) l5_lexer.$(CMO) l5_ast.$(CMO) l4_ast.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l5_code.$(CMO) l4_code.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
+	$(OCAMLC) -o L5c str.$(CMA) utils.$(CMO) l1_ast.$(CMO) l2_ast.$(CMO) l3_ast.$(CMO) l4_ast.$(CMO) l5_ast.$(CMO) l1_code.$(CMO) l2_code.$(CMO) l3_code.$(CMO) l4_code.$(CMO) l5_code.$(CMO) l5_parser.$(CMO) l5_lexer.$(CMO) l5_main.$(CMO)
 
-l5_main.cmx:	l5_main.ml l5_parser.cmx l5_lexer.cmx l5_ast.cmx l4_ast.cmx l5_code.cmx l4_code.cmx l3_code.cmx l2_code.cmx l1_code.cmx utils.cmx
-		ocamlopt -c l5_main.ml
+l5_main.$(CMO):	l5_main.ml l5_parser.$(CMO) l5_lexer.$(CMO) l5_ast.$(CMO) l4_ast.$(CMO) l5_code.$(CMO) l4_code.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l5_main.ml
 
-l5_parser.cmx:	l5_parser.ml l5_parser.cmi l5_ast.cmx utils.cmx
-		ocamlopt -c l5_parser.ml
+l5_parser.$(CMO):	l5_parser.ml l5_parser.cmi l5_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l5_parser.ml
 
-l5_lexer.cmx:	l5_lexer.ml l5_parser.cmx l5_ast.cmx utils.cmx
-		ocamlopt -c l5_lexer.ml
+l5_lexer.$(CMO):	l5_lexer.ml l5_parser.$(CMO) l5_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l5_lexer.ml
 
-l5_code.cmx:	l5_code.ml l5_ast.cmx l4_code.cmx l4_ast.cmx utils.cmx
-		ocamlopt -c l5_code.ml
+l5_code.$(CMO):	l5_code.ml l5_ast.$(CMO) l4_code.$(CMO) l4_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l5_code.ml
 
-l5_parser.cmi:	l5_parser.mli l5_ast.cmx utils.cmx
-		ocamlopt -c l5_parser.mli
+l5_parser.cmi:	l5_parser.mli l5_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l5_parser.mli
 
-l5_ast.cmx:	l5_ast.ml utils.cmx
-		ocamlopt -c l5_ast.ml
+l5_ast.$(CMO):	l5_ast.ml utils.$(CMO)
+		$(OCAMLC) -c l5_ast.ml
 
 l5_parser.ml:	l5_parser.mly
 		ocamlyacc l5_parser.mly
@@ -62,26 +67,26 @@ l5_lexer.ml:	l5_lexer.mll
 
 ### L4 compiler ###
 
-L4c:	l4_main.cmx l4_parser.cmx l4_lexer.cmx l4_ast.cmx l3_ast.cmx l2_ast.cmx l1_ast.cmx l4_code.cmx l3_code.cmx l2_code.cmx l1_code.cmx utils.cmx
-	ocamlopt -o L4c str.cmxa utils.cmx l1_ast.cmx l2_ast.cmx l3_ast.cmx l4_ast.cmx l1_code.cmx l2_code.cmx l3_code.cmx l4_code.cmx l4_parser.cmx l4_lexer.cmx l4_main.cmx
+L4c:	l4_main.$(CMO) l4_parser.$(CMO) l4_lexer.$(CMO) l4_ast.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l4_code.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
+	$(OCAMLC) -o L4c str.$(CMA) utils.$(CMO) l1_ast.$(CMO) l2_ast.$(CMO) l3_ast.$(CMO) l4_ast.$(CMO) l1_code.$(CMO) l2_code.$(CMO) l3_code.$(CMO) l4_code.$(CMO) l4_parser.$(CMO) l4_lexer.$(CMO) l4_main.$(CMO)
 
-l4_main.cmx:	l4_main.ml l4_parser.cmx l4_lexer.cmx l4_ast.cmx l3_ast.cmx l4_code.cmx l3_code.cmx l2_code.cmx l1_code.cmx utils.cmx
-		ocamlopt -c l4_main.ml
+l4_main.$(CMO):	l4_main.ml l4_parser.$(CMO) l4_lexer.$(CMO) l4_ast.$(CMO) l3_ast.$(CMO) l4_code.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l4_main.ml
 
-l4_parser.cmx:	l4_parser.ml l4_parser.cmi l4_ast.cmx utils.cmx
-		ocamlopt -c l4_parser.ml
+l4_parser.$(CMO):	l4_parser.ml l4_parser.cmi l4_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l4_parser.ml
 
-l4_lexer.cmx:	l4_lexer.ml l4_parser.cmx l4_ast.cmx utils.cmx
-		ocamlopt -c l4_lexer.ml
+l4_lexer.$(CMO):	l4_lexer.ml l4_parser.$(CMO) l4_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l4_lexer.ml
 
-l4_code.cmx:	l4_code.ml l4_ast.cmx l3_ast.cmx utils.cmx
-		ocamlopt -c l4_code.ml
+l4_code.$(CMO):	l4_code.ml l4_ast.$(CMO) l3_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l4_code.ml
 
-l4_parser.cmi:	l4_parser.mli l4_ast.cmx utils.cmx
-		ocamlopt -c l4_parser.mli
+l4_parser.cmi:	l4_parser.mli l4_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l4_parser.mli
 
-l4_ast.cmx:	l4_ast.ml utils.cmx
-		ocamlopt -c l4_ast.ml
+l4_ast.$(CMO):	l4_ast.ml utils.$(CMO)
+		$(OCAMLC) -c l4_ast.ml
 
 l4_parser.ml:	l4_parser.mly
 		ocamlyacc l4_parser.mly
@@ -94,26 +99,26 @@ l4_lexer.ml:	l4_lexer.mll
 
 ### L3 compiler ###
 
-L3c:	utils.cmx l3_ast.cmx l2_ast.cmx l1_ast.cmx l3_code.cmx l2_code.cmx l1_code.cmx l3_parser.cmx l3_lexer.cmx l3_main.cmx
-	ocamlopt -o L3c str.cmxa utils.cmx l3_ast.cmx l2_ast.cmx l1_ast.cmx l3_code.cmx l2_code.cmx l1_code.cmx l3_parser.cmx l3_lexer.cmx l3_main.cmx
+L3c:	utils.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l3_parser.$(CMO) l3_lexer.$(CMO) l3_main.$(CMO)
+	$(OCAMLC) -o L3c str.$(CMA) utils.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l3_parser.$(CMO) l3_lexer.$(CMO) l3_main.$(CMO)
 
-l3_main.cmx:	l3_main.ml l3_parser.cmx l3_lexer.cmx l3_ast.cmx l2_ast.cmx l2_code.cmx l1_code.cmx utils.cmx
-		ocamlopt -c l3_main.ml
+l3_main.$(CMO):	l3_main.ml l3_parser.$(CMO) l3_lexer.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l3_main.ml
 
-l3_parser.cmx:	l3_parser.ml l3_parser.cmi utils.cmx
-		ocamlopt -c l3_parser.ml
+l3_parser.$(CMO):	l3_parser.ml l3_parser.cmi utils.$(CMO)
+		$(OCAMLC) -c l3_parser.ml
 
-l3_lexer.cmx:	l3_lexer.ml l3_parser.cmi l3_ast.cmx utils.cmx
-		ocamlopt -c l3_lexer.ml
+l3_lexer.$(CMO):	l3_lexer.ml l3_parser.cmi l3_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l3_lexer.ml
 
-l3_code.cmx:	l3_code.ml l3_ast.cmx l2_ast.cmx utils.cmx
-		ocamlopt -c l3_code.ml
+l3_code.$(CMO):	l3_code.ml l3_ast.$(CMO) l2_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l3_code.ml
 
-l3_parser.cmi:	l3_parser.mli l3_ast.cmx utils.cmx
-		ocamlopt -c l3_parser.mli
+l3_parser.cmi:	l3_parser.mli l3_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l3_parser.mli
 
-l3_ast.cmx:	l3_ast.ml utils.cmx
-		ocamlopt -c l3_ast.ml
+l3_ast.$(CMO):	l3_ast.ml utils.$(CMO)
+		$(OCAMLC) -c l3_ast.ml
 
 l3_parser.ml:	l3_parser.mly
 		ocamlyacc l3_parser.mly
@@ -126,28 +131,28 @@ l3_lexer.ml:	l3_lexer.mll
 
 ### graph test ###
 
-graph:			utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx graph_main.cmx
-			ocamlopt -o graph str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx graph_main.cmx
+graph:			utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) graph_main.$(CMO)
+			$(OCAMLC) -o graph str.$(CMA) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) graph_main.$(CMO)
 
-graph_main.cmx:		graph_main.ml liveness_parser.cmx liveness_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
-			ocamlopt -c graph_main.ml
+graph_main.$(CMO):		graph_main.ml liveness_parser.$(CMO) liveness_lexer.$(CMO) l2_code.$(CMO) l2_ast.$(CMO) utils.$(CMO)
+			$(OCAMLC) -c graph_main.ml
 
 ### liveness test ###
 
-liveness:		utils.cmx l2_ast.cmx l1_ast.ml l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
-			ocamlopt -o liveness str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx liveness_parser.cmx liveness_lexer.cmx liveness_main.cmx
+liveness:		utils.$(CMO) l2_ast.$(CMO) l1_ast.ml l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) liveness_main.$(CMO)
+			$(OCAMLC) -o liveness str.$(CMA) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) liveness_main.$(CMO)
 
-liveness_main.cmx:	liveness_main.ml liveness_parser.cmx liveness_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
-			ocamlopt -c liveness_main.ml
+liveness_main.$(CMO):	liveness_main.ml liveness_parser.$(CMO) liveness_lexer.$(CMO) l2_code.$(CMO) l2_ast.$(CMO) utils.$(CMO)
+			$(OCAMLC) -c liveness_main.ml
 
-liveness_parser.cmx:	liveness_parser.ml liveness_parser.cmi utils.cmx
-			ocamlopt -c liveness_parser.ml
+liveness_parser.$(CMO):	liveness_parser.ml liveness_parser.cmi utils.$(CMO)
+			$(OCAMLC) -c liveness_parser.ml
 
-liveness_lexer.cmx:	liveness_lexer.ml liveness_parser.cmi l2_ast.cmx utils.cmx
-			ocamlopt -c liveness_lexer.ml
+liveness_lexer.$(CMO):	liveness_lexer.ml liveness_parser.cmi l2_ast.$(CMO) utils.$(CMO)
+			$(OCAMLC) -c liveness_lexer.ml
 
-liveness_parser.cmi:	liveness_parser.mli l2_ast.cmx utils.cmx
-			ocamlopt -c liveness_parser.mli
+liveness_parser.cmi:	liveness_parser.mli l2_ast.$(CMO) utils.$(CMO)
+			$(OCAMLC) -c liveness_parser.mli
 
 liveness_parser.ml:	liveness_parser.mly
 			ocamlyacc liveness_parser.mly
@@ -160,20 +165,20 @@ liveness_lexer.ml:	liveness_lexer.mll
 
 ### spill test ###
 
-spill:			utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
-			ocamlopt -o spill str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx spill_parser.cmx spill_lexer.cmx spill_main.cmx
+spill:			utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) spill_parser.$(CMO) spill_lexer.$(CMO) spill_main.$(CMO)
+			$(OCAMLC) -o spill str.$(CMA) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) spill_parser.$(CMO) spill_lexer.$(CMO) spill_main.$(CMO)
 
-spill_main.cmx:		spill_main.ml spill_parser.cmx spill_lexer.cmx l2_code.cmx l2_ast.cmx utils.cmx
-			ocamlopt -c spill_main.ml
+spill_main.$(CMO):		spill_main.ml spill_parser.$(CMO) spill_lexer.$(CMO) l2_code.$(CMO) l2_ast.$(CMO) utils.$(CMO)
+			$(OCAMLC) -c spill_main.ml
 
-spill_parser.cmx:	spill_parser.ml spill_parser.cmi utils.cmx
-			ocamlopt -c spill_parser.ml
+spill_parser.$(CMO):	spill_parser.ml spill_parser.cmi utils.$(CMO)
+			$(OCAMLC) -c spill_parser.ml
 
-spill_lexer.cmx:	spill_lexer.ml spill_parser.cmi l2_ast.cmx utils.cmx
-			ocamlopt -c spill_lexer.ml
+spill_lexer.$(CMO):	spill_lexer.ml spill_parser.cmi l2_ast.$(CMO) utils.$(CMO)
+			$(OCAMLC) -c spill_lexer.ml
 
-spill_parser.cmi:	spill_parser.mli l2_ast.cmx utils.cmx
-			ocamlopt -c spill_parser.mli
+spill_parser.cmi:	spill_parser.mli l2_ast.$(CMO) utils.$(CMO)
+			$(OCAMLC) -c spill_parser.mli
 
 spill_parser.ml:	spill_parser.mly
 			ocamlyacc spill_parser.mly
@@ -186,26 +191,26 @@ spill_lexer.ml:		spill_lexer.mll
 
 ### L2 compiler ###
 
-L2c:	utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx l1_code.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
-	ocamlopt -o L2c str.cmxa utils.cmx l2_ast.cmx l1_ast.cmx l2_code.cmx l1_code.cmx l2_parser.cmx l2_lexer.cmx l2_main.cmx
+L2c:	utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l2_parser.$(CMO) l2_lexer.$(CMO) l2_main.$(CMO)
+	$(OCAMLC) -o L2c str.$(CMA) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l2_parser.$(CMO) l2_lexer.$(CMO) l2_main.$(CMO)
 
-l2_main.cmx:	l2_main.ml l2_parser.cmx l2_lexer.cmx l2_ast.cmx l1_ast.cmx l1_code.cmx utils.cmx
-		ocamlopt -c l2_main.ml
+l2_main.$(CMO):	l2_main.ml l2_parser.$(CMO) l2_lexer.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l1_code.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l2_main.ml
 
-l2_parser.cmx:	l2_parser.ml l2_parser.cmi utils.cmx
-		ocamlopt -c l2_parser.ml
+l2_parser.$(CMO):	l2_parser.ml l2_parser.cmi utils.$(CMO)
+		$(OCAMLC) -c l2_parser.ml
 
-l2_lexer.cmx:	l2_lexer.ml l2_parser.cmi l2_ast.cmx utils.cmx
-		ocamlopt -c l2_lexer.ml
+l2_lexer.$(CMO):	l2_lexer.ml l2_parser.cmi l2_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l2_lexer.ml
 
-l2_code.cmx:	l2_code.ml l2_ast.cmx l1_ast.cmx utils.cmx
-		ocamlopt -c l2_code.ml
+l2_code.$(CMO):	l2_code.ml l2_ast.$(CMO) l1_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l2_code.ml
 
-l2_parser.cmi:	l2_parser.mli l2_ast.cmx utils.cmx
-		ocamlopt -c l2_parser.mli
+l2_parser.cmi:	l2_parser.mli l2_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l2_parser.mli
 
-l2_ast.cmx:	l2_ast.ml utils.cmx
-		ocamlopt -c l2_ast.ml
+l2_ast.$(CMO):	l2_ast.ml utils.$(CMO)
+		$(OCAMLC) -c l2_ast.ml
 
 l2_parser.ml:	l2_parser.mly
 		ocamlyacc l2_parser.mly
@@ -217,26 +222,26 @@ l2_lexer.ml:	l2_lexer.mll
 		ocamllex l2_lexer.mll
 
 ### L1 compiler ###
-L1c:	utils.cmx l1_ast.cmx l1_code.cmx l1_parser.cmx l1_lexer.cmx l1_main.cmx
-	ocamlopt -o L1c str.cmxa utils.cmx l1_ast.cmx l1_code.cmx l1_parser.cmx l1_lexer.cmx l1_main.cmx
+L1c:	utils.$(CMO) l1_ast.$(CMO) l1_code.$(CMO) l1_parser.$(CMO) l1_lexer.$(CMO) l1_main.$(CMO)
+	$(OCAMLC) -o L1c str.$(CMA) utils.$(CMO) l1_ast.$(CMO) l1_code.$(CMO) l1_parser.$(CMO) l1_lexer.$(CMO) l1_main.$(CMO)
 
-l1_main.cmx:	l1_main.ml l1_parser.cmx l1_lexer.cmx l1_code.cmx l1_ast.cmx utils.cmx
-		ocamlopt -c l1_main.ml
+l1_main.$(CMO):	l1_main.ml l1_parser.$(CMO) l1_lexer.$(CMO) l1_code.$(CMO) l1_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l1_main.ml
 
-l1_parser.cmx:	l1_parser.ml l1_parser.cmi utils.cmx
-		ocamlopt -c l1_parser.ml
+l1_parser.$(CMO):	l1_parser.ml l1_parser.cmi utils.$(CMO)
+		$(OCAMLC) -c l1_parser.ml
 
-l1_lexer.cmx:	l1_lexer.ml l1_parser.cmi l1_ast.cmx utils.cmx
-		ocamlopt -c l1_lexer.ml
+l1_lexer.$(CMO):	l1_lexer.ml l1_parser.cmi l1_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l1_lexer.ml
 
-l1_code.cmx:	l1_code.ml l1_ast.cmx utils.cmx
-		ocamlopt -c l1_code.ml
+l1_code.$(CMO):	l1_code.ml l1_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l1_code.ml
 
-l1_parser.cmi:	l1_parser.mli l1_ast.cmx utils.cmx
-		ocamlopt -c l1_parser.mli
+l1_parser.cmi:	l1_parser.mli l1_ast.$(CMO) utils.$(CMO)
+		$(OCAMLC) -c l1_parser.mli
 
-l1_ast.cmx:	l1_ast.ml utils.cmx
-		ocamlopt -c l1_ast.ml
+l1_ast.$(CMO):	l1_ast.ml utils.$(CMO)
+		$(OCAMLC) -c l1_ast.ml
 
 l1_parser.ml:	l1_parser.mly
 		ocamlyacc l1_parser.mly
@@ -247,8 +252,8 @@ l1_parser.mli:	l1_parser.mly
 l1_lexer.ml:	l1_lexer.mll
 		ocamllex l1_lexer.mll
 
-utils.cmx:	utils.ml
-		ocamlopt -c utils.ml
+utils.$(CMO):	utils.ml
+		$(OCAMLC) -c utils.ml
 
 clean:		
 		rm -rf *.S *.s *.out *.cm* *.o *.mli *_parser.ml *_lexer.ml
@@ -286,4 +291,4 @@ wc:
 		make clean
 		wc -l *.m*
 
-# use the "-ccopt -static" ocamlopt switch to statically link
+# use the "-ccopt -static" $(OCAMLC) switch to statically link
