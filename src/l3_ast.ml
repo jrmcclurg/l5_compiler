@@ -15,11 +15,11 @@
 open Utils;;
 
 (* unique prefix for auto-generated variables *)
-let l3_prefix = "_l3";; (* TODO XXX - do this for L2 as well!! *)
+let l3_prefix = "_l3";;
 
 (* data type for L3 programs *)
 type program = Program of pos * exp * func list
- and func = Function of pos * string * var list * exp
+ and func = Function of pos * int * var list * exp
  and exp = LetExp of pos * var * dexp * exp
          | IfExp of pos * sval * exp * exp
          | DExpExp of pos * dexp
@@ -34,18 +34,18 @@ type program = Program of pos * exp * func list
           | AppDExp of pos * sval * sval list
           | NewArrayDExp of pos * sval * sval
           | NewTupleDExp of pos * sval list
-      (**)    | ArefDExp of pos * sval * sval
-      (**)    | AsetDExp of pos * sval * sval * sval
+          | ArefDExp of pos * sval * sval
+          | AsetDExp of pos * sval * sval * sval
           | AlenDExp of pos * sval
           | PrintDExp of pos * sval
-          | MakeClosureDExp of pos * string * sval
+          | MakeClosureDExp of pos * int * sval
           | ClosureProcDExp of pos * sval
           | ClosureVarsDExp of pos * sval
           | SValDExp of pos * sval
  and sval = VarSVal of pos * var
           | IntSVal of pos * int64
-          | LabelSVal of pos * string
- and var = Var of pos * string (* TODO XXX - eventually we need a symbol table *)
+          | LabelSVal of pos * int
+ and var = Var of pos * int
 ;;
 
 (* the output_... functions pretty-print L3 constructs to a specified channel *)
@@ -63,7 +63,7 @@ let rec output_program out p = match p with
      output_string out "\n)\n"
 and output_func out f = match f with
   | Function(_,n,vl,e) ->
-     output_string out ("  (:"^n^" (");
+     output_string out ("  (:"^(get_symbol n)^" (");
      let _ = List.fold_left (fun flag i ->
         if flag then output_string out " ";
         output_var out i;
@@ -182,7 +182,7 @@ and output_dexp out de = match de with
       output_string out ")"
    | MakeClosureDExp(_,s,sv) ->
       output_string out "(make-closure ";
-      output_string out (":"^s);
+      output_string out (":"^(get_symbol s));
       output_string out " ";
       output_sval out sv;
       output_string out ")"
@@ -197,11 +197,11 @@ and output_dexp out de = match de with
    | SValDExp(_, sv) ->
       output_sval out sv
 and output_var out r = match r with
-   | Var(_,s) -> output_string out s
+   | Var(_,s) -> output_string out (get_symbol s)
 and output_sval out s = match s with
    | VarSVal(_, r) -> output_var out r
    | IntSVal(_, i) -> output_string out (Int64.to_string i)
-   | LabelSVal(_,s) -> output_string out (":"^s)
+   | LabelSVal(_,s) -> output_string out (":"^(get_symbol s))
 ;;
 
 (* the print_... functions pretty-print L3 constructs to stdout *)

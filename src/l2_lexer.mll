@@ -18,7 +18,7 @@
    open Utils;;
 }
 rule token = parse
-  [' ' '\t']                 { token lexbuf }                     (* skip blanks *)
+  [' ' '\t']                 { token lexbuf }                    (* skip blanks *)
 | ['\r']                     { token lexbuf }                    (* skip blanks *)
 | ['\n']                     { do_newline lexbuf; token lexbuf } (* skip newlines (but count them) *)
 | (['-']? ['0'-'9']+) as s   { let i = Int64.of_string s in
@@ -60,12 +60,6 @@ rule token = parse
                                LABEL(id) }                       (* label *)
 | ['a'-'z' 'A'-'Z' '-'
    '_' '0'-'9']* as s        { let id = add_symbol s in
-                               IDENT(id) }                        (* variable *)
+                               IDENT(id) }                       (* variable *)
 | eof { EOF }
-| _ { let p = Lexing.lexeme_end_p lexbuf in
-      let file_name = p.Lexing.pos_fname in
-      let line_num = p.Lexing.pos_lnum in
-      let col_num = (p.Lexing.pos_cnum-p.Lexing.pos_bol) in
-      print_string ("Lexical error in '"^file_name^
-   "' on line "^(string_of_int line_num)^" col "^(string_of_int
-   col_num)^"!\n"); raise Lexing_error }
+| _ { lex_error "Lexing error" lexbuf }

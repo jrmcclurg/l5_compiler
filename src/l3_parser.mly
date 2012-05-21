@@ -16,8 +16,8 @@
    open Utils;;
 %}
 %token <int64> INT
-%token <string> LABEL
-%token <string> IDENT 
+%token <int> LABEL
+%token <int> IDENT 
 %token CLOSUREPROC CLOSUREVARS MAKECLOSURE NEWARRAY NEWTUPLE PRINT
 %token ASET AREF ALEN NUMBERQ ARRAYQ
 %token LET IF
@@ -74,7 +74,7 @@ dexp:
    | sval                                  { SValDExp(get_current_pos (), $1) }
 
 var:
-   | IDENT { update_max_ident $1; Var(get_current_pos (), $1) }
+   | IDENT { Var(get_current_pos (), $1) }
 ;
 
 var_list:
@@ -85,7 +85,7 @@ var_list:
 sval:
    | var   { VarSVal(get_current_pos(), $1) }
    | INT   { IntSVal(get_current_pos(), $1) }
-   | LABEL { update_max_ident $1; LabelSVal(get_current_pos(), $1) }
+   | LABEL { LabelSVal(get_current_pos(), $1) }
 ;
 
 sval_list:

@@ -167,10 +167,9 @@ let add_symbol (s : string) : int =
 let get_unique_symbol (prefix : string) : int =
    let id = get_unique_id () in
    let ids = string_of_int id in
-   let pl = String.length prefix in
    let num = (max 0 (!max_symbol_len -
                     (String.length prefix) - (String.length ids))) in
-   Hashtbl.replace symbol_table (String.make num '0') id;
+   Hashtbl.replace symbol_table (prefix^(String.make num '0')^ids) id;
    id
 ;;
 

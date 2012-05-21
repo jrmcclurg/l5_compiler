@@ -33,7 +33,7 @@ OCAMLC = ocamlopt -ccopt -O2
 CMO = cmx
 CMA = cmxa
 
-all:			L1c L2c
+all:			L1c L2c L3c
 #all:			L1c spill liveness graph L2c L3c L4c L5c
 
 ### L5 compiler ###
@@ -293,4 +293,3 @@ l5c_tarball:		graph clean
 wc:		
 		make clean
 		wc -l *.m*
-

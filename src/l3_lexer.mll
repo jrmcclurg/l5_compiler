@@ -50,14 +50,10 @@ rule token = parse
 | ';' [^'\n']*               { token lexbuf }                    (* single-line comment *)
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'
-       '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
+       '0'-'9' '_']* as s)   { let id = add_symbol s in
+                               LABEL(id) }                       (* label *)
 | ['a'-'z' 'A'-'Z' '-'
-   '_' '0'-'9']* as s        { IDENT(s) }                        (* variable *)
+   '_' '0'-'9']* as s        { let id = add_symbol s in
+                               IDENT(id) }                       (* variable *)
 | eof { EOF }
-| _ { let p = Lexing.lexeme_end_p lexbuf in
-      let file_name = p.Lexing.pos_fname in
-      let line_num = p.Lexing.pos_lnum in
-      let col_num = (p.Lexing.pos_cnum-p.Lexing.pos_bol) in
-      print_string ("Lexical error in '"^file_name^
-   "' on line "^(string_of_int line_num)^" col "^(string_of_int
-   col_num)^"!\n"); raise Lexing_error }
+| _ { lex_error "Lexing error" lexbuf }
