@@ -16,7 +16,8 @@
 open L2_ast;;
 open Utils;;
 
-let debug_alloc = false;;
+let debug_alloc = true;;
+
 
 (*********************************************************
  **  LIVENESS                                           **
@@ -45,27 +46,25 @@ let compare_var (v1 : var) (v2 : var) : int =
   compare (get_var_id v1) (get_var_id v2)
 ;;
 
+module VarSet = Set.Make(struct 
+                            type t = var
+                            let compare = compare_var
+                         end);;
+
 (* searches a list for a given var *)
-let rec list_contains (vl : var list) (v : var) : bool =
-   match vl with
-   | [] -> false
-   | t::ts ->
-      if (compare_var t v) = 0 then true else list_contains ts v
+let rec list_contains (vl : VarSet.t) (v : var) : bool =
+   VarSet.mem v vl
 ;;
 
 (* sorts a var list *)
-let sort_vars (vl : var list) : var list =
+let sort_vars (vl : VarSet.t) : VarSet.t =
   vl
   (*List.sort compare_var vl*) (* XXX *)
 ;;
       
 (* compares two var lists (returns true iff equal) *)
-let rec compare_lists (vl1 : var list) (vl2 : var list) : bool =
-   match (vl1,vl2) with
-   | ([],[]) -> true
-   | ([],_) -> false
-   | (_,[]) -> false
-   | (a::ax,b::bx) -> ((compare_var a b) = 0) && (compare_lists ax bx)
+let rec compare_lists (vl1 : VarSet.t) (vl2 : VarSet.t) : bool =
+   VarSet.equal vl1 vl2
 ;;
 
 (*
@@ -79,119 +78,125 @@ let rec compare_lists (vl1 : var list) (vl2 : var list) : bool =
  *
  * returns a var list of all the "ins" (no duplicates, list not sorted)
  *)
-let rec find_target_ins_helper (il : (instr * var list * var list) list) (s1 : int) (s2o : int option) : (var list) =
+let rec find_target_ins_helper (il : (instr * VarSet.t * VarSet.t) list) (s1 : int) (s2o : int option) : VarSet.t =
    match il with
-   | [] -> []
+   | [] -> VarSet.empty
    | (i1,ins,_)::is ->
       let l = (match (i1,s2o) with
-      | (LabelInstr(_,s),None) -> if (s1 = s) then ins else []
-      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then ins else []
-      | _ -> []) in
-      (* go through the ins for the first instruction *)
-      List.fold_right (fun i res -> 
-         (* if the var i is not in the result list, add it *)
-         if (not (list_contains res i)) then i::res else res
-      ) l (find_target_ins_helper is s1 s2o)
+      | (LabelInstr(_,s),None) -> if (s1 = s) then ins else VarSet.empty
+      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then ins else VarSet.empty
+      | _ -> VarSet.empty) in
+      (* add the ins for the first instruction *)
+      VarSet.union l (find_target_ins_helper is s1 s2o)
 
 (* gets the "ins" for a specified target label (see the find_target_ins_helper function)
  * (resulting list is SORTED) *)
-and find_target_ins (il : (instr * var list * var list) list) (s1 : int) (s2o : int option) : (var list) =
+and find_target_ins (il : (instr * VarSet.t * VarSet.t) list) (s1 : int) (s2o : int option) : VarSet.t =
    let l = find_target_ins_helper il s1 s2o in
    sort_vars l (* XXX *)
 ;;
 
 (* adds a var to the list, and sorts the resulting list *)
-let add_and_sort (vl : var list) (v : var) = 
-   let r = if (not (list_contains vl v)) then v::vl else vl in
+let add_and_sort (vl : VarSet.t) (v : var) : VarSet.t = 
+   let r = VarSet.add v vl in
    sort_vars r (* XXX *)
 ;;
 
 (* given instruction i, returns (gens, kills) *)
-let get_gens_kills (i : instr) : (var list * var list) =
+let get_gens_kills (i : instr) : (VarSet.t * VarSet.t) =
    match i with
    (* assignment *)
-   | AssignInstr(_,v,VarSVal(_,v2)) -> ([v2], [v])
-   | AssignInstr(_,v,_) -> ([], [v])
+   | AssignInstr(_,v,VarSVal(_,v2)) -> (VarSet.singleton v2, VarSet.singleton v)
+   | AssignInstr(_,v,_) -> (VarSet.empty, VarSet.singleton v)
    (* mem read *)
-   | MemReadInstr(_,v1,v2,_) -> ([v2],[v1])
+   | MemReadInstr(_,v1,v2,_) -> (VarSet.singleton v2,VarSet.singleton v1)
    (* mem write *)
-   | MemWriteInstr(_,v1,_,VarSVal(_,v2)) -> (add_and_sort [v1] v2,[])
-   | MemWriteInstr(_,v1,_,_) -> ([v1],[])
+   | MemWriteInstr(_,v1,_,VarSVal(_,v2)) -> (add_and_sort (VarSet.singleton v1) v2,VarSet.empty)
+   | MemWriteInstr(_,v1,_,_) -> (VarSet.singleton v1,VarSet.empty)
    (* plus *)
-   | PlusInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
-   | PlusInstr(_,v,_) -> ([v], [v])
+   | PlusInstr(_,v,VarTVal(_,v2)) -> (add_and_sort (VarSet.singleton v) v2,VarSet.singleton v)
+   | PlusInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
    (* minus *)
-   | MinusInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
-   | MinusInstr(_,v,_) -> ([v], [v])
+   | MinusInstr(_,v,VarTVal(_,v2)) -> (add_and_sort (VarSet.singleton v) v2,VarSet.singleton v)
+   | MinusInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
    (* times *)
-   | TimesInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
-   | TimesInstr(_,v,_) -> ([v], [v])
+   | TimesInstr(_,v,VarTVal(_,v2)) -> (add_and_sort (VarSet.singleton v) v2,VarSet.singleton v)
+   | TimesInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
    (* bitwise and *)
-   | BitAndInstr(_,v,VarTVal(_,v2)) -> (add_and_sort [v] v2,[v])
-   | BitAndInstr(_,v,_) -> ([v], [v])
+   | BitAndInstr(_,v,VarTVal(_,v2)) -> (add_and_sort (VarSet.singleton v) v2,VarSet.singleton v)
+   | BitAndInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
    (* shift left *)
-   | SllInstr(_,v,ShVar(_,v2)) -> (add_and_sort [v] v2,[v])
-   | SllInstr(_,v,_) -> ([v], [v])
+   | SllInstr(_,v,ShVar(_,v2)) -> (add_and_sort (VarSet.singleton v) v2,VarSet.singleton v)
+   | SllInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
    (* shift right *)
-   | SrlInstr(_,v,ShVar(_,v2)) -> (add_and_sort [v] v2,[v])
-   | SrlInstr(_,v,_) -> ([v], [v])
+   | SrlInstr(_,v,ShVar(_,v2)) -> (add_and_sort (VarSet.singleton v) v2,VarSet.singleton v)
+   | SrlInstr(_,v,_) -> ((VarSet.singleton v), (VarSet.singleton v))
    (* less-than comparison *)
-   | LtInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
-   | LtInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
-   | LtInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
-   | LtInstr(_,v,_,_) -> ([], [v])
+   | LtInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort (VarSet.singleton v2) v3,(VarSet.singleton v))
+   | LtInstr(_,v,_,VarTVal(_,v3)) -> ((VarSet.singleton v3),(VarSet.singleton v))
+   | LtInstr(_,v,VarTVal(_,v2),_) -> ((VarSet.singleton v2),(VarSet.singleton v))
+   | LtInstr(_,v,_,_) -> (VarSet.empty, (VarSet.singleton v))
    (* less-than-or-equal-to comparison *)
-   | LeqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
-   | LeqInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
-   | LeqInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
-   | LeqInstr(_,v,_,_) -> ([], [v])
+   | LeqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort (VarSet.singleton v2) v3,(VarSet.singleton v))
+   | LeqInstr(_,v,_,VarTVal(_,v3)) -> ((VarSet.singleton v3),(VarSet.singleton v))
+   | LeqInstr(_,v,VarTVal(_,v2),_) -> ((VarSet.singleton v2),(VarSet.singleton v))
+   | LeqInstr(_,v,_,_) -> (VarSet.empty, (VarSet.singleton v))
    (* equal-to comparison *)
-   | EqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[v])
-   | EqInstr(_,v,_,VarTVal(_,v3)) -> ([v3],[v])
-   | EqInstr(_,v,VarTVal(_,v2),_) -> ([v2],[v])
-   | EqInstr(_,v,_,_) -> ([], [v])
+   | EqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort (VarSet.singleton v2) v3,(VarSet.singleton v))
+   | EqInstr(_,v,_,VarTVal(_,v3)) -> ((VarSet.singleton v3),(VarSet.singleton v))
+   | EqInstr(_,v,VarTVal(_,v2),_) -> ((VarSet.singleton v2),(VarSet.singleton v))
+   | EqInstr(_,v,_,_) -> (VarSet.empty, (VarSet.singleton v))
    (* label *)
-   | LabelInstr(_,_) -> ([],[])
+   | LabelInstr(_,_) -> (VarSet.empty,VarSet.empty)
    (* goto *)
-   | GotoInstr(_,_) -> ([],[])
+   | GotoInstr(_,_) -> (VarSet.empty,VarSet.empty)
    (* less-than jump *)
-   | LtJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
-   | LtJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
-   | LtJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   | LtJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort (VarSet.singleton v1) v2,VarSet.empty)
+   | LtJumpInstr(_,_,VarTVal(_,v2),_,_) -> ((VarSet.singleton v2),VarSet.empty)
+   | LtJumpInstr(_,VarTVal(_,v1),_,_,_) -> ((VarSet.singleton v1),VarSet.empty)
    (* less-than-or-equal-to jump *)
-   | LeqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
-   | LeqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
-   | LeqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   | LeqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort (VarSet.singleton v1) v2,VarSet.empty)
+   | LeqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ((VarSet.singleton v2),VarSet.empty)
+   | LeqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ((VarSet.singleton v1),VarSet.empty)
    (* equal-to jump *)
-   | EqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort [v1] v2,[])
-   | EqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ([v2],[])
-   | EqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ([v1],[])
+   | EqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (add_and_sort (VarSet.singleton v1) v2,VarSet.empty)
+   | EqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ((VarSet.singleton v2),VarSet.empty)
+   | EqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ((VarSet.singleton v1),VarSet.empty)
    (* call *)
    | CallInstr(_,VarUVal(p,v)) ->
-      let l = add_and_sort [EaxReg(p);EdxReg(p);EcxReg(p)] v in
-      (l,[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
-   | CallInstr(p,_) -> ([EaxReg(p);EcxReg(p);EdxReg(p)],[EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)])
+      let l = add_and_sort (List.fold_right VarSet.add [EaxReg(p);EdxReg(p);EcxReg(p)] VarSet.empty) v in
+      (l,(List.fold_right VarSet.add [EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty))
+   | CallInstr(p,_) ->
+      (List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty,
+      List.fold_right VarSet.add [EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
    (* tail-call *)
    | TailCallInstr(_,VarUVal(p,v)) ->
-      let l = add_and_sort [EaxReg(p);EdxReg(p);EcxReg(p);EdiReg(p);EsiReg(p)] v in
-      (l,[])
-   | TailCallInstr(p,_) -> ([EaxReg(p);EcxReg(p);EdiReg(p);EdxReg(p);EsiReg(p)],[])
+      let l = add_and_sort (List.fold_right VarSet.add [EaxReg(p);EdxReg(p);EcxReg(p);EdiReg(p);EsiReg(p)] VarSet.empty) v in
+      (l,VarSet.empty)
+   | TailCallInstr(p,_) -> (List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdiReg(p);EdxReg(p);EsiReg(p)] VarSet.empty,
+                            VarSet.empty)
    (* return *)
-   | ReturnInstr(p) -> ([EaxReg(p);EdiReg(p);EsiReg(p)],[])
+   | ReturnInstr(p) -> (List.fold_right VarSet.add [EaxReg(p);EdiReg(p);EsiReg(p)] VarSet.empty,VarSet.empty)
    (* print *)
-   | PrintInstr(p,VarTVal(_,v)) -> ([v],[EaxReg(p);EcxReg(p);EdxReg(p)])
-   | PrintInstr(p,_) -> ([],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | PrintInstr(p,VarTVal(_,v)) -> ((VarSet.singleton v),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | PrintInstr(p,_) -> (VarSet.empty,List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
    (* allocate *)
-   | AllocInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p);EcxReg(p);EdxReg(p)])
-   | AllocInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p);EcxReg(p);EdxReg(p)])
-   | AllocInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p);EcxReg(p);EdxReg(p)])
-   | AllocInstr(p,_,_) -> ([],[EaxReg(p);EcxReg(p);EdxReg(p)])
+   | AllocInstr(p,VarTVal(_,v2),VarTVal(_,v3)) ->
+      (add_and_sort (VarSet.singleton v2) v3,List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | AllocInstr(p,_,VarTVal(_,v3)) ->
+      ((VarSet.singleton v3),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | AllocInstr(p,VarTVal(_,v2),_) ->
+      ((VarSet.singleton v2),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | AllocInstr(p,_,_) -> (VarSet.empty,List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
    (* array-error *)
-   | ArrayErrorInstr(p,VarTVal(_,v2),VarTVal(_,v3)) -> (add_and_sort [v2] v3,[EaxReg(p);EcxReg(p);EdxReg(p)])
-   | ArrayErrorInstr(p,_,VarTVal(_,v3)) -> ([v3],[EaxReg(p);EcxReg(p);EdxReg(p)])
-   | ArrayErrorInstr(p,VarTVal(_,v2),_) -> ([v2],[EaxReg(p);EcxReg(p);EdxReg(p)])
-   | ArrayErrorInstr(p,_,_) -> ([],[EaxReg(p);EcxReg(p);EdxReg(p)])
-   | _ -> ([],[])
+   | ArrayErrorInstr(p,VarTVal(_,v2),VarTVal(_,v3)) ->
+      (add_and_sort (VarSet.singleton v2) v3,List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | ArrayErrorInstr(p,_,VarTVal(_,v3)) ->
+      ((VarSet.singleton v3),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | ArrayErrorInstr(p,VarTVal(_,v2),_) ->
+      ((VarSet.singleton v2),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | ArrayErrorInstr(p,_,_) -> (VarSet.empty,List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | _ -> (VarSet.empty,VarSet.empty)
 ;;
 
 (*
@@ -202,12 +207,8 @@ let get_gens_kills (i : instr) : (var list * var list) =
  * (where "U" is set union)
  * The result is sorted
  *)
-let compute_ins (gens : var list) (kills : var list) (outs : var list) : var list =
-   let result = List.fold_right (fun o l ->
-      (* find the ones that are in "outs", but not in "kills" *)
-      if ((not (list_contains kills o)) && (not (list_contains l o))) then o::l else l
-   ) outs gens in (* the initial value "gens" here gets added to (outs - kills),
-                   * which is computed during the fold operation *)
+let compute_ins (gens : VarSet.t) (kills : VarSet.t) (outs : VarSet.t) : VarSet.t =
+   let result = VarSet.union gens (VarSet.diff outs kills) in
    sort_vars result (* XXX sort the result *)
 ;;
 
@@ -223,8 +224,8 @@ let compute_ins (gens : var list) (kills : var list) (outs : var list) : var lis
  * 
  * returns a list of tuples (i, ins, outs) having the final results
  *)
-let rec liveness_helper (il : (instr * var list * var list) list) :
-                                        ((instr * var list * var list) list) =
+let rec liveness_helper (il : (instr * VarSet.t * VarSet.t) list) :
+                                        ((instr * VarSet.t * VarSet.t) list) =
    (* go through the instructions *)
    let (_,result,change) = List.fold_right (fun (i,ins,outs) (prev_ins,res,flag) -> 
       (* get the gens and kills for this instruction *)
@@ -239,16 +240,16 @@ let rec liveness_helper (il : (instr * var list * var list) list) :
       | LtJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
       | LeqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
       | EqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
-      | ReturnInstr(_) -> []
-      | TailCallInstr(_,_) -> []
-      | ArrayErrorInstr(_,_,_) -> []
+      | ReturnInstr(_) -> VarSet.empty
+      | TailCallInstr(_,_) -> VarSet.empty
+      | ArrayErrorInstr(_,_,_) -> VarSet.empty
       (* prev_ins is maintained as the successor instrution's "ins" list *)
       | _ -> prev_ins) in
       (* compare new_ins with ins and new_outs with outs to determine if anything changed *)
       let result = (ins,(i,new_ins,new_outs)::res,flag || (not (compare_lists ins new_ins))
-                                          || (not (compare_lists outs new_outs))) in
+                                                       || (not (compare_lists outs new_outs))) in
       result
-   ) il ([],[],false) in
+   ) il (VarSet.empty,[],false) in
    (* if the "ins" or "outs" changed, process again, otherwise we're done *)
    if change then liveness_helper result else result
 ;;
@@ -264,9 +265,9 @@ let rec liveness_helper (il : (instr * var list * var list) list) :
  * returns (l1, l2) where l1 is a (var list) of the ins and
  *                        l2 is a (var list) of the outs
  *)
-let liveness (il : instr list) : ((var list) list * (var list) list) = 
+let liveness (il : instr list) : ((VarSet.t) list * (VarSet.t) list) = 
    (* add an empty "in" and "out" list for each instruction *)
-   let nl = List.map (fun i -> (i,[],[])) il in
+   let nl = List.map (fun i -> (i,VarSet.empty,VarSet.empty)) il in
    (* get the ins and outs (this is a fixpoint operator *)
    let l = liveness_helper nl in
    (* return the ins and outs in the appropriate format *)
@@ -347,20 +348,20 @@ let add_edge (v1 : var) (v2o : var option)
  * added as vertices in h.  The graph h has the same structure
  * as the "h" parameter of the add_edge function.
  *)
-let add_all_edges (vl1 : var list) (vl2 : var list) (so : (var * var) option)
+let add_all_edges (vl1 : VarSet.t) (vl2 : VarSet.t) (so : (var * var) option)
                   (h : (int, (var * (int,var) Hashtbl.t)) Hashtbl.t) : unit =
    (* if vl1 is empty, just add a vertex for each item in vl2 *)
-   match vl1 with
-   | [] -> List.iter (fun v2 -> add_edge v2 None h) vl2
+   match (VarSet.is_empty vl1) with
+   | true -> VarSet.iter (fun v2 -> add_edge v2 None h) vl2
    | _ ->
    (* if vl1 is non-empty, iterate through its items *)
-   List.iter (fun v1 ->
-      (match vl2 with
+   VarSet.iter (fun v1 ->
+      (match (VarSet.is_empty vl2) with
       (* if vl2 is empty, just add a vertex for the current item of vl1 *)
-      | [] -> add_edge v1 None h
+      | true -> add_edge v1 None h
       | _ ->
          (* if vl2 is non-empty, iterate through its item *)
-         List.iter (fun v2 ->
+         VarSet.iter (fun v2 ->
             (* get the ids for v1/v2 *)
             let s1 = get_var_id v1 in
             let s2 = get_var_id v2 in
@@ -408,7 +409,7 @@ let add_all_edges (vl1 : var list) (vl2 : var list) (so : (var * var) option)
  * add_edge function.  The "first" argument should be true
  * when this function is called normally.
  *)
-let rec compute_adjacency_table (il : (instr * var list * var list) list)
+let rec compute_adjacency_table (il : (instr * VarSet.t * VarSet.t) list)
                                 (h : (int, (var * (int,var) Hashtbl.t)) Hashtbl.t)
                                 (first : bool) : unit =
    match (il) with
@@ -425,7 +426,7 @@ let rec compute_adjacency_table (il : (instr * var list * var list) list)
        * (this means any variables that appear in any "out" set together,
        * or any variables that appear together in the first instruction's
        * "in" set *)
-      if first then add_all_edges ins ins None h else add_all_edges ins [] None h;
+      if first then add_all_edges ins ins None h else add_all_edges ins (VarSet.empty) None h;
       add_all_edges outs outs temp h;
       (* add edges between the kills and the out set *)
       let (gens,kills) = get_gens_kills i in
@@ -436,20 +437,20 @@ let rec compute_adjacency_table (il : (instr * var list * var list) list)
       add_all_edges kills outs temp h;
       (* handle the special instructions *)
       (* l1 is all the usable registers except ecx *)
-      let l1 = [EaxReg(NoPos);EbxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
+      let l1 = (List.fold_right VarSet.add [EaxReg(NoPos);EbxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] VarSet.empty) in
       (* l2 is the callee-save registers *)
-      let l2 = [EdiReg(NoPos);EsiReg(NoPos)] in
+      let l2 = (List.fold_right VarSet.add [EdiReg(NoPos);EsiReg(NoPos)] VarSet.empty) in
       (match i with
       (* any shift variable v will conflict with all usable registers except ecx
        * (since ecx is the only allowable shift register in the x86 instruction) *)
-      | SllInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges [v] l1 None h
-      | SrlInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges [v] l1 None h
+      | SllInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges (VarSet.singleton v) l1 None h
+      | SrlInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges (VarSet.singleton v) l1 None h
       (* a destination variable for comparisons will conflict with the 
        * callee-save registers, since the callER-save registers are the only
        * valid destinations *)
-      | LtInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
-      | LeqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
-      | EqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges [v] l2 None h
+      | LtInstr(_,(Var(_,_) as v),_,_) -> add_all_edges (VarSet.singleton v) l2 None h
+      | LeqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges (VarSet.singleton v) l2 None h
+      | EqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges (VarSet.singleton v) l2 None h
       | _ -> ());
       (* recursively process the remaining instructions *)
       compute_adjacency_table more h false
@@ -469,18 +470,19 @@ let rec compute_adjacency_table (il : (instr * var list * var list) list)
  * "colors" is the list of (var,reg) coloring assignments, and
  * "ok" is true iff the graph was able to be colored properly
  *)
-let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) =
+let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * bool) =
    if debug_alloc then (print_string ("   graph color: "^(string_of_int (List.length il))^"... ");
    flush stdout );
    (* perform the liveness analysis based on the instruction list *)
-   let nl = List.map (fun i -> (i,[],[])) il in
+   let nl = List.map (fun i -> (i,VarSet.empty,VarSet.empty)) il in
    let il2 = liveness_helper nl in
    (*print_string ("   done.\n");
    flush stdout;*)
    (* make sure all of the usable registers are connected *)
-   let l1 = [EaxReg(NoPos);EbxReg(NoPos);EcxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] in
+   let l1 = List.fold_right VarSet.add
+            [EaxReg(NoPos);EbxReg(NoPos);EcxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] VarSet.empty in
    (* create an empty hashtable for the graph *)
-   let h = ((Hashtbl.create (List.length l1)) : (int, (var * (int,var) Hashtbl.t)) Hashtbl.t) in
+   let h = ((Hashtbl.create (VarSet.cardinal l1)) : (int, (var * (int,var) Hashtbl.t)) Hashtbl.t) in
    (* add edges between all the usable registers *)
    (*print_string ("   adding all edges: "^(string_of_int (List.length l1))^"... ");
    flush stdout;*)
@@ -506,7 +508,7 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
    flush stdout;*)
    (* now we do the heuristic graph coloring *)
    (* create a hashtable for mapping variable ids to their register (color) assignments *)
-   let assignments = ((Hashtbl.create (List.length l1)) : (int,var) Hashtbl.t) in
+   let assignments = ((Hashtbl.create (VarSet.cardinal l1)) : (int,var) Hashtbl.t) in
    (* go through the graph (via the sorted keys2 list)
     * and compute the return values (ag,colors,ok) *)
    (*print_string ("   folding: "^(string_of_int (List.length keys2))^"... ");
@@ -520,14 +522,14 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
       let (v,tb) = Hashtbl.find h x in
       (* get the list of destination variables *)
       let tbl = Hashtbl.fold (fun _ vr res2 ->
-         vr::res2
-      ) tb [] in
-      if debug_alloc then ( print_string ("   "^(string_of_int (List.length tbl))^" conflicts\n");
+         VarSet.add vr res2
+      ) tb VarSet.empty in
+      if debug_alloc then ( print_string ("   "^(string_of_int (VarSet.cardinal tbl))^" conflicts\n");
       flush stdout );
       (* go through all of the usable registers l1, 
        * and compute an optional color (register)
        * assignment l2 *)
-      let l2 = List.fold_left (fun r l3 ->
+      let l2 = VarSet.fold (fun l3 r ->
          (* the_id is the current register id *)
          let the_id = (get_var_id l3) in
          (* check if "r" already contains a coloring *)
@@ -536,7 +538,7 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
          | None ->
             (* go through the list tbl of destination vertices to see
              * if register the_id is contained there *)
-            let found = (List.fold_left (fun flag t ->
+            let found = (VarSet.fold (fun t flag ->
                let f = 
                (match t with
                (* if this destination vertex is a variable... *)
@@ -547,7 +549,7 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
                (* if this destination vertex is a register... *)
                | _ -> if ((get_var_id t)=the_id) then true else false) in
                (flag || f)
-            ) false tbl) in
+            ) tbl false) in
             (* if register the_id was found in the dest list,
              * we can't used it as the coloring assignment *)
             if found then None
@@ -567,7 +569,7 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
             )
          (* if "r" already contains a coloring, just use that one *)
          | Some(_) -> r
-      ) None l1 in
+      ) l1 None in
 
       (* based on the current source vertex v, compute newl,
        * the updated list of coloring assignments, and
@@ -590,7 +592,7 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
        * list (newl) and the result status (f && flag) which is
        * true iff ALL source vertices are able to be assigned a
        * color properly *)
-      (r2@[(v::(sort_vars tbl))],newl,f && flag)
+      (r2@[(v,(sort_vars tbl))],newl,f && flag)
    ) ([],[],true) keys2 in
    if debug_alloc then ( print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
    flush stdout );
@@ -1190,8 +1192,8 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
       (* just pick any old variable to spill *)
       if debug_alloc then ( print_string ("Looking through: "^(string_of_int (List.length at))^"\n");
       flush stdout );
-      let nameop = List.fold_left (fun res vl -> 
-         match (List.hd vl) with
+      let nameop = List.fold_left (fun res (hd,vl) -> 
+         match hd with
          (* only look at variables we haven't already spilled *)
 	 | Var(_,id) -> (try Hashtbl.find spilled id; None
                         with _ -> Some(id) ) (* this is the "not already spilled" case *)
