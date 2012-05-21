@@ -15,6 +15,7 @@
 
 open L1_ast;;
 open Utils;;
+open Unix;;
 
 (*
  * the compile_... functions generate x86 assembly code based on
@@ -594,17 +595,21 @@ and compile_strlit (o : out_channel) (s : string) (p : pos) (first : bool) (j : 
  *
  * returns unit
  *)
-let compile_and_link (filename : string) (assembly_file_name : string) : unit =
+let compile_and_link (filename : string) (assembly_file_name : string) (runtime_file_name : string) : unit =
    let r1c = ("as --32 -o "^assembly_file_name^".o "^assembly_file_name) in
-   let r2c = ("gcc -m32 -c -O2 -o runtime.o runtime.c") in
-   let r3c = ("gcc -m32 -o "^filename^" "^assembly_file_name^".o runtime.o") in
+   let r2c = ("gcc -m32 -c -O2 -o "^runtime_file_name^".o "^runtime_file_name) in
+   let r3c = ("gcc -m32 -o "^filename^" "^assembly_file_name^".o "^runtime_file_name^".o") in
    let r1 = Sys.command (r1c^" 2> /dev/null")  in
    let r2 = Sys.command (r2c^" 2> /dev/null") in
    let r3 = Sys.command (r3c^" 2> /dev/null") in
    if (r1 <> 0) then die_system_error ("assembler failed: \""^r1c^"\" returned "^(string_of_int r1));
    if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));
    if (r3 <> 0) then die_system_error ("compiler/linker failed: \""^r3c^"\" returned "^(string_of_int r3));
-   ()
+   (* delete all the temporary files *)
+   Unix.unlink assembly_file_name;
+   Unix.unlink (assembly_file_name^".o");
+   Unix.unlink runtime_file_name;
+   Unix.unlink (runtime_file_name^".o");
 ;;
 
 (*
@@ -954,7 +959,7 @@ let generate_runtime (o : out_channel) : unit =
 
 (* this dumps the binary, given a program AST *)
 let generate_binary (result : program) (output_file_name : string) : unit = 
-   let runtime_file_name = "runtime.c" in
+   let runtime_file_name = (Filename.temp_file ?temp_dir:(Some("")) "runtime_" ".c") in
    let assembly_file_name = (Filename.temp_file ?temp_dir:(Some("")) "prog_" ".S") in
    (* generate the C runtime *)
    let out1 = (try (open_out runtime_file_name)
@@ -971,5 +976,5 @@ let generate_binary (result : program) (output_file_name : string) : unit =
    compile_program out2 result;
    close_out out2;
    (* compile and link everything *)
-   compile_and_link output_file_name assembly_file_name
+   compile_and_link output_file_name assembly_file_name runtime_file_name
 ;;

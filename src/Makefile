@@ -32,6 +32,7 @@
 OCAMLC = ocamlopt -ccopt -O2
 CMO = cmx
 CMA = cmxa
+LIBS = str.$(CMA) unix.$(CMA)
 
 all:			L1c L2c L3c L4c L5c
 #all:			L1c spill liveness graph L2c L3c L4c L5c
@@ -39,7 +40,7 @@ all:			L1c L2c L3c L4c L5c
 ### L5 compiler ###
 
 L5c:	l5_main.$(CMO) l5_parser.$(CMO) l5_lexer.$(CMO) l5_ast.$(CMO) l4_ast.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l5_code.$(CMO) l4_code.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
-	$(OCAMLC) -o L5c str.$(CMA) utils.$(CMO) l1_ast.$(CMO) l2_ast.$(CMO) l3_ast.$(CMO) l4_ast.$(CMO) l5_ast.$(CMO) l1_code.$(CMO) l2_code.$(CMO) l3_code.$(CMO) l4_code.$(CMO) l5_code.$(CMO) l5_parser.$(CMO) l5_lexer.$(CMO) l5_main.$(CMO)
+	$(OCAMLC) -o L5c $(LIBS) utils.$(CMO) l1_ast.$(CMO) l2_ast.$(CMO) l3_ast.$(CMO) l4_ast.$(CMO) l5_ast.$(CMO) l1_code.$(CMO) l2_code.$(CMO) l3_code.$(CMO) l4_code.$(CMO) l5_code.$(CMO) l5_parser.$(CMO) l5_lexer.$(CMO) l5_main.$(CMO)
 
 l5_main.$(CMO):	l5_main.ml l5_parser.$(CMO) l5_lexer.$(CMO) l5_ast.$(CMO) l4_ast.$(CMO) l5_code.$(CMO) l4_code.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
 		$(OCAMLC) -c l5_main.ml
@@ -71,7 +72,7 @@ l5_lexer.ml:	l5_lexer.mll
 ### L4 compiler ###
 
 L4c:	l4_main.$(CMO) l4_parser.$(CMO) l4_lexer.$(CMO) l4_ast.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l4_code.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
-	$(OCAMLC) -o L4c str.$(CMA) utils.$(CMO) l1_ast.$(CMO) l2_ast.$(CMO) l3_ast.$(CMO) l4_ast.$(CMO) l1_code.$(CMO) l2_code.$(CMO) l3_code.$(CMO) l4_code.$(CMO) l4_parser.$(CMO) l4_lexer.$(CMO) l4_main.$(CMO)
+	$(OCAMLC) -o L4c $(LIBS) utils.$(CMO) l1_ast.$(CMO) l2_ast.$(CMO) l3_ast.$(CMO) l4_ast.$(CMO) l1_code.$(CMO) l2_code.$(CMO) l3_code.$(CMO) l4_code.$(CMO) l4_parser.$(CMO) l4_lexer.$(CMO) l4_main.$(CMO)
 
 l4_main.$(CMO):	l4_main.ml l4_parser.$(CMO) l4_lexer.$(CMO) l4_ast.$(CMO) l3_ast.$(CMO) l4_code.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
 		$(OCAMLC) -c l4_main.ml
@@ -103,7 +104,7 @@ l4_lexer.ml:	l4_lexer.mll
 ### L3 compiler ###
 
 L3c:	utils.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l3_parser.$(CMO) l3_lexer.$(CMO) l3_main.$(CMO)
-	$(OCAMLC) -o L3c str.$(CMA) utils.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l3_parser.$(CMO) l3_lexer.$(CMO) l3_main.$(CMO)
+	$(OCAMLC) -o L3c $(LIBS) utils.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l3_code.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l3_parser.$(CMO) l3_lexer.$(CMO) l3_main.$(CMO)
 
 l3_main.$(CMO):	l3_main.ml l3_parser.$(CMO) l3_lexer.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l2_code.$(CMO) l1_code.$(CMO) utils.$(CMO)
 		$(OCAMLC) -c l3_main.ml
@@ -135,7 +136,7 @@ l3_lexer.ml:	l3_lexer.mll
 ### graph test ###
 
 graph:			utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) graph_main.$(CMO)
-			$(OCAMLC) -o graph str.$(CMA) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) graph_main.$(CMO)
+			$(OCAMLC) -o graph $(LIBS) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) graph_main.$(CMO)
 
 graph_main.$(CMO):		graph_main.ml liveness_parser.$(CMO) liveness_lexer.$(CMO) l2_code.$(CMO) l2_ast.$(CMO) utils.$(CMO)
 			$(OCAMLC) -c graph_main.ml
@@ -143,7 +144,7 @@ graph_main.$(CMO):		graph_main.ml liveness_parser.$(CMO) liveness_lexer.$(CMO) l
 ### liveness test ###
 
 liveness:		utils.$(CMO) l2_ast.$(CMO) l1_ast.ml l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) liveness_main.$(CMO)
-			$(OCAMLC) -o liveness str.$(CMA) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) liveness_main.$(CMO)
+			$(OCAMLC) -o liveness $(LIBS) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) liveness_parser.$(CMO) liveness_lexer.$(CMO) liveness_main.$(CMO)
 
 liveness_main.$(CMO):	liveness_main.ml liveness_parser.$(CMO) liveness_lexer.$(CMO) l2_code.$(CMO) l2_ast.$(CMO) utils.$(CMO)
 			$(OCAMLC) -c liveness_main.ml
@@ -169,7 +170,7 @@ liveness_lexer.ml:	liveness_lexer.mll
 ### spill test ###
 
 spill:			utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) spill_parser.$(CMO) spill_lexer.$(CMO) spill_main.$(CMO)
-			$(OCAMLC) -o spill str.$(CMA) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) spill_parser.$(CMO) spill_lexer.$(CMO) spill_main.$(CMO)
+			$(OCAMLC) -o spill $(LIBS) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) spill_parser.$(CMO) spill_lexer.$(CMO) spill_main.$(CMO)
 
 spill_main.$(CMO):		spill_main.ml spill_parser.$(CMO) spill_lexer.$(CMO) l2_code.$(CMO) l2_ast.$(CMO) utils.$(CMO)
 			$(OCAMLC) -c spill_main.ml
@@ -195,7 +196,7 @@ spill_lexer.ml:		spill_lexer.mll
 ### L2 compiler ###
 
 L2c:	utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l2_parser.$(CMO) l2_lexer.$(CMO) l2_main.$(CMO)
-	$(OCAMLC) -o L2c str.$(CMA) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l2_parser.$(CMO) l2_lexer.$(CMO) l2_main.$(CMO)
+	$(OCAMLC) -o L2c $(LIBS) utils.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l2_code.$(CMO) l1_code.$(CMO) l2_parser.$(CMO) l2_lexer.$(CMO) l2_main.$(CMO)
 
 l2_main.$(CMO):	l2_main.ml l2_parser.$(CMO) l2_lexer.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) l1_code.$(CMO) utils.$(CMO)
 		$(OCAMLC) -c l2_main.ml
@@ -226,7 +227,7 @@ l2_lexer.ml:	l2_lexer.mll
 
 ### L1 compiler ###
 L1c:	utils.$(CMO) l1_ast.$(CMO) l1_code.$(CMO) l1_parser.$(CMO) l1_lexer.$(CMO) l1_main.$(CMO)
-	$(OCAMLC) -o L1c str.$(CMA) utils.$(CMO) l1_ast.$(CMO) l1_code.$(CMO) l1_parser.$(CMO) l1_lexer.$(CMO) l1_main.$(CMO)
+	$(OCAMLC) -o L1c $(LIBS) utils.$(CMO) l1_ast.$(CMO) l1_code.$(CMO) l1_parser.$(CMO) l1_lexer.$(CMO) l1_main.$(CMO)
 
 l1_main.$(CMO):	l1_main.ml l1_parser.$(CMO) l1_lexer.$(CMO) l1_code.$(CMO) l1_ast.$(CMO) utils.$(CMO)
 		$(OCAMLC) -c l1_main.ml
