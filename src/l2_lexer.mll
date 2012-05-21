@@ -18,7 +18,7 @@
    open Utils;;
 }
 rule token = parse
-  [' ' '\t']                 {token lexbuf }                     (* skip blanks *)
+  [' ' '\t']                 { token lexbuf }                     (* skip blanks *)
 | ['\r']                     { token lexbuf }                    (* skip blanks *)
 | ['\n']                     { do_newline lexbuf; token lexbuf } (* skip newlines (but count them) *)
 | (['-']? ['0'-'9']+) as s   { let i = Int64.of_string s in
@@ -56,9 +56,11 @@ rule token = parse
 | ';' [^'\n']*               { token lexbuf }                    (* single-line comment *)
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'
-       '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
+       '0'-'9' '_']* as s)   { let id = add_symbol s in
+                               LABEL(id) }                       (* label *)
 | ['a'-'z' 'A'-'Z' '-'
-   '_' '0'-'9']* as s        { IDENT(s) }                        (* variable *)
+   '_' '0'-'9']* as s        { let id = add_symbol s in
+                               IDENT(id) }                        (* variable *)
 | eof { EOF }
 | _ { let p = Lexing.lexeme_end_p lexbuf in
       let file_name = p.Lexing.pos_fname in

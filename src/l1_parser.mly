@@ -15,9 +15,9 @@
    open L1_ast;;
    open Utils;;
 %}
-%token <string> STRING
+%token <int> STRING
 %token <int64> INT
-%token <string> LABEL
+%token <int> LABEL
 %token ARRAYERR TAILCALL ALLOC RETURN PRINT PRINTSTR CJUMP GOTO MEM CALL
 %token ESI EDI EBP ESP
 %token EAX ECX EDX EBX

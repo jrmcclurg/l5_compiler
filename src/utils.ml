@@ -139,6 +139,57 @@ let make_ident_unique (prefix : string) (s : string) : string =
    (prefix^s^(!max_prefix))
 ;;
 
+let unique_id = ref 64;; (* start a fairly large number *)
+let symbol_table = ((Hashtbl.create 64) : (string,int) Hashtbl.t);;
+let max_symbol_len = ref 0;;
+
+let get_unique_id () : int =
+   if !unique_id >= Pervasives.max_int then (
+      (* if we have run out of unique integers, die *)
+      parse_error "ran out of unique IDs"
+   ) else (
+     unique_id := (!unique_id + 1);
+     !unique_id
+   )
+;;
+
+let add_symbol (s : string) : int = 
+   try Hashtbl.find symbol_table s
+   with _ -> (
+      let id = get_unique_id () in
+      let len = String.length s in
+      if (len > !max_symbol_len) then max_symbol_len := len;
+      Hashtbl.replace symbol_table s id;
+      id
+   )
+;;
+
+let get_unique_symbol (prefix : string) : int =
+   let id = get_unique_id () in
+   let ids = string_of_int id in
+   let pl = String.length prefix in
+   let num = (max 0 (!max_symbol_len -
+                    (String.length prefix) - (String.length ids))) in
+   Hashtbl.replace symbol_table (String.make num '0') id;
+   id
+;;
+
+let get_id (sym : string) : int =
+   try Hashtbl.find symbol_table sym
+   with _ -> 0
+;; 
+
+let get_symbol (id : int) : string =
+   let res = Hashtbl.fold (fun k v i ->
+      match i with
+      | None -> if (v = id) then Some(k) else None
+      | _ -> i
+   ) symbol_table None in
+   match res with
+   | None -> parse_error ("could not find symbol: "^(string_of_int id))
+   | Some(s) -> s
+;;
+
 let rec explode (s : string) : (char list) =
   let len = String.length s in
   if len = 0 then []

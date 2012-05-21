@@ -16,8 +16,8 @@
    open Utils;;
 %}
 %token <int64> INT
-%token <string> LABEL
-%token <string> IDENT 
+%token <int> LABEL
+%token <int> IDENT 
 %token ARRAYERR TAILCALL ALLOC RETURN PRINT CJUMP GOTO MEM CALL
 %token ESI EDI EBP ESP
 %token EAX ECX EDX EBX

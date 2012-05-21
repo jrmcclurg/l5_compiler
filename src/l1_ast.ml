@@ -16,7 +16,7 @@ open Utils;;
 
 (* data type for L1 programs *)
 type program = Program of pos * func list
- and func = Function of pos * string option * instr list
+ and func = Function of pos * int option * instr list
  and instr = 
              AssignInstr of pos * reg * sval
            | MemReadInstr of pos * reg * reg * int64 
@@ -30,18 +30,18 @@ type program = Program of pos * func list
            | LtInstr of pos * creg * tval * tval
            | LeqInstr of pos * creg * tval * tval
            | EqInstr of pos * creg * tval * tval
-           | LabelInstr of pos * string
-           | GotoInstr of pos * string
-           | LtJumpInstr of pos * tval * tval * string * string
-           | LeqJumpInstr of pos * tval * tval * string * string
-           | EqJumpInstr of pos * tval * tval * string * string
+           | LabelInstr of pos * int 
+           | GotoInstr of pos * int
+           | LtJumpInstr of pos * tval * tval * int * int
+           | LeqJumpInstr of pos * tval * tval * int * int 
+           | EqJumpInstr of pos * tval * tval * int * int
            | CallInstr of pos * uval
            | TailCallInstr of pos * uval
            | ReturnInstr of pos
            | PrintInstr of pos * tval
            | PrintStrInstr of pos * tval
            | AllocInstr of pos * tval * tval
-           | StringInstr of pos * string
+           | StringInstr of pos * int
            | ArrayErrorInstr of pos * tval * tval
  and reg = EsiReg of pos
          | EdiReg of pos
@@ -56,13 +56,13 @@ type program = Program of pos * func list
            | IntShVal of pos * int64 
  and sval = RegSVal of pos * reg
           | IntSVal of pos * int64
-          | LabelSVal of pos * string
+          | LabelSVal of pos * int
  and uval = RegUVal of pos * reg
           | IntUVal of pos * int64
-          | LabelUVal of pos * string
+          | LabelUVal of pos * int
  and tval = RegTVal of pos * reg
           | IntTVal of pos * int64
-          | LabelTVal of pos * string
+          | LabelTVal of pos * int
 ;;
 
 (* the output_... functions pretty-print L1 constructs to a specified channel *)
@@ -79,7 +79,7 @@ let rec output_program out p = match p with
 and output_func out f = match f with
   | Function(_,n,il) -> output_string out "  (";
      (match n with
-     | Some(s) -> output_string out (":"^s);
+     | Some(s) -> output_string out (":"^(get_symbol s));
      | _ -> ());
      output_string out "\n";
      let _ = List.fold_left (fun flag i ->
@@ -173,10 +173,10 @@ and output_instr out i = match i with
       output_tval out tv2;
       output_string out ")";
    | LabelInstr(_,s) ->
-      output_string out (":"^s);
+      output_string out (":"^(get_symbol s));
    | GotoInstr(_,s) ->
       output_string out "(goto :";
-      output_string out s;
+      output_string out (get_symbol s);
       output_string out ")";
    | LtJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
@@ -184,9 +184,9 @@ and output_instr out i = match i with
       output_string out " < ";
       output_tval out tv2;
       output_string out " :";
-      output_string out s1;
+      output_string out (get_symbol s1);
       output_string out " :";
-      output_string out s2;
+      output_string out (get_symbol s2);
       output_string out ")";
    | LeqJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
@@ -194,9 +194,9 @@ and output_instr out i = match i with
       output_string out " <= ";
       output_tval out tv2;
       output_string out " :";
-      output_string out s1;
+      output_string out (get_symbol s1);
       output_string out " :";
-      output_string out s2;
+      output_string out (get_symbol s2);
       output_string out ")";
    | EqJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
@@ -204,9 +204,9 @@ and output_instr out i = match i with
       output_string out " = ";
       output_tval out tv2;
       output_string out " :";
-      output_string out s1;
+      output_string out (get_symbol s1);
       output_string out " :";
-      output_string out s2;
+      output_string out (get_symbol s2);
       output_string out ")";
    | CallInstr(_, uv) ->
       output_string out "(call ";
@@ -234,7 +234,7 @@ and output_instr out i = match i with
       output_string out "))";
    | StringInstr(_, s) ->
       output_string out "(eax <- ";
-      output_stringlit out (Printf.sprintf "%S" s);
+      output_stringlit out (Printf.sprintf "%S" (get_symbol s));
       output_string out ")";
    | ArrayErrorInstr(_, tv1, tv2) ->
       output_string out "(eax <- (array-error ";
@@ -259,15 +259,15 @@ and output_sreg out sr = match sr with
 and output_sval out s = match s with
    | RegSVal(_, r) -> output_reg out r
    | IntSVal(_, i) -> output_string out (Int64.to_string i)
-   | LabelSVal(_,s) -> output_string out (":"^s)
+   | LabelSVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_uval out u = match u with
    | RegUVal(_,r) -> output_reg out r
    | IntUVal(_, i) -> output_string out (Int64.to_string i)
-   | LabelUVal(_,s) -> output_string out (":"^s)
+   | LabelUVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_tval out t = match t with
    | RegTVal(_,r) -> output_reg out r
    | IntTVal(_,i) -> output_string out (Int64.to_string i)
-   | LabelTVal(_,s) -> output_string out (":"^s)
+   | LabelTVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_stringlit out s =
    output_string out s (* TODO - encode special chars *)
 ;;

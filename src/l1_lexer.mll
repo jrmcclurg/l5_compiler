@@ -18,7 +18,7 @@
    open Utils;;
 }
 rule token = parse
-  [' ' '\t']                 {token lexbuf }                     (* skip blanks *)
+  [' ' '\t']                 { token lexbuf }                    (* skip blanks *)
 | ['\r']                     { token lexbuf }                    (* skip blanks *)
 | ['\n']                     { do_newline lexbuf; token lexbuf } (* skip newlines (but count them) *)
 | (['-']? ['0'-'9']+) as s   { let i = Int64.of_string s in
@@ -57,8 +57,10 @@ rule token = parse
 | ';' [^'\n']*               { token lexbuf }                    (* single-line comment *)
 | ':' (['a'-'z' 'A'-'Z' '_']
       ['a'-'z' 'A'-'Z'
-       '0'-'9' '_']* as s)   { LABEL(s) }                        (* label *)
-| '"' ([^ '"']*) '"' as s    { let s2 = Scanf.sscanf s "%S" (fun x -> x) in
-                               STRING(s2) }
+       '0'-'9' '_']* as s)   { let id = add_symbol s in
+                               LABEL(id) }                       (* label *)
+| '"' ([^ '"']*) '"' as s    { (*let s2 = Scanf.sscanf s "%S" (fun x -> x) in*)
+                               let id = add_symbol s in
+                               STRING(id) }
 | eof { EOF }
 | _ { lex_error "Lexing error" lexbuf }

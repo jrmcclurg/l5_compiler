@@ -16,7 +16,7 @@ open Utils;;
 
 (* data type for L2 programs *)
 type program = Program of pos * func list
- and func = Function of pos * string option * instr list
+ and func = Function of pos * int option * instr list
  and instr = 
              AssignInstr of pos * var * sval
            | MemReadInstr of pos * var * var * int64 
@@ -30,11 +30,11 @@ type program = Program of pos * func list
            | LtInstr of pos * var * tval * tval
            | LeqInstr of pos * var * tval * tval
            | EqInstr of pos * var * tval * tval
-           | LabelInstr of pos * string
-           | GotoInstr of pos * string
-           | LtJumpInstr of pos * tval * tval * string * string
-           | LeqJumpInstr of pos * tval * tval * string * string
-           | EqJumpInstr of pos * tval * tval * string * string
+           | LabelInstr of pos * int
+           | GotoInstr of pos * int 
+           | LtJumpInstr of pos * tval * tval * int * int
+           | LeqJumpInstr of pos * tval * tval * int * int 
+           | EqJumpInstr of pos * tval * tval * int * int 
            | CallInstr of pos * uval
            | TailCallInstr of pos * uval
            | ReturnInstr of pos
@@ -43,13 +43,13 @@ type program = Program of pos * func list
            | ArrayErrorInstr of pos * tval * tval
  and sval = VarSVal of pos * var
           | IntSVal of pos * int64
-          | LabelSVal of pos * string
+          | LabelSVal of pos * int
  and uval = VarUVal of pos * var
           | IntUVal of pos * int64
-          | LabelUVal of pos * string
+          | LabelUVal of pos * int
  and tval = VarTVal of pos * var
           | IntTVal of pos * int64
-          | LabelTVal of pos * string
+          | LabelTVal of pos * int
  and var = EsiReg of pos
          | EdiReg of pos
          | EbpReg of pos
@@ -58,21 +58,21 @@ type program = Program of pos * func list
          | EcxReg of pos
          | EdxReg of pos
          | EbxReg of pos
-         | Var of pos * string (* TODO XXX - eventually we need a symbol table *)
+         | Var of pos * int
  and svar = IntShVal of pos * int64 
            | ShVar of pos * var
 ;;
 
-let rec get_var_name (v : var) = match v with
-   | EsiReg(_) -> "esi"
-   | EdiReg(_) -> "edi"
-   | EbpReg(_) -> "ebp"
-   | EspReg(_) -> "esp"
-   | EaxReg(_) -> "eax"
-   | EcxReg(_) -> "ecx"
-   | EdxReg(_) -> "edx"
-   | EbxReg(_) -> "ebx"
-   | Var(_,s) -> s
+let rec get_var_id (v : var) : int = match v with
+   | EsiReg(_) -> 1
+   | EdiReg(_) -> 2
+   | EbpReg(_) -> 3
+   | EspReg(_) -> 4
+   | EaxReg(_) -> 5
+   | EcxReg(_) -> 6
+   | EdxReg(_) -> 7
+   | EbxReg(_) -> 8
+   | Var(_,id) -> id
 ;;
 
 let rec get_pos_instr (i : instr) : pos = match i with
@@ -115,7 +115,7 @@ let rec output_program out p = match p with
 and output_func out f = match f with
   | Function(_,n,il) -> output_string out "  (";
      (match n with
-     | Some(s) -> output_string out (":"^s);
+     | Some(s) -> output_string out (":"^(get_symbol s));
      | _ -> ());
      output_string out "\n";
      let _ = List.fold_left (fun flag i ->
@@ -209,10 +209,10 @@ and output_instr out i = match i with
       output_tval out tv2;
       output_string out ")";
    | LabelInstr(_,s) ->
-      output_string out (":"^s);
+      output_string out (":"^(get_symbol s));
    | GotoInstr(_,s) ->
       output_string out "(goto :";
-      output_string out s;
+      output_string out (get_symbol s);
       output_string out ")";
    | LtJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
@@ -220,9 +220,9 @@ and output_instr out i = match i with
       output_string out " < ";
       output_tval out tv2;
       output_string out " :";
-      output_string out s1;
+      output_string out (get_symbol s1);
       output_string out " :";
-      output_string out s2;
+      output_string out (get_symbol s2);
       output_string out ")";
    | LeqJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
@@ -230,9 +230,9 @@ and output_instr out i = match i with
       output_string out " <= ";
       output_tval out tv2;
       output_string out " :";
-      output_string out s1;
+      output_string out (get_symbol s1);
       output_string out " :";
-      output_string out s2;
+      output_string out (get_symbol s2);
       output_string out ")";
    | EqJumpInstr(_,tv1,tv2,s1,s2) ->
       output_string out "(cjump ";
@@ -240,9 +240,9 @@ and output_instr out i = match i with
       output_string out " = ";
       output_tval out tv2;
       output_string out " :";
-      output_string out s1;
+      output_string out (get_symbol s1);
       output_string out " :";
-      output_string out s2;
+      output_string out (get_symbol s2);
       output_string out ")";
    | CallInstr(_, uv) ->
       output_string out "(call ";
@@ -279,22 +279,22 @@ and output_var out r = match r with
    | EcxReg(_) -> output_string out "ecx"
    | EdxReg(_) -> output_string out "edx"
    | EbxReg(_) -> output_string out "ebx"
-   | Var(_,s) -> output_string out s
+   | Var(_,id) -> output_string out (get_symbol id)
 and output_svar out sr = match sr with
    | IntShVal(_,i) -> output_string out (Int64.to_string i)
    | ShVar(_,v) -> output_var out v
 and output_sval out s = match s with
    | VarSVal(_, r) -> output_var out r
    | IntSVal(_, i) -> output_string out (Int64.to_string i)
-   | LabelSVal(_,s) -> output_string out (":"^s)
+   | LabelSVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_uval out u = match u with
    | VarUVal(_,r) -> output_var out r
    | IntUVal(_, i) -> output_string out (Int64.to_string i)
-   | LabelUVal(_,s) -> output_string out (":"^s)
+   | LabelUVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_tval out t = match t with
    | VarTVal(_,r) -> output_var out r
    | IntTVal(_,i) -> output_string out (Int64.to_string i)
-   | LabelTVal(_,s) -> output_string out (":"^s)
+   | LabelTVal(_,s) -> output_string out (":"^(get_symbol s))
 ;;
 
 (* the print_... functions pretty-print L2 constructs to stdout *)

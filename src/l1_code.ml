@@ -53,7 +53,7 @@ and compile_function (o : out_channel) (f : func) (first : bool) (j : int) : uni
       (* if it's the first function, then it's name must be "go") *)
       let name = (if first then "go" else (match so with
         | None -> die_error ps "function must be named"
-        | Some(s) -> ("_"^s))) in
+        | Some(s) -> ("_"^(get_symbol s)))) in
       (* output some boilerplate if we're processing the "go" function *)
       if first then (
       output_string o ("	.globl	"^name^"\n") ;
@@ -295,7 +295,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
    | GotoInstr(ps,s) ->
       (* jmp _l *)
       output_string o ("\t"^"jmp"^"\t"^"_");
-      output_string o s;
+      output_string o (get_symbol s);
       output_string o "\n"
    | LtJumpInstr(ps,tv1,tv2,s1,s2) ->
       (* if tv1 is constant, we must reverse the operation,
@@ -333,11 +333,11 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
          );
          (* jl s1 (or jg s1 if reverse) *)
          output_string o ("\t"^"j"^(if reverse then "g" else "l")^"\t"^"_");
-         output_string o s1;
+         output_string o (get_symbol s1);
          output_string o "\n";
          (* jmp s2 *)
          output_string o ("\t"^"jmp"^"\t"^"_");
-         output_string o s2;
+         output_string o (get_symbol s2);
          output_string o "\n" 
    | LeqJumpInstr(ps,tv1,tv2,s1,s2) ->
       (* if tv1 is constant, we must reverse the operation,
@@ -375,11 +375,11 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
          );
          (* jle s1 (or jge s1 if reverse) *)
          output_string o ("\t"^"j"^(if reverse then "g" else "l")^"e"^"\t"^"_");
-         output_string o s1;
+         output_string o (get_symbol s1);
          output_string o "\n";
          (* jmp s2 *)
          output_string o ("\t"^"jmp"^"\t"^"_");
-         output_string o s2;
+         output_string o (get_symbol s2);
          output_string o "\n" 
    | EqJumpInstr(ps,tv1,tv2,s1,s2) ->
       (* if tv1 is constant, we must reverse the operation,
@@ -417,11 +417,11 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
          );
          (* je s1 *)
          output_string o ("\t"^"je"^"\t"^"_");
-         output_string o s1;
+         output_string o (get_symbol s1);
          output_string o "\n";
          (* jmp s2 *)
          output_string o ("\t"^"jmp"^"\t"^"_");
-         output_string o s2;
+         output_string o (get_symbol s2);
          output_string o "\n" 
    | CallInstr(ps, uv) ->
       (* pushl $r_j_k *)
@@ -500,7 +500,8 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       output_string o ("\t"^"call"^"\t"^"allocate"^"\n");
       (* addl $8, %esp *)
       output_string o ("\t"^"addl"^"\t"^"$8, %esp"^"\n")
-   | StringInstr(ps,s) ->
+   | StringInstr(ps,id) ->
+      let s = (get_symbol id) in
       let len = String.length s in
       let elen = Int64.add (Int64.mul (Int64.of_int len) 2L) 1L in
       let tv1 = IntTVal(ps,elen) in
@@ -556,23 +557,23 @@ and compile_sreg (o : out_channel) (sr : sreg) : unit = match sr with
 and compile_sval (o : out_channel) (sv : sval) : unit = match sv with
    | RegSVal(ps,r) -> compile_reg o r;
    | IntSVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
-   | LabelSVal(ps,l) -> output_string o ("$_"^l)
+   | LabelSVal(ps,l) -> output_string o ("$_"^(get_symbol l))
 
 (* compiles an L1 "u" nonterminal into x86 assembly *)
 and compile_uval (o : out_channel) (uv : uval) : unit = match uv with
    | RegUVal(ps,r) -> output_string o "*"; compile_reg o r
    | IntUVal(ps,i) -> output_string o (Int64.to_string i)
-   | LabelUVal(ps,l) -> output_string o ("_"^l)
+   | LabelUVal(ps,l) -> output_string o ("_"^(get_symbol l))
 
 (* compiles an L1 "t" nonterminal into x86 assembly *)
 and compile_tval (o : out_channel) (t : tval) : unit = match t with
    | RegTVal(ps,r) -> compile_reg o r
    | IntTVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
-   | LabelTVal(ps,l) -> output_string o ("$_"^l)
+   | LabelTVal(ps,l) -> output_string o ("$_"^(get_symbol l))
 
 (* compiles an L1 label l into x86 assembly *)
-and compile_label (o : out_channel) (l : string) : unit = 
-   output_string o ("_"^l^":\n") ;
+and compile_label (o : out_channel) (l : int) : unit = 
+   output_string o ("_"^(get_symbol l)^":\n") ;
 and compile_strlit (o : out_channel) (s : string) (p : pos) (first : bool) (j : int) (k : int) : unit =
    let cl = explode s in
    let _ = List.fold_left (fun k c -> 
