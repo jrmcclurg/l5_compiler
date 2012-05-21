@@ -16,7 +16,7 @@
 open L2_ast;;
 open Utils;;
 
-let debug_alloc = true;;
+let debug_alloc = false;;
 
 
 (*********************************************************
@@ -83,11 +83,14 @@ let rec find_target_ins_helper (il : (instr * VarSet.t * VarSet.t) list) (s1 : i
    | [] -> VarSet.empty
    | (i1,ins,_)::is ->
       let l = (match (i1,s2o) with
-      | (LabelInstr(_,s),None) -> if (s1 = s) then ins else VarSet.empty
-      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then ins else VarSet.empty
-      | _ -> VarSet.empty) in
+      | (LabelInstr(_,s),None) ->
+         if (s1 = s) then (VarSet.union ins (find_target_ins_helper is s1 s2o)) else (find_target_ins_helper is s1 s2o)
+      | (LabelInstr(_,s),Some(s2)) -> 
+         if ((s1 = s) || (s2 = s)) then (VarSet.union ins (find_target_ins_helper is s1 s2o)) else (find_target_ins_helper is s1 s2o)
+      | _ -> (find_target_ins_helper is s1 s2o)) in
+      l
       (* add the ins for the first instruction *)
-      VarSet.union l (find_target_ins_helper is s1 s2o)
+      
 
 (* gets the "ins" for a specified target label (see the find_target_ins_helper function)
  * (resulting list is SORTED) *)
