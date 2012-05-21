@@ -79,18 +79,12 @@ let rec compare_lists (vl1 : VarSet.t) (vl2 : VarSet.t) : bool =
  * returns a var list of all the "ins" (no duplicates, list not sorted)
  *)
 let rec find_target_ins_helper (il : (instr * VarSet.t * VarSet.t) list) (s1 : int) (s2o : int option) : VarSet.t =
-   match il with
-   | [] -> VarSet.empty
-   | (i1,ins,_)::is ->
-      let l = (match (i1,s2o) with
-      | (LabelInstr(_,s),None) ->
-         if (s1 = s) then (VarSet.union ins (find_target_ins_helper is s1 s2o)) else (find_target_ins_helper is s1 s2o)
-      | (LabelInstr(_,s),Some(s2)) -> 
-         if ((s1 = s) || (s2 = s)) then (VarSet.union ins (find_target_ins_helper is s1 s2o)) else (find_target_ins_helper is s1 s2o)
-      | _ -> (find_target_ins_helper is s1 s2o)) in
-      l
-      (* add the ins for the first instruction *)
-      
+   List.fold_left (fun res (i1,ins,_) ->
+      match (i1,s2o) with
+      | (LabelInstr(_,s),None) -> if (s1 = s) then (VarSet.union ins res) else res
+      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then (VarSet.union ins res) else res
+      | _ -> res
+   ) VarSet.empty il
 
 (* gets the "ins" for a specified target label (see the find_target_ins_helper function)
  * (resulting list is SORTED) *)

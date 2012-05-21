@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #define HEAP_SIZE 1048576  // one megabyte
-//#define HEAP_SIZE 10       // small heap size for testing
+//#define HEAP_SIZE 20       // small heap size for testing
 #define ENABLE_GC          // uncomment this to enable GC
 //#define GC_DEBUG           // uncomment this to enable GC debugging
 
@@ -41,7 +41,7 @@ void print_content(void **in, int depth) {
       size= *((int*)in);
       data = in + 1;
       printf("{s:%i", size);
-      for(i=0; i < size; i++) {
+      for(i = 0; i < size; i++) {
          printf(", ");
          print_content(*data, depth + 1);
          data++;
@@ -49,6 +49,7 @@ void print_content(void **in, int depth) {
       printf("}");
    }
 }
+
 
 /*
  * Runtime "print" function
@@ -58,6 +59,32 @@ int print(void *l) {
    printf("\n");
 
    return 1;
+}
+
+/*
+ * Runtime function for printing an array as a string
+ */
+void print_str(int **in) {
+   int i, x, size;
+   int **data;
+   int c;
+
+   if(in == NULL) {
+      printf("nil");
+      return;
+   }
+   x = (int)in;
+   if(x & 1) {
+      printf("%i\n", x >> 1);
+   } else {
+      size= (int)(*in);
+      data = in + 1;
+      //fwrite(data,sizeof(char),size,stdout);
+      for(i = 0; i < size; i++) {
+         c = (int)data[i];
+         putchar(c >> 1);
+      }
+   }
 }
 
 /*

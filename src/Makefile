@@ -25,9 +25,11 @@
 # make wc      - counts the number of lines of code
 ###########################################################
 
+# use the "-ccopt -static" $(OCAMLC) switch to statically link
+
 # OCAMLC = ocamlcp -p a
-OCAMLC = ocamlopt -p -g
-#OCAMLC = ocamlopt
+#OCAMLC = ocamlopt -p -g
+OCAMLC = ocamlopt -ccopt -O2
 CMO = cmx
 CMA = cmxa
 
@@ -292,4 +294,3 @@ wc:
 		make clean
 		wc -l *.m*
 
-# use the "-ccopt -static" $(OCAMLC) switch to statically link
