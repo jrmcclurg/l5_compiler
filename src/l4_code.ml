@@ -101,11 +101,11 @@ let rec recombine_exp (e2 : L4_ast.exp) (extr : (L4_ast.var * L4_ast.exp) list) 
       let env = recombine_exp e2 more in
       (match extracted with
       | LetExp(p,v,e1,e2) -> 
-         let cv = Var(p,get_unique_ident l4_prefix) in
+         let cv = Var(p,get_unique_symbol l4_prefix) in
          L4_ast.LetExp(p,cv,e1,LetExp(p,x,(replace_in_exp e2 v (VarExp(p,cv))),env))
       | IfExp(p,e1,e2,e3) -> L4_ast.IfExp(p,e1,replace_in_exp env x e2,replace_in_exp env x e3)
       | BeginExp(p,e1,e2) ->    
-         let cv = Var(p,get_unique_ident l4_prefix) in
+         let cv = Var(p,get_unique_symbol l4_prefix) in
          L4_ast.LetExp(p,cv,e1,L4_ast.LetExp(p,x,e2,env)) 
       | AppExp(p,e,el) -> L4_ast.LetExp(p,x,extracted,env) 
       | NewArrayExp(p,e1,e2) -> L4_ast.LetExp(p,x,extracted,env) 
@@ -153,22 +153,22 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       match en with
       | ExpEnv -> ([],e) 
       | _ ->
-         let v2 = L4_ast.Var(p,get_unique_ident l4_prefix) in
-         let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+         let v2 = L4_ast.Var(p,get_unique_symbol l4_prefix) in
+         let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(v2,e1);(uv,(replace_in_exp e2 v (VarExp(p,v2))))], VarExp(p,uv)) )
    | IfExp(p,e1,e2,e3) -> 
       let (pull1,env1) = lift_one e1 SValEnv in
       if List.length pull1 > 0 then (pull1,IfExp(p,env1,e2,e3)) else (
       match en with
       | ExpEnv -> ([],e) 
-      | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | _ -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv)) )
    | BeginExp(p,e1,e2) -> 
       let (pull1,env1) = lift_one e1 DExpEnv in
       if List.length pull1 > 0 then (pull1,BeginExp(p,env1,e2)) else (
       match en with
       | ExpEnv -> ([],e)
-      | _ -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | _ -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv)) )
    | AppExp(p,ex,el) -> 
       let (pull1,env1) = lift_one ex SValEnv in
@@ -181,7 +181,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,AppExp(p,env1,el)) else
       if List.length pull2 > 0 then (pull2,AppExp(p,ex,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | NewArrayExp(p,e1,e2) -> 
@@ -190,7 +190,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,NewArrayExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,NewArrayExp(p,e1,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | NewTupleExp(p,el) -> 
@@ -202,7 +202,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       ) ([],[],false) el in
       if List.length pull2 > 0 then (pull2,NewTupleExp(p,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | ArefExp(p,e1,e2) -> 
@@ -211,7 +211,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,ArefExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,ArefExp(p,e1,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | AsetExp(p,e1,e2,e3) -> 
@@ -222,42 +222,42 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull2 > 0 then (pull2,AsetExp(p,e1,env2,e3)) else
       if List.length pull3 > 0 then (pull3,AsetExp(p,e1,e2,env3)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | AlenExp(p,e1) -> 
       let (pull1,env1) = lift_one e1 SValEnv in
       if List.length pull1 > 0 then (pull1,AlenExp(p,env1)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | PrintExp(p,e1) -> 
       let (pull1,env1) = lift_one e1 SValEnv in
       if List.length pull1 > 0 then (pull1,PrintExp(p,env1)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | MakeClosureExp(p,s,e1) -> 
       let (pull1,env1) = lift_one e1 SValEnv in
       if List.length pull1 > 0 then (pull1,MakeClosureExp(p,s,env1)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | ClosureProcExp(p,e1) -> 
       let (pull1,env1) = lift_one e1 SValEnv in
       if List.length pull1 > 0 then (pull1,ClosureProcExp(p,env1)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | ClosureVarsExp(p,e1) -> 
       let (pull1,env1) = lift_one e1 SValEnv in
       if List.length pull1 > 0 then (pull1,ClosureVarsExp(p,env1)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | PlusExp(p,e1,e2) -> 
@@ -266,7 +266,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,PlusExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,PlusExp(p,e1,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | MinusExp(p,e1,e2) -> 
@@ -275,7 +275,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,MinusExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,MinusExp(p,e1,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | TimesExp(p,e1,e2) -> 
@@ -284,7 +284,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,TimesExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,TimesExp(p,e1,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | LtExp(p,e1,e2) -> 
@@ -293,7 +293,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,LtExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,LtExp(p,e1,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | LeqExp(p,e1,e2) -> 
@@ -302,7 +302,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,LeqExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,LeqExp(p,e1,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | EqExp(p,e1,e2) -> 
@@ -311,21 +311,21 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       if List.length pull1 > 0 then (pull1,EqExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,EqExp(p,e1,env2)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | NumberPredExp(p,e1) -> 
       let (pull1,env1) = lift_one e1 SValEnv in
       if List.length pull1 > 0 then (pull1,NumberPredExp(p,env1)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | ArrayPredExp(p,e1) -> 
       let (pull1,env1) = lift_one e1 SValEnv in
       if List.length pull1 > 0 then (pull1,ArrayPredExp(p,env1)) else (
       match en with
-      | SValEnv -> let uv = L4_ast.Var(p,get_unique_ident l4_prefix) in
+      | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | VarExp(p,s) ->    ([],e)
@@ -377,7 +377,7 @@ and compile_exp (e : L4_ast.exp) : L3_ast.exp =
       L3_ast.DExpExp(p,L3_ast.AsetDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2,compile_exp_to_sval e3))
    | AlenExp(p,e1) -> L3_ast.DExpExp(p,L3_ast.AlenDExp(p,compile_exp_to_sval e1))
    | BeginExp(p,e1,e2) ->
-      let v = L3_ast.Var(p,get_unique_ident l4_prefix) in
+      let v = L3_ast.Var(p,get_unique_symbol l4_prefix) in
       L3_ast.LetExp(p,v,compile_exp_to_dexp e1,compile_exp e2)
    | PrintExp(p,e) -> L3_ast.DExpExp(p,L3_ast.PrintDExp(p,compile_exp_to_sval e)) 
    | MakeClosureExp(p,s,e) -> L3_ast.DExpExp(p,L3_ast.MakeClosureDExp(p,s,compile_exp_to_sval e))

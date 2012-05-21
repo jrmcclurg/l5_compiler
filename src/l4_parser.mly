@@ -16,8 +16,8 @@
    open Utils;;
 %}
 %token <int64> INT
-%token <string> LABEL
-%token <string> IDENT 
+%token <int> LABEL
+%token <int> IDENT 
 %token CLOSUREPROC CLOSUREVARS MAKECLOSURE NEWARRAY NEWTUPLE PRINT
 %token ASET AREF ALEN NUMBERQ ARRAYQ BEGIN
 %token LET IF
@@ -70,7 +70,7 @@ exp:
    | LPAREN ARRAYQ exp RPAREN                                   { ArrayPredExp(get_current_pos (), $3) }
    | var                                                        { VarExp(get_current_pos(), $1) }
    | INT                                                        { IntExp(get_current_pos(), $1) }
-   | LABEL                                                      { update_max_ident $1; LabelExp(get_current_pos(), $1) }
+   | LABEL                                                      { LabelExp(get_current_pos(), $1) }
 ;
 
 exp_list:
@@ -79,7 +79,7 @@ exp_list:
 ;
 
 var:
-   | IDENT { update_max_ident $1; Var(get_current_pos (), $1) }
+   | IDENT { Var(get_current_pos (), $1) }
 ;
 
 var_list:

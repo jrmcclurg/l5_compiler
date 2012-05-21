@@ -49,6 +49,7 @@ rule token = parse
 | "="                        { EQ }
 | ';' [^'\n']*               { token lexbuf }                    (* single-line comment *)
 | ['a'-'z' 'A'-'Z' '-'
-   '_' '0'-'9']* as s        { IDENT(s) }                        (* variable *)
+   '_' '0'-'9']* as s        { let id = add_symbol s in
+                               IDENT(id) }                       (* variable *)
 | eof { EOF }
 | _ { lex_error "Lexing error" lexbuf }

@@ -15,11 +15,11 @@
 open Utils;;
 
 (* unique prefix for auto-generated variables (NOTE: this begins with a "_" to avoid conflicting with keywords *)
-let l4_prefix = "_l4";; (* TODO XXX - do this for L2 as well!! *)
+let l4_prefix = "_l4";;
 
 (* data type for L4 programs *)
 type program = Program of pos * exp * func list
- and func = Function of pos * string * var list * exp
+ and func = Function of pos * int * var list * exp
  and exp = LetExp of pos * var * exp * exp
          | IfExp of pos * exp * exp * exp
          | AppExp of pos * exp * exp list
@@ -30,7 +30,7 @@ type program = Program of pos * exp * func list
          | AlenExp of pos * exp
          | BeginExp of pos * exp * exp
          | PrintExp of pos * exp
-         | MakeClosureExp of pos * string * exp
+         | MakeClosureExp of pos * int * exp
          | ClosureProcExp of pos * exp
          | ClosureVarsExp of pos * exp
          | PlusExp of pos * exp * exp
@@ -43,8 +43,8 @@ type program = Program of pos * exp * func list
          | ArrayPredExp of pos * exp
          | VarExp of pos * var
          | IntExp of pos * int64
-         | LabelExp of pos * string
- and var = Var of pos * string (* TODO XXX - eventually we need a symbol table *)
+         | LabelExp of pos * int
+ and var = Var of pos * int
 ;;
 
 (* the output_... functions pretty-print L4 constructs to a specified channel *)
@@ -62,7 +62,7 @@ let rec output_program out (p : program) = match p with
      output_string out "\n)\n"
 and output_func out (f : func) = match f with
   | Function(_,n,vl,e) ->
-     output_string out ("  (:"^n^" (");
+     output_string out ("  (:"^(get_symbol n)^" (");
      let _ = List.fold_left (fun flag i ->
         if flag then output_string out " ";
         output_var out i;
@@ -140,7 +140,7 @@ and output_exp out (e : exp) = match e with
       output_string out ")"
    | MakeClosureExp(_,s,e) ->
       output_string out "(make-closure ";
-      output_string out (":"^s);
+      output_string out (":"^(get_symbol s));
       output_string out " ";
       output_exp out e;
       output_string out ")"
@@ -198,9 +198,9 @@ and output_exp out (e : exp) = match e with
       output_string out ")"
    | VarExp(_, r) -> output_var out r
    | IntExp(_, i) -> output_string out (Int64.to_string i)
-   | LabelExp(_,s) -> output_string out (":"^s)
+   | LabelExp(_,s) -> output_string out (":"^(get_symbol s))
 and output_var out r = match r with
-   | Var(_,s) -> output_string out s
+   | Var(_,s) -> output_string out (get_symbol s)
 ;;
 
 (* the print_... functions pretty-print L4 constructs to stdout *)

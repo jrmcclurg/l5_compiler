@@ -15,7 +15,7 @@
 open Utils;;
 
 (* unique prefix for auto-generated variables (NOTE: this begins with a "_" to avoid conflicting with keywords *)
-let l5_prefix = "_l5";; (* TODO XXX - do this for L2 as well!! *)
+let l5_prefix = "_l5";;
 
 (* data type for L4 programs *)
 type program = Program of pos * exp
@@ -42,7 +42,7 @@ type program = Program of pos * exp
           | ArefPrim of pos
           | AsetPrim of pos
           | AlenPrim of pos
- and var = Var of pos * string (* TODO XXX - eventually we need a symbol table *)
+ and var = Var of pos * int
 ;;
 
 (* the output_... functions pretty-print L4 constructs to a specified channel *)
@@ -140,7 +140,7 @@ and output_prim out (pr : prim) = match pr with
    | AlenPrim(_) ->
       output_string out "alen";
 and output_var out r = match r with
-   | Var(_,s) -> output_string out s
+   | Var(_,s) -> output_string out (get_symbol s)
 ;;
 
 (* the print_... functions pretty-print L4 constructs to stdout *)

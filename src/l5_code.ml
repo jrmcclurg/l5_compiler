@@ -19,32 +19,36 @@ open Utils;;
  **  L5-to-L4 CODE GENERATION                           **
  *********************************************************)
 
+let fv_id = add_symbol "fv";;
+let bv_id = add_symbol "bv";;
+
 let fast_prefix = "FAST";;
 
 let rec make_var_list (p : pos) (prefix : string) (n : int) : L4_ast.var list =
+   let name = (prefix^(string_of_int n)) in
    if n = 0 then []
-   else if n = 1 then [L4_ast.Var(p,prefix^(string_of_int n))]
+   else if n = 1 then [L4_ast.Var(p,add_symbol name)]
    else (
-      (make_var_list p prefix (n-1))@[L4_ast.Var(p,prefix^(string_of_int n))]
+      (make_var_list p prefix (n-1))@[L4_ast.Var(p,add_symbol name)]
    )
 ;;
 
-let get_func (p : pos) (nm : string) (num : int) (fn : ((string * string) option) ref) :
-(string * string * L4_ast.var list * L4_ast.var list * L4_ast.var option) =
+let get_func (p : pos) (nm : string) (num : int) (fn : ((int * int) option) ref) :
+(int * int * L4_ast.var list * L4_ast.var list * L4_ast.var option) =
    match !fn with
    | None ->
-      let name = make_ident_unique l5_prefix nm in
-      let fname = make_ident_unique l5_prefix (fast_prefix^nm) in
+      let name = get_unique_symbol (l5_prefix^nm) in
+      let fname = get_unique_symbol (l5_prefix^fast_prefix^nm) in
       fn := Some(name,fname);
-      let fv = L4_ast.Var(p,"fv") in
-      let bv = L4_ast.Var(p,"bv") in
+      let fv = L4_ast.Var(p,fv_id) in
+      let bv = L4_ast.Var(p,bv_id) in
       let fvars = make_var_list p "p" num in 
       (name,fname,[fv;bv],fvars,Some(bv))
    | Some(s1,s2) -> (s1,s2,[],[],None)
 ;;
 
-let plus_func_name = ref (None : (string * string) option);;
-let get_plus_func (p : pos) : (string * string * L4_ast.func list) =
+let plus_func_name = ref (None : (int * int) option);;
+let get_plus_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "plus" 2 plus_func_name in
    match bvo with
    | Some(bv) ->
@@ -57,8 +61,8 @@ let get_plus_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let minus_func_name = ref (None : (string * string) option);;
-let get_minus_func (p : pos) : (string * string * L4_ast.func list) =
+let minus_func_name = ref (None : (int * int) option);;
+let get_minus_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "minus" 2 minus_func_name in
    match bvo with
    | Some(bv) ->
@@ -71,8 +75,8 @@ let get_minus_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let times_func_name = ref (None : (string * string) option);;
-let get_times_func (p : pos) : (string * string * L4_ast.func list) =
+let times_func_name = ref (None : (int * int) option);;
+let get_times_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "times" 2 times_func_name in
    match bvo with
    | Some(bv) ->
@@ -85,8 +89,8 @@ let get_times_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let lt_func_name = ref (None : (string * string) option);;
-let get_lt_func (p : pos) : (string * string * L4_ast.func list) =
+let lt_func_name = ref (None : (int * int) option);;
+let get_lt_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "lt" 2 lt_func_name in
    match bvo with
    | Some(bv) ->
@@ -99,8 +103,8 @@ let get_lt_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let leq_func_name = ref (None : (string * string) option);;
-let get_leq_func (p : pos) : (string * string * L4_ast.func list) =
+let leq_func_name = ref (None : (int * int) option);;
+let get_leq_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "leq" 2 leq_func_name in
    match bvo with
    | Some(bv) ->
@@ -113,8 +117,8 @@ let get_leq_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let eq_func_name = ref (None : (string * string) option);;
-let get_eq_func (p : pos) : (string * string * L4_ast.func list) =
+let eq_func_name = ref (None : (int * int) option);;
+let get_eq_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "eq" 2 eq_func_name in
    match bvo with
    | Some(bv) ->
@@ -127,8 +131,8 @@ let get_eq_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let numberq_func_name = ref (None : (string * string) option);;
-let get_numberq_func (p : pos) : (string * string * L4_ast.func list) =
+let numberq_func_name = ref (None : (int * int) option);;
+let get_numberq_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "numberq" 1 numberq_func_name in
    match bvo with
    | Some(bv) ->
@@ -140,8 +144,8 @@ let get_numberq_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let arrayq_func_name = ref (None : (string * string) option);;
-let get_arrayq_func (p : pos) : (string * string * L4_ast.func list) =
+let arrayq_func_name = ref (None : (int * int) option);;
+let get_arrayq_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "arrayq" 1 arrayq_func_name in
    match bvo with
    | Some(bv) ->
@@ -153,8 +157,8 @@ let get_arrayq_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let print_func_name = ref (None : (string * string) option);;
-let get_print_func (p : pos) : (string * string * L4_ast.func list) =
+let print_func_name = ref (None : (int * int) option);;
+let get_print_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "print" 1 print_func_name in
    match bvo with
    | Some(bv) ->
@@ -166,8 +170,8 @@ let get_print_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let newarr_func_name = ref (None : (string * string) option);;
-let get_newarr_func (p : pos) : (string * string * L4_ast.func list) =
+let newarr_func_name = ref (None : (int * int) option);;
+let get_newarr_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "newarr" 2 newarr_func_name in
    match bvo with
    | Some(bv) ->
@@ -180,8 +184,8 @@ let get_newarr_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let aref_func_name = ref (None : (string * string) option);;
-let get_aref_func (p : pos) : (string * string * L4_ast.func list) =
+let aref_func_name = ref (None : (int * int) option);;
+let get_aref_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "aref" 2 aref_func_name in
    match bvo with
    | Some(bv) ->
@@ -194,8 +198,8 @@ let get_aref_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let aset_func_name = ref (None : (string * string) option);;
-let get_aset_func (p : pos) : (string * string * L4_ast.func list) =
+let aset_func_name = ref (None : (int * int) option);;
+let get_aset_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "aset" 3 aset_func_name in
    match bvo with
    | Some(bv) ->
@@ -211,8 +215,8 @@ let get_aset_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let alen_func_name = ref (None : (string * string) option);;
-let get_alen_func (p : pos) : (string * string * L4_ast.func list) =
+let alen_func_name = ref (None : (int * int) option);;
+let get_alen_func (p : pos) : (int * int * L4_ast.func list) =
    let (name,fname,vars,fvars,bvo) = get_func p "alen" 1 alen_func_name in
    match bvo with
    | Some(bv) ->
@@ -224,7 +228,7 @@ let get_alen_func (p : pos) : (string * string * L4_ast.func list) =
    | _ -> (name,fname,[])
 ;;
 
-let rec var_list_contains (vl : L5_ast.var list) (s : string) : bool =
+let rec var_list_contains (vl : L5_ast.var list) (s : int) : bool =
    match vl with
    | []-> false
    | (Var(_,s2))::more -> ((s2 = s) || (var_list_contains more s))
@@ -317,9 +321,9 @@ let rec compile_program (pr : L5_ast.program) : L4_ast.program =
 and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
    match e with
    | LambdaExp(p,vl,e) -> 
-      let name = get_unique_ident l5_prefix in
-      let fparam = get_unique_ident l5_prefix in
-      let bparam = get_unique_ident l5_prefix in
+      let name = get_unique_symbol l5_prefix in
+      let fparam = get_unique_symbol l5_prefix in
+      let bparam = get_unique_symbol l5_prefix in
       let free_vars = (*[Var(p,"m1");Var(p,"m2")]*) get_free_vars e vl in
       let (e2,fl) = compile_exp e in
       let (e3,_) = List.fold_right (fun v (ex,k) ->
@@ -420,7 +424,7 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
          let (ex,fl) = compile_prim pr false in
          (L4_ast.AppExp(p,ex,el2),fl@fl2)
       | _ ->
-         let name = get_unique_ident l5_prefix in
+         let name = get_unique_symbol l5_prefix in
          let (e2,fl1) = compile_exp e in
          let f = L4_ast.Var(p,name) in
          (L4_ast.LetExp(p,f,e2,L4_ast.AppExp(p,L4_ast.ClosureProcExp(p,L4_ast.VarExp(p,f)),

@@ -14,9 +14,6 @@
 
 open Utils;;
 
-(* unique prefix for auto-generated variables *)
-let l2_prefix = "_l2";;
-
 let esi_id = add_symbol "esi";;
 let edi_id = add_symbol "edi";;
 let ebp_id = add_symbol "ebp";;
