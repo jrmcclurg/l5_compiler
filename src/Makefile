@@ -279,18 +279,18 @@ liveness_tarball:	liveness clean
 graph_tarball:		graph clean
 			tar -cvzf mcclurg.graph.tar.gz GRAPH* graph* liveness_pars* liveness_lex* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml
 
-l2c_tarball:		graph clean
+l2c_tarball:		L2c clean
 			tar -cvzf mcclurg.2.tar.gz L2* Makefile l2* l1_code.ml l1_ast.ml utils.ml
 
-l3c_tarball:		graph clean
+l3c_tarball:		L3c clean
 			tar -cvzf mcclurg.3.tar.gz L3* Makefile l3* l2_code.ml l1_code.ml l2_ast.ml l1_ast.ml utils.ml
 
-l4c_tarball:		graph clean
+l4c_tarball:		L4c clean
 			tar -cvzf mcclurg.4.tar.gz L4* Makefile l4* l3_code.ml l2_code.ml l1_code.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml
 
-l5c_tarball:		graph clean
+l5c_tarball:		L5c clean
 			tar -cvzf mcclurg.5.tar.gz L5* Makefile l5* l4_code.ml l3_code.ml l2_code.ml l1_code.ml l4_ast.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml
 
 wc:		
 		make clean
-		wc -l *.m*
+		wc -l *.m* mod_runtime.c

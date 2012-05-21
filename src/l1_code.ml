@@ -857,6 +857,11 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   int i, data_size, array_size;\n";
    output_string o "   int *ret;\n";
    output_string o "\n";
+   output_string o "#ifdef GC_DEBUG\n";
+   output_string o "   printf(\"runtime.c: allocate(): ESP = %p (%d), EDI = %p (%d), ESI = %p (%d)\\n\",\n";
+   output_string o "          esp, (int)esp, (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
+   output_string o "#endif\n";
+   output_string o "\n";
    output_string o "   if(!(fw_size & 1)) {\n";
    output_string o "      printf(\"allocate called with size input that was not an encoded integer, %i\\n\",\n";
    output_string o "             fw_size);\n";
@@ -952,6 +957,10 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "      :             // inputs (none)\n";
    output_string o "      : \"%eax\"      // clobbered registers (eax)\n";
    output_string o "   );  \n";
+   output_string o "\n";
+   output_string o "#ifdef GC_DEBUG\n";
+   output_string o "   printf(\"runtime.c: main(): initial ESP value = %p (%d)\\n\", stack, (int)stack);\n";
+   output_string o "#endif\n";
    output_string o "\n";
    output_string o "   return 0;\n";
    output_string o "}\n";
