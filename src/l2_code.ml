@@ -512,7 +512,8 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
    (*print_string ("   folding: "^(string_of_int (List.length keys2))^"... ");
    flush stdout;*)
    let (ag,colors,ok) = List.fold_left (fun (r2,r3,flag) x -> 
-      if debug_alloc then print_string ("Examining key: "^(get_symbol x)^"\n");
+      if debug_alloc then ( print_string ("Examining key: "^(get_symbol x)^"\n");
+      flush stdout );
       (* find the current source variable "x" in the graph
        * (v is the corresponding var data structure, and 
        * tb is the hashtable of destinations) *)
@@ -521,7 +522,8 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
       let tbl = Hashtbl.fold (fun _ vr res2 ->
          vr::res2
       ) tb [] in
-      if debug_alloc then print_string ("   "^(string_of_int (List.length tbl))^" conflicts\n");
+      if debug_alloc then ( print_string ("   "^(string_of_int (List.length tbl))^" conflicts\n");
+      flush stdout );
       (* go through all of the usable registers l1, 
        * and compute an optional color (register)
        * assignment l2 *)
@@ -559,7 +561,8 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
       print_string (get_symbol x);
       print_string " -> ";
       print_var l3;
-      print_string "\n" );
+      print_string "\n";
+      flush stdout );
                (Some(l3))
             )
          (* if "r" already contains a coloring, just use that one *)
@@ -589,8 +592,8 @@ let graph_color (il : instr list) : ((var list) list * (var * var) list * bool) 
        * color properly *)
       (r2@[(v::(sort_vars tbl))],newl,f && flag)
    ) ([],[],true) keys2 in
-   if debug_alloc then print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
-   flush stdout;
+   if debug_alloc then ( print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
+   flush stdout );
    (ag,colors,ok)
 ;;
 
@@ -1185,7 +1188,8 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
    (* if the graph coloring failed... *)
    if (not ok) then (
       (* just pick any old variable to spill *)
-      if debug_alloc then print_string ("Looking through: "^(string_of_int (List.length at))^"\n");
+      if debug_alloc then ( print_string ("Looking through: "^(string_of_int (List.length at))^"\n");
+      flush stdout );
       let nameop = List.fold_left (fun res vl -> 
          match (List.hd vl) with
          (* only look at variables we haven't already spilled *)
@@ -1202,7 +1206,8 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
           * collisions with normal varialbes) *)
 	 let spill_name = ("<s_"^(string_of_int count)^"_"^(Int64.to_string num)^">") in
          Hashtbl.replace spilled id ();
-         if debug_alloc then print_string ("spilling: "^(get_symbol id)^" to "^spill_name^"\n");
+         if debug_alloc then ( print_string ("spilling: "^(get_symbol id)^" to "^spill_name^"\n");
+         flush stdout );
          (* do the spilling *)
          (*print_string "spilling... ";
          flush stdout;*)

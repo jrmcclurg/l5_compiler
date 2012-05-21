@@ -139,7 +139,7 @@ let make_ident_unique (prefix : string) (s : string) : string =
    (prefix^s^(!max_prefix))
 ;;
 
-let unique_id = ref 64;; (* start a fairly large number *)
+let unique_id = ref 1;; (* 0 is reserved for "NULL" *)
 let symbol_table = ((Hashtbl.create 64) : (string,int) Hashtbl.t);;
 let max_symbol_len = ref 0;;
 

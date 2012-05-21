@@ -14,6 +14,15 @@
 
 open Utils;;
 
+let esi_id = add_symbol "esi";;
+let edi_id = add_symbol "edi";;
+let ebp_id = add_symbol "ebp";;
+let esp_id = add_symbol "esp";;
+let eax_id = add_symbol "eax";;
+let ecx_id = add_symbol "ecx";;
+let edx_id = add_symbol "edx";;
+let ebx_id = add_symbol "ebx";;
+
 (* data type for L2 programs *)
 type program = Program of pos * func list
  and func = Function of pos * int option * instr list
@@ -64,14 +73,14 @@ type program = Program of pos * func list
 ;;
 
 let rec get_var_id (v : var) : int = match v with
-   | EsiReg(_) -> 1
-   | EdiReg(_) -> 2
-   | EbpReg(_) -> 3
-   | EspReg(_) -> 4
-   | EaxReg(_) -> 5
-   | EcxReg(_) -> 6
-   | EdxReg(_) -> 7
-   | EbxReg(_) -> 8
+   | EsiReg(_) -> esi_id
+   | EdiReg(_) -> edi_id
+   | EbpReg(_) -> ebp_id
+   | EspReg(_) -> esp_id
+   | EaxReg(_) -> eax_id
+   | EcxReg(_) -> ecx_id
+   | EdxReg(_) -> edx_id
+   | EbxReg(_) -> ebx_id
    | Var(_,id) -> id
 ;;
 

@@ -27,6 +27,7 @@
 
 # OCAMLC = ocamlcp -p a
 OCAMLC = ocamlopt -p -g
+#OCAMLC = ocamlopt
 CMO = cmx
 CMA = cmxa
 
