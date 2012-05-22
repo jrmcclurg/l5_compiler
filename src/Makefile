@@ -29,7 +29,7 @@
 
 # OCAMLC = ocamlcp -p a
 #OCAMLC = ocamlopt -p -g
-OCAMLC = ocamlopt -ccopt -O2
+OCAMLC = ocamlopt -ccopt -O3
 CMO = cmx
 CMA = cmxa
 LIBS = str.$(CMA) unix.$(CMA)

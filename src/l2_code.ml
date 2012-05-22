@@ -467,7 +467,7 @@ let rec compute_adjacency_table (il : (instr * VarSet.t * VarSet.t) list)
  * "colors" is the list of (var,reg) coloring assignments, and
  * "ok" is true iff the graph was able to be colored properly
  *)
-let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * bool) =
+let graph_color (il : instr list) (prev_max : int) : ((var * VarSet.t) list * (var * var) list * bool * int) =
    if debug_alloc then (print_string ("   graph color: "^(string_of_int (List.length il))^"... ");
    flush stdout );
    (* perform the liveness analysis based on the instruction list *)
@@ -499,7 +499,7 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
    (* sort the source vertices by (ascending order of) number of conflicts *)
    (*print_string ("   sorting keys: "^(string_of_int (List.length keys))^"... ");
    flush stdout;*)
-   let keyst = List.sort (fun (a,at) (b,bt) -> compare (Hashtbl.length at) (Hashtbl.length bt)) keys in (* XXX *)
+   let keyst = List.sort (fun (a,at) (b,bt) -> compare (Hashtbl.length bt) (Hashtbl.length at)) keys in (* XXX *)
    let keys2 = List.map (fun (k,tab) -> k) keyst in
    (*print_string ("   done.\n");
    flush stdout;*)
@@ -510,6 +510,11 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
     * and compute the return values (ag,colors,ok) *)
    (*print_string ("   folding: "^(string_of_int (List.length keys2))^"... ");
    flush stdout;*)
+   let the_max = ref 0 in
+   let the_num = ref 0 in
+   let the_prev = ref 0 in
+   let the_prev_max = ref 0 in
+   let the_counter = ref 0 in
    let (ag,colors,ok) = List.fold_left (fun (r2,r3,flag) x -> 
       if debug_alloc then ( print_string ("Examining key: "^(get_symbol x)^"\n");
       flush stdout );
@@ -521,6 +526,13 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
       let tbl = Hashtbl.fold (fun _ vr res2 ->
          VarSet.add vr res2
       ) tb VarSet.empty in
+      let test = VarSet.cardinal tbl in
+      if test > !the_max then the_max := test;
+      let check = (max 0 ((!the_prev) - test))/(int_of_float (sqrt (float_of_int (!the_counter+1)))) in
+      print_string ("Conflicts: "^(string_of_int test)^" check = "^(string_of_int check)^"\n");
+      if (check > !the_prev_max) then (the_num := !the_counter; the_prev_max := check );
+      the_prev := test;
+      the_counter := !the_counter + 1;
       if debug_alloc then ( print_string ("   "^(string_of_int (VarSet.cardinal tbl))^" conflicts\n");
       flush stdout );
       (* go through all of the usable registers l1, 
@@ -593,7 +605,11 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
    ) ([],[],true) keys2 in
    if debug_alloc then ( print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
    flush stdout );
-   (ag,colors,ok)
+   let num_to_spill = max 1 !the_num in
+   print_string ("MAX: "^(string_of_int !the_max)^" (prev "^(string_of_int prev_max)^") (should spill "^(string_of_int num_to_spill)^")\n");
+   print_string "------------------------\n";
+   flush stdout;
+   (ag,colors,ok,!the_max)
 ;;
 
 (*********************************************************
@@ -1165,7 +1181,7 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    let initial = (Int64.add 1L init_offset) in
    (* compile the instructions to L1 instructions *)
    let h = ((Hashtbl.create 64) : (int,unit) Hashtbl.t) in
-   let (il3,num_spilled) = compile_instr_list il2 initial count h in
+   let (il3,num_spilled) = compile_instr_list il2 initial count h Pervasives.max_int in
    (* add the stack size adjustment to the beginning of each function *)
    let il4 = (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3 in
    (* add the stack size de-adjustment to the end of the first instruction *)
@@ -1175,12 +1191,12 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    L1_ast.Function(p,so,il5)
 
 (* this is a fixpoint operator where i is the current number of spilled vars *)
-and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spilled : (int,unit) Hashtbl.t):
+and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spilled : (int,unit) Hashtbl.t) (prev_max : int) :
                                                               (L1_ast.instr list * int64) =
    (* try to do the register allocation *)
    if debug_alloc then (print_string ("compile_instr_list: "^(Int64.to_string num)^"\n");
    flush stdout );
-   let (at,colors,ok) = graph_color il in
+   let (at,colors,ok,current_max) = graph_color il prev_max in
    (*print_string ((Int64.to_string num)^", table size = "^(string_of_int (List.length at))^" : ");
    flush stdout;*)
    if (num > 50L) then parse_error "register allocation took too long"; (* TODO XXX *)
@@ -1189,11 +1205,15 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
       (* just pick any old variable to spill *)
       if debug_alloc then ( print_string ("Looking through: "^(string_of_int (List.length at))^"\n");
       flush stdout );
+      (*print_string ("Table size = "^(string_of_int (List.length at))^"\n");*)
       let nameop = List.fold_left (fun res (hd,vl) -> 
-         match hd with
+         (*print_var hd;
+         print_string "\n";*)
+         match (res,hd) with
          (* only look at variables we haven't already spilled *)
-	 | Var(_,id) -> (try Hashtbl.find spilled id; None
-                        with _ -> Some(id) ) (* this is the "not already spilled" case *)
+         | (Some(_),_) -> res
+	 | (_,Var(_,id)) -> (try Hashtbl.find spilled id; None
+                             with _ -> Some(id) ) (* this is the "not already spilled" case *)
 	 | _ -> res
       ) None at in
       (* spill and try again *)
@@ -1215,10 +1235,11 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
          (*print_string "done.\n";
          flush stdout;*)
          (* try to compile again *)
-         compile_instr_list il2 (Int64.add num (1L)) count spilled
+         compile_instr_list il2 (Int64.add num (1L)) count spilled current_max
    )
    (* if the graph coloring succeeded *)
    else (
+      print_string ("SUCCESS : function '"^(string_of_int count)^"'\n");
       (*print_string ("colored graph properly: "^(string_of_int count)^"\n");*)
       (* set up the replacement table *)
       let h = ((Hashtbl.create (List.length colors)) : (int,L1_ast.reg) Hashtbl.t) in
