@@ -1223,11 +1223,12 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
              if (tnum >= num_to_spill) then (res,ilt,tnum) else
              (try Hashtbl.find spilled id; (res,ilt,tnum)
                              with _ -> (
-                        let spill_name = ("<s_"^(string_of_int count)^"_"^(Int64.to_string num)^">") in
+                        let new_num = (Int64.add num (Int64.of_int tnum)) in
+                        let spill_name = ("<s_"^(string_of_int count)^"_"^(Int64.to_string new_num)^">") in
                         Hashtbl.replace spilled id ();
                         if debug_alloc then ( print_string ("spilling: "^(get_symbol id)^" to "^spill_name^"\n");
                         flush stdout );
-                        let il2t = spill ilt id (Int64.mul (-4L) (Int64.add num (1L))) spill_name in
+                        let il2t = spill ilt id (Int64.mul (-4L) (Int64.add new_num (1L))) spill_name in
                              (Some(id),il2t,tnum + 1)
              ) ) (* this is the "not already spilled" case *)
 	 | _ -> (res,ilt,tnum)
@@ -1237,13 +1238,14 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
       (* if there's nothing left to spill, fail *)
       | None -> parse_error "register allocation failed" (* TODO don't use parse_error for this message *)
       | Some(id) ->
+         let new_num = (Int64.add num (Int64.of_int ns)) in
          (* pick a unique name for the spill variable (it starts with "<" to prevent
           * collisions with normal varialbes) *)
          (*List.iter (fun i -> print_instr i; print_string "\n") il2;*)
          (*print_string "done.\n";
          flush stdout;*)
          (* try to compile again *)
-         compile_instr_list il2 (Int64.add num (1L)) count spilled
+         compile_instr_list il2 (Int64.add new_num (1L)) count spilled
    )
    (* if the graph coloring succeeded *)
    else (
