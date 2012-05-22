@@ -38,6 +38,10 @@ Arg.parse [
                     "Print the parsed L1 code and exit");
    ("-compile",  Arg.Unit(fun x -> do_compile_only := true; do_parse_only := false),
                     "Print the parsed L1 code and exit");
+   ("-debug",    Arg.String(fun x -> add_debug x),
+                    "Add a debug option");
+   ("-heap",     Arg.Int(fun x -> set_heap_size x),
+                    "Set the heap size (default 1048576)");
    ("-o",        Arg.String(fun x -> output_file_name := x; custom_out_file := true),
                     "Location of the compiled result (default: a.out)")
 ] (fun x -> filename := x) banner_text;;

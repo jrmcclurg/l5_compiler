@@ -187,7 +187,8 @@ asm(
    "popl %edx\n" // arg 2
    "# put the original edi/esi on stack instead of args\n"
    "pushl %edi\n" // formerly edx
-   "pushl %esi\n" // formerly eax  <-- this is the ESP we want
+   "pushl %esi\n" // formerly eax
+   "pushl %ebx\n" // formerly return addr  <-- this is the ESP we want
    "pushl %ecx\n" // ecx (return val)
    "pushl %eax\n" // eax (arg 1)
    "pushl %edx\n" // edx (arg 2)
@@ -213,12 +214,16 @@ asm(
    "# restore esi/edi from stack\n"
    "popl %edx\n"  // arg 2
    "popl %ecx\n"  // arg 1
-   "addl $4, %esp\n" // skip over return val (it didn't change)
+   "addl $4, %esp\n" // skip over return val (it hasn't changed)
+   "popl %ebx\n"  // restore ebx
    "popl %esi\n"  // restore esi
    "popl %edi\n"  // restore edi
    "pushl %edx\n" // put back arg 2
    "pushl %ecx\n" // put back arg 1
-   "subl $4, %esp\n" // put back return val
+   "subl $8, %esp\n" // put back return val
+   "popl %edx\n"  // original return addr
+   "popl %ecx\n"  // junk
+   "pushl %edx\n"  // restore return addr
    "ret\n" 
 );
 
@@ -232,8 +237,8 @@ void* allocate_helper(int fw_size, void *fw_fill, int *esp)
    int *ret;
 
 #ifdef GC_DEBUG
-   printf("runtime.c: allocate(): ESP = %p (%d), EDI = %p (%d), ESI = %p (%d)\n",
-          esp, (int)esp, (int*)esp[1], esp[1], (int*)esp[0], esp[0]);
+   printf("runtime.c: allocate(): ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\n",
+          esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);
 #endif
 
    if(!(fw_size & 1)) {

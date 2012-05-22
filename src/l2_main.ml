@@ -30,6 +30,8 @@ Arg.parse [
                     "Output the parsed L1 code and exit (default location: stdout)");
    ("-compile",  Arg.Unit(fun x -> do_compile_only := true; do_parse_only := false),
                     "Do the full L2->L1 compilation (default location: a.out)");
+   ("-debug",    Arg.String(fun x -> add_debug x),
+                    "Add a debug level");
    ("-o",        Arg.String(fun x -> out_file_name := Some(x); binary_file_name := x),
                     "Location of the result")
 ] (fun x -> filename := x) banner_text;;

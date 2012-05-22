@@ -209,3 +209,25 @@ let rec implode (cl : char list) : string =
 let encode_int (i : int) : int64 =
    Int64.add (Int64.mul (Int64.of_int i) 2L) 1L
 ;;
+
+module StringSet = Set.Make(String);;
+
+let debug_table = ref (StringSet.empty : StringSet.t);;
+
+let add_debug (d : string) : unit =
+   debug_table := StringSet.add d !debug_table
+;;
+
+let has_debug (d : string) : bool =
+   StringSet.mem d !debug_table
+;;
+
+let heap_size = ref 1048576;;
+
+let set_heap_size (hs : int) : unit =
+   heap_size := hs
+;;
+
+let get_heap_size () : int =
+   !heap_size
+;;

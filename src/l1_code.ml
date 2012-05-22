@@ -17,6 +17,11 @@ open L1_ast;;
 open Utils;;
 open Unix;;
 
+let debug_enabled () =
+   let result = has_debug "1" in 
+   result
+;;
+
 (*
  * the compile_... functions generate x86 assembly code based on
  * L1 program constructs and writes the code to the output channel o
@@ -606,10 +611,10 @@ let compile_and_link (filename : string) (assembly_file_name : string) (runtime_
    if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));
    if (r3 <> 0) then die_system_error ("compiler/linker failed: \""^r3c^"\" returned "^(string_of_int r3));
    (* delete all the temporary files *)
-   Unix.unlink assembly_file_name;
+   (*Unix.unlink assembly_file_name;
    Unix.unlink (assembly_file_name^".o");
    Unix.unlink runtime_file_name;
-   Unix.unlink (runtime_file_name^".o");
+   Unix.unlink (runtime_file_name^".o");*)
 ;;
 
 (*
@@ -628,10 +633,11 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "#include <stdlib.h>\n";
    output_string o "#include <stdio.h>\n";
    output_string o "\n";
-   output_string o "#define HEAP_SIZE 1048576  // one megabyte\n";
+   output_string o ("#define HEAP_SIZE "^(string_of_int (get_heap_size ()))^" // the heap size\n");
+   output_string o "//#define HEAP_SIZE 1048576  // one megabyte\n";
    output_string o "//#define HEAP_SIZE 20       // small heap size for testing\n";
    output_string o "#define ENABLE_GC          // uncomment this to enable GC\n";
-   output_string o "//#define GC_DEBUG           // uncomment this to enable GC debugging\n";
+   output_string o ((if has_debug "gc" then "" else "//")^"#define GC_DEBUG           // uncomment this to enable GC debugging\n");
    output_string o "\n";
    output_string o "void **heap;      // the current heap\n";
    output_string o "void **heap2;     // the heap for copying\n";
@@ -813,7 +819,8 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   \"popl %edx\\n\" // arg 2\n";
    output_string o "   \"# put the original edi/esi on stack instead of args\\n\"\n";
    output_string o "   \"pushl %edi\\n\" // formerly edx\n";
-   output_string o "   \"pushl %esi\\n\" // formerly eax  <-- this is the ESP we want\n";
+   output_string o "   \"pushl %esi\\n\" // formerly eax\n";
+   output_string o "   \"pushl %ebx\\n\" // formerly return addr  <-- this is the ESP we want\n";
    output_string o "   \"pushl %ecx\\n\" // ecx (return val)\n";
    output_string o "   \"pushl %eax\\n\" // eax (arg 1)\n";
    output_string o "   \"pushl %edx\\n\" // edx (arg 2)\n";
@@ -839,12 +846,16 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   \"# restore esi/edi from stack\\n\"\n";
    output_string o "   \"popl %edx\\n\"  // arg 2\n";
    output_string o "   \"popl %ecx\\n\"  // arg 1\n";
-   output_string o "   \"addl $4, %esp\\n\" // skip over return val (it didn't change)\n";
+   output_string o "   \"addl $4, %esp\\n\" // skip over return val (it hasn't changed)\n";
+   output_string o "   \"popl %ebx\\n\"  // restore ebx\n";
    output_string o "   \"popl %esi\\n\"  // restore esi\n";
    output_string o "   \"popl %edi\\n\"  // restore edi\n";
    output_string o "   \"pushl %edx\\n\" // put back arg 2\n";
    output_string o "   \"pushl %ecx\\n\" // put back arg 1\n";
-   output_string o "   \"subl $4, %esp\\n\" // put back return val\n";
+   output_string o "   \"subl $8, %esp\\n\" // put back return val\n";
+   output_string o "   \"popl %edx\\n\"  // original return addr\n";
+   output_string o "   \"popl %ecx\\n\"  // junk\n";
+   output_string o "   \"pushl %edx\\n\"  // restore return addr\n";
    output_string o "   \"ret\\n\" \n";
    output_string o ");\n";
    output_string o "\n";
@@ -858,8 +869,8 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   int *ret;\n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   printf(\"runtime.c: allocate(): ESP = %p (%d), EDI = %p (%d), ESI = %p (%d)\\n\",\n";
-   output_string o "          esp, (int)esp, (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
+   output_string o "   printf(\"runtime.c: allocate(): ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\\n\",\n";
+   output_string o "          esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
    output_string o "#endif\n";
    output_string o "\n";
    output_string o "   if(!(fw_size & 1)) {\n";
