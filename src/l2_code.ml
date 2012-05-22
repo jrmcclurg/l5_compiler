@@ -527,9 +527,16 @@ let graph_color (il : instr list) (prev_max : int) : ((var * VarSet.t) list * (v
          VarSet.add vr res2
       ) tb VarSet.empty in
       let test = VarSet.cardinal tbl in
+      let perc = (!the_counter+1)/(List.length keys2) in
+      let compute = (fun x i max ->
+         (int_of_float ((float_of_int x)/.((float_of_int max)/.((float_of_int max)**(1.0 -. ((float_of_int i)/.(float_of_int max)))))))
+         (* x/(int_of_float (sqrt (float_of_int i))) *)
+      ) in
       if test > !the_max then the_max := test;
-      let check = (max 0 ((!the_prev) - test))/(int_of_float (sqrt (float_of_int (!the_counter+1)))) in
-      print_string ("Conflicts: "^(string_of_int test)^" check = "^(string_of_int check)^"\n");
+      let diff = (!the_prev - test) in
+      let check = (max 0 (compute diff (!the_counter+1) (List.length keys2))) in
+      (*print_string ((string_of_int (!the_counter+1))^"/"^(string_of_int (List.length keys2))^
+                    ". Conflicts: "^(string_of_int test)^" check = "^(string_of_int diff)^" ("^(string_of_int check)^")\n");*)
       if (check > !the_prev_max) then (the_num := !the_counter; the_prev_max := check );
       the_prev := test;
       the_counter := !the_counter + 1;
