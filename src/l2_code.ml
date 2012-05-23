@@ -17,6 +17,9 @@ open L2_ast;;
 open Utils;;
 open Flags;;
 
+let num_unions = ref 0;;
+let liveness_num = ref 0;;
+
 let debug_enabled () =
    let result = has_debug "2" in 
    result
@@ -66,17 +69,25 @@ module VarSet = Set.Make(struct
  * returns a var list of all the "ins" (no duplicates, list not sorted)
  *)
 let rec find_target_ins_helper (il : (instr * VarSet.t * VarSet.t) list) (s1 : int) (s2o : int option) : VarSet.t =
-   List.fold_left (fun res (i1,ins,_) ->
+   let find_target_ins_helper_fun = (fun res (i1,ins,_) ->
       match (i1,s2o) with
-      | (LabelInstr(_,s),None) -> if (s1 = s) then (VarSet.union ins res) else res
-      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then (VarSet.union ins res) else res
+      | (LabelInstr(_,s),None) -> if (s1 = s) then (num_unions := !num_unions+1; VarSet.union ins res) else res
+      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then (num_unions := !num_unions+1; VarSet.union ins res) else res
       | _ -> res
-   ) VarSet.empty il
+   ) in
+   List.fold_left find_target_ins_helper_fun VarSet.empty il
 
 (* gets the "ins" for a specified target label (see the find_target_ins_helper function)
  * (resulting list is SORTED) *)
-and find_target_ins (il : (instr * VarSet.t * VarSet.t) list) (s1 : int) (s2o : int option) : VarSet.t =
-   find_target_ins_helper il s1 s2o
+and find_target_ins (il : (instr * VarSet.t * VarSet.t) list) (s1 : int) (s2o : int option)
+                    (jumps : (int,VarSet.t) Hashtbl.t): VarSet.t =
+   let r1 = (try Hashtbl.find jumps s1
+            with _ -> VarSet.empty) in
+   match s2o with
+   | None -> r1
+   | Some(s) ->
+      (try VarSet.union (Hashtbl.find jumps s) r1
+       with _ -> r1)
 ;;
 
 (* given instruction i, returns (gens, kills) *)
@@ -200,8 +211,14 @@ let compute_ins (gens : VarSet.t) (kills : VarSet.t) (outs : VarSet.t) : VarSet.
  * 
  * returns a list of tuples (i, ins, outs) having the final results
  *)
-let rec liveness_helper (il : (instr * VarSet.t * VarSet.t) list) :
+let rec liveness_helper (il : (instr * VarSet.t * VarSet.t) list) (jumps : (int,VarSet.t) Hashtbl.t) :
                                         ((instr * VarSet.t * VarSet.t) list) =
+   liveness_num := !liveness_num + (List.length il);
+   List.iter (fun (i,ins,_) ->
+      match i with
+      | LabelInstr(_,s) -> Hashtbl.replace jumps s ins
+      | _ -> ()
+   ) il;
    (* go through the instructions *)
    let (_,result,change) = List.fold_right (fun (i,ins,outs) (prev_ins,res,flag) -> 
       (* get the gens and kills for this instruction *)
@@ -212,10 +229,10 @@ let rec liveness_helper (il : (instr * VarSet.t * VarSet.t) list) :
        * the successor instruction(s) *)
       let new_outs = (match i with
       (* if we're looking at a branch instruction, find the ins for the target *)
-      | GotoInstr(_,s) -> find_target_ins il s None
-      | LtJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
-      | LeqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
-      | EqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2))
+      | GotoInstr(_,s) -> find_target_ins il s None jumps
+      | LtJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2)) jumps
+      | LeqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2)) jumps
+      | EqJumpInstr(_,_,_,s1,s2) -> find_target_ins il s1 (Some(s2)) jumps
       | ReturnInstr(_) -> VarSet.empty
       | TailCallInstr(_,_) -> VarSet.empty
       | ArrayErrorInstr(_,_,_) -> VarSet.empty
@@ -227,7 +244,7 @@ let rec liveness_helper (il : (instr * VarSet.t * VarSet.t) list) :
       result
    ) il (VarSet.empty,[],false) in
    (* if the "ins" or "outs" changed, process again, otherwise we're done *)
-   if change then liveness_helper result else result
+   if change then liveness_helper result jumps else result
 ;;
 
 (*
@@ -242,10 +259,11 @@ let rec liveness_helper (il : (instr * VarSet.t * VarSet.t) list) :
  *                        l2 is a (var list) of the outs
  *)
 let liveness (il : instr list) : ((VarSet.t) list * (VarSet.t) list) = 
+   let jumps = ((Hashtbl.create 100) : (int, VarSet.t) Hashtbl.t) in
    (* add an empty "in" and "out" list for each instruction *)
    let nl = List.map (fun i -> (i,VarSet.empty,VarSet.empty)) il in
    (* get the ins and outs (this is a fixpoint operator *)
-   let l = liveness_helper nl in
+   let l = liveness_helper nl jumps in
    (* return the ins and outs in the appropriate format *)
    List.fold_right (fun (i,ins,outs) (inl,outl) -> (ins::inl,outs::outl)) l ([],[])
 ;;
@@ -457,12 +475,12 @@ let estimate_spill_num edges diff i max_i = match !spill_mode with
  * "colors" is the list of (var,reg) coloring assignments, and
  * "ok" is true iff the graph was able to be colored properly
  *)
-let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * bool * int) =
+let graph_color (il : instr list) (jumps : (int,VarSet.t) Hashtbl.t) : ((var * VarSet.t) list * (var * var) list * bool * int) =
    (*if debug_enabled () then (print_string ("   graph color: "^(string_of_int (List.length il))^"... ");
    flush stdout );*)
    (* perform the liveness analysis based on the instruction list *)
    let nl = List.map (fun i -> (i,VarSet.empty,VarSet.empty)) il in
-   let il2 = liveness_helper nl in
+   let il2 = liveness_helper nl jumps in
    (*print_string ("   done.\n");
    flush stdout;*)
    (* make sure all of the usable registers are connected *)
@@ -1149,6 +1167,8 @@ let rec compile_program (p : L2_ast.program) : L1_ast.program =
          (count+1,res@[compile_func f count])
       ) (0,[]) fl in
       if debug_enabled () then print_string ("Total spill count: "^(string_of_int !global_spill_count)^"\n");
+      (*print_string ("Num unions:   "^(string_of_int !num_unions)^"\n");
+      print_string ("Num liveness: "^(string_of_int !liveness_num)^"\n");*)
       L1_ast.Program(p, fl2)
 
 (* compile and L2 function into an L1 function. count should
@@ -1180,7 +1200,8 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    let initial = (Int64.add 1L init_offset) in
    (* compile the instructions to L1 instructions *)
    let h = ((Hashtbl.create 64) : (int,unit) Hashtbl.t) in
-   let (il3,num_spilled) = compile_instr_list il2 initial count h in
+   let j = ((Hashtbl.create 64) : (int,VarSet.t) Hashtbl.t) in
+   let (il3,num_spilled) = compile_instr_list il2 initial count h j in
    global_spill_count := !global_spill_count + (Hashtbl.length h);
    (* add the stack size adjustment to the beginning of each function *)
    let il4 = (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3 in
@@ -1191,12 +1212,12 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    L1_ast.Function(p,so,il5)
 
 (* this is a fixpoint operator where i is the current number of spilled vars *)
-and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spilled : (int,unit) Hashtbl.t) :
+and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spilled : (int,unit) Hashtbl.t) (jumps : (int,VarSet.t) Hashtbl.t) :
                                                               (L1_ast.instr list * int64) =
    (* try to do the register allocation *)
    (*if debug_enabled () then (print_string ("compile_instr_list: "^(Int64.to_string num)^"\n");
    flush stdout );*)
-   let (at,colors,ok,num_to_spill) = graph_color il in
+   let (at,colors,ok,num_to_spill) = graph_color il jumps in
    (*print_string ((Int64.to_string num)^", table size = "^(string_of_int (List.length at))^" : ");
    flush stdout;*)
    (*if (num > 50L) then parse_error "register allocation took too long";*) (* TODO XXX *)
@@ -1238,7 +1259,7 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
          (*print_string "done.\n";
          flush stdout;*)
          (* try to compile again *)
-         compile_instr_list il2 (Int64.add new_num (1L)) count spilled
+         compile_instr_list il2 (Int64.add new_num (1L)) count spilled jumps
    )
    (* if the graph coloring succeeded *)
    else (
