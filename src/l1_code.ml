@@ -633,7 +633,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "#include <stdlib.h>\n";
    output_string o "#include <stdio.h>\n";
    output_string o "\n";
-   output_string o ("#define HEAP_SIZE "^(string_of_int (get_heap_size ()))^" // the heap size\n");
+   output_string o ("#define HEAP_SIZE "^(string_of_int !heap_size)^" // the heap size\n");
    output_string o "//#define HEAP_SIZE 1048576  // one megabyte\n";
    output_string o "//#define HEAP_SIZE 20       // small heap size for testing\n";
    output_string o "#define ENABLE_GC          // uncomment this to enable GC\n";

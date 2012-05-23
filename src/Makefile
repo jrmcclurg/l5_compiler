@@ -35,8 +35,8 @@ CMO = cmx
 CMA = cmxa
 LIBS = str.$(CMA) unix.$(CMA)
 
-all:			Lc
-#all:			L1c spill liveness graph L2c L3c L4c L5c Lc
+#all:			Lc
+all:			L1c spill liveness graph L2c L3c L4c L5c Lc
 
 ### Lc compiler ###
 

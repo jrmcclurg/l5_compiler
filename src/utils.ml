@@ -224,10 +224,12 @@ let has_debug (d : string) : bool =
 
 let heap_size = ref 1048576;;
 
-let set_heap_size (hs : int) : unit =
-   heap_size := hs
+type spill_agr = SpillMin
+               | SpillMax
+               | SpillConst of int
+               | SpillPercent of float
+               | SpillDampedEdgeCount
+               | SpillIncrease
 ;;
 
-let get_heap_size () : int =
-   !heap_size
-;;
+let spill_aggressiveness = ref SpillDampedEdgeCount;;

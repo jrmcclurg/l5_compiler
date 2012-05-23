@@ -431,6 +431,17 @@ let rec compute_adjacency_table (il : (instr * VarSet.t * VarSet.t) list)
       compute_adjacency_table more h false
 ;;
 
+let estimate_spill_num edges diff i max_i = match !spill_aggressiveness with
+   | SpillMax -> min i edges
+   | SpillMin -> 1
+   | SpillConst(c) -> max 1 (min c i)
+   | SpillPercent(p) -> max 1 (min (int_of_float (ceil (p*.(float_of_int diff)))) diff)
+   | SpillDampedEdgeCount ->
+      (int_of_float ((float_of_int diff) /.
+         ((float_of_int max_i)/.((float_of_int max_i)**(1.0 -. ((float_of_int i)/.(float_of_int max_i)))))))
+   | SpillIncrease -> i
+;;
+
 (*
  * graph_color il
  *
@@ -505,15 +516,11 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
          VarSet.add vr res2
       ) tb VarSet.empty in
       let test = VarSet.cardinal tbl in
-      let compute = (fun x i max ->
-         (int_of_float ((float_of_int x)/.((float_of_int max)/.((float_of_int max)**(1.0 -. ((float_of_int i)/.(float_of_int max)))))))
-         (* x/(int_of_float (sqrt (float_of_int i))) *)
-      ) in
       if test > !the_max then the_max := test;
-      let diff = (!the_prev - test) in
-      let check = (max 0 (compute diff (!the_counter+1) (List.length keys2))) in
-      (*print_string ((string_of_int (!the_counter+1))^"/"^(string_of_int (List.length keys2))^
-                    ". Conflicts: "^(string_of_int test)^" check = "^(string_of_int diff)^" ("^(string_of_int check)^")\n");*)
+      let diff = max 0 (!the_prev - test) in
+      let check = (max 0 (estimate_spill_num test diff (!the_counter+1) (List.length keys2))) in
+      print_string ((string_of_int (!the_counter+1))^"/"^(string_of_int (List.length keys2))^
+                    ". Conflicts: "^(string_of_int test)^" check = "^(string_of_int diff)^" ("^(string_of_int check)^")\n");
       if (check > !the_prev_max) then (the_num := !the_counter; the_prev_max := check );
       the_prev := test;
       the_counter := !the_counter + 1;
@@ -589,9 +596,8 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
    ) ([],[],true) keys2 in
    (*if debug_enabled () then ( print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
    flush stdout );*)
-   let num_to_spill = max 1 !the_num in
-   (*print_string ("MAX: "^(string_of_int !the_max)^" (should spill "^(string_of_int num_to_spill)^")\n");
-   print_string "------------------------\n";*)
+   let num_to_spill = max 1 (min !the_num (List.length keys2)) in
+   print_string ("MAX: "^(string_of_int !the_max)^" (should spill "^(string_of_int num_to_spill)^")\n");
    flush stdout;
    (ag,colors,ok,num_to_spill)
 ;;
