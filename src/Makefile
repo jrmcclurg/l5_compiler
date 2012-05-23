@@ -35,7 +35,6 @@ CMO = cmx
 CMA = cmxa
 LIBS = str.$(CMA) unix.$(CMA)
 
-#all:			Lc
 all:			L1c spill liveness graph L2c L3c L4c L5c Lc
 
 ### Lc compiler ###
@@ -302,37 +301,72 @@ binary:
 		gcc -m32 -c -O2 -o runtime.o runtime.c
 		gcc -m32 -o a.out prog.o runtime.o
 
-l1_tarball:		L1c clean
+l1c_tarball:		L1c clean
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tL1c/g" > Makefile_temp
+			mv Makefile_temp Makefile
 			tar -cvzf mcclurg.1.tar.gz L1* l1* Makefile utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 spill_tarball:		spill clean
-			tar -cvzf mcclurg.spill.tar.gz SPILL* spill* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tspill/g" > Makefile_temp
+			mv Makefile_temp Makefile
+			tar -cvzf mcclurg.spill.tar.gz SPILL* spill* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 liveness_tarball:	liveness clean
-			tar -cvzf mcclurg.liveness.tar.gz LIVENESS* liveness* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tliveness/g" > Makefile_temp
+			mv Makefile_temp Makefile
+			tar -cvzf mcclurg.liveness.tar.gz LIVENESS* liveness* Makefile l2_ast.ml l1_ast.ml l2_code.ml utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 graph_tarball:		graph clean
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tgraph/g" > Makefile_temp
+			mv Makefile_temp Makefile
 			tar -cvzf mcclurg.graph.tar.gz GRAPH* graph* liveness_pars* liveness_lex* Makefile l2_ast.ml l1_ast.ml \
-			l2_code.ml utils.ml
+			l2_code.ml utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 l2c_tarball:		L2c clean
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tL2c/g" > Makefile_temp
+			mv Makefile_temp Makefile
 			tar -cvzf mcclurg.2.tar.gz L2* Makefile l2* l1_code.ml l1_ast.ml utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 l3c_tarball:		L3c clean
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tL3c/g" > Makefile_temp
+			mv Makefile_temp Makefile
 			tar -cvzf mcclurg.3.tar.gz L3* Makefile l3* l2_code.ml l1_code.ml l2_ast.ml l1_ast.ml utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 l4c_tarball:		L4c clean
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tL4c/g" > Makefile_temp
+			mv Makefile_temp Makefile
 			tar -cvzf mcclurg.4.tar.gz L4* Makefile l4* l3_code.ml l2_code.ml l1_code.ml l3_ast.ml l2_ast.ml l1_ast.ml \
 			utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 l5c_tarball:		L5c clean
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tL5c/g" > Makefile_temp
+			mv Makefile_temp Makefile
 			tar -cvzf mcclurg.5.tar.gz L5* Makefile l5* l4_code.ml l3_code.ml l2_code.ml l1_code.ml \
 			l4_ast.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 lc_tarball:		Lc clean
-			cat Makefile | sed "s/^\(all.*\)$$/# \1\nall:\tLc/g" > Makefile
+			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tLc/g" > Makefile_temp
+			mv Makefile_temp Makefile
 			tar -cvzf mcclurg.Lc.tar.gz Lc* Makefile lc* l5* l5_code.ml l4_code.ml l3_code.ml l2_code.ml l1_code.ml \
 			l5_ast.ml l4_ast.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml flags.ml
+			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
+			mv Makefile_temp Makefile
 
 wc:		
 		make clean
