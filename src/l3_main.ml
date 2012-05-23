@@ -22,13 +22,13 @@ let banner_text = "L3 Compiler v. 1.0\n------------------" in
 let in_stream = parse_command_line banner_text in
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let result = L3_parser.main L3_lexer.token lexbuf in (* run the parser, producing AST *)
-let p2 = compile_program result in     (* compile from L3 to L2 *)
-let p1 = L2_code.compile_program p2 in (* compile from L2 to L1 *)
-if !target_lang <= 0 then L1_code.generate_binary p1 !binary_file_name
+if !target_lang <= 0 then L1_code.generate_binary (L2_code.compile_program  
+                                                  (compile_program result)) !binary_file_name
 else (
    let out_stream = open_out_file () in
-   (if !target_lang <= 1 then L1_ast.output_program out_stream p1
-   else if !target_lang <= 2 then L2_ast.output_program out_stream p2
+   (if !target_lang <= 1 then L1_ast.output_program out_stream (L2_code.compile_program
+                                                               (compile_program result))
+   else if !target_lang <= 2 then L2_ast.output_program out_stream (compile_program result)
    else output_program out_stream result);
    output_string out_stream "\n";
    let _ = close_out_file out_stream in ()
