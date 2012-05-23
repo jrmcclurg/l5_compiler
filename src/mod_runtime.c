@@ -220,7 +220,7 @@ asm(
    "popl %edi\n"  // restore edi
    "pushl %edx\n" // put back arg 2
    "pushl %ecx\n" // put back arg 1
-   "subl $8, %esp\n" // put back return val
+   "subl $8, %esp\n" // skip over the temp ebx
    "popl %edx\n"  // original return addr
    "popl %ecx\n"  // junk
    "pushl %edx\n"  // restore return addr

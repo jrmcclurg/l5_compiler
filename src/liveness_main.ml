@@ -29,7 +29,11 @@ let print_vars_list vls =
       List.iter (fun v -> 
          print_var v;
          print_string " "
-      ) vl;
+      ) (List.sort (fun a b -> 
+         let id1 = L2_ast.get_var_id a in
+         let id2 = L2_ast.get_var_id b in
+         String.compare (get_symbol id1) (get_symbol id2)
+      ) (VarSet.elements vl));
       print_string ") ";
    ) vls
 ;;

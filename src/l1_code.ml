@@ -611,10 +611,10 @@ let compile_and_link (filename : string) (assembly_file_name : string) (runtime_
    if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));
    if (r3 <> 0) then die_system_error ("compiler/linker failed: \""^r3c^"\" returned "^(string_of_int r3));
    (* delete all the temporary files *)
-   (*Unix.unlink assembly_file_name;
+   Unix.unlink assembly_file_name;
    Unix.unlink (assembly_file_name^".o");
    Unix.unlink runtime_file_name;
-   Unix.unlink (runtime_file_name^".o");*)
+   Unix.unlink (runtime_file_name^".o");
 ;;
 
 (*
@@ -852,7 +852,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   \"popl %edi\\n\"  // restore edi\n";
    output_string o "   \"pushl %edx\\n\" // put back arg 2\n";
    output_string o "   \"pushl %ecx\\n\" // put back arg 1\n";
-   output_string o "   \"subl $8, %esp\\n\" // put back return val\n";
+   output_string o "   \"subl $8, %esp\\n\" // skip over old ebx\n";
    output_string o "   \"popl %edx\\n\"  // original return addr\n";
    output_string o "   \"popl %ecx\\n\"  // junk\n";
    output_string o "   \"pushl %edx\\n\"  // restore return addr\n";

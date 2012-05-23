@@ -16,8 +16,8 @@
    open Utils;;
 %}
 %token <int64> INT
-%token <string> LABEL
-%token <string> IDENT 
+%token <int> LABEL
+%token <int> IDENT 
 %token ARRAYERR TAILCALL ALLOC RETURN PRINT CJUMP GOTO MEM CALL
 %token ESI EDI EBP ESP
 %token EAX ECX EDX EBX
@@ -29,12 +29,12 @@
 %token EOF
 /* last tokens have highest precedence */
 %start main /* the entry point */
-%type <L2_ast.instr list * string * int64 * string> main
+%type <L2_ast.instr list * int * int64 * int> main
 %%
 main:
    LPAREN instr_list RPAREN var INT var { let i = $5 in
                                           check_int_alignment i;
-                                          ($2,get_var_name $4,$5,get_var_name $6) }
+                                          ($2,get_var_id $4,$5,get_var_id $6) }
                                           /* TODO XXX - these will be var ids */
    /* TODO XXX - add the EOF at some point */
 ;

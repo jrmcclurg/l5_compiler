@@ -25,14 +25,28 @@ Arg.parse [
 
 (* print a list of (var list) *)
 let print_vars_list vls sp =
-   List.iter (fun vl ->
+   let vls2 = (List.sort (fun (a,_) (b,_) ->
+      let id1 = get_var_id a in
+      let id2 = get_var_id b in
+      String.compare (get_symbol id1) (get_symbol id2)
+   ) vls) in
+   List.iter (fun (v,vl) ->
       print_string "(";
+      print_var v;
+      print_string " ";
+      let vl2 = (List.sort (fun a b ->
+         let id1 = get_var_id a in
+         let id2 = get_var_id b in
+         (* print_string (">>> comparing "^(get_symbol id1)^" with "^(get_symbol id2)^"<<<\n");
+         flush stdout; *)
+         String.compare (get_symbol id1) (get_symbol id2)
+      ) (VarSet.elements vl)) in
       List.iter (fun v -> 
          print_var v;
          print_string " "
-      ) vl;
+      ) vl2;
       print_string (")"^sp);
-   ) vls
+   ) vls2
 ;;
 
 (* use the command-line filename if one exists, otherwise use stdin *)
@@ -46,7 +60,7 @@ let il = Liveness_parser.main Liveness_lexer.token lexbuf in (* run the parser, 
 (* get the adjacency list (ag),
  * register assignments (colors), and
  * any error message (ok) *)
-let (ag,colors,ok) = graph_color il in
+let (ag,colors,ok,_) = graph_color il in
 (* print the adjacency list *)
 print_string "\n\n( ";
 print_vars_list ag "\n";
@@ -62,7 +76,11 @@ List.iter (fun (v,c) ->
    print_string " ";
    print_var c;
    print_string ")\n"
-) colors;
+) (List.sort (fun (a,_) (b,_) -> 
+   let id1 = get_var_id a in
+   let id2 = get_var_id b in
+   String.compare (get_symbol id1) (get_symbol id2)
+) colors);
 print_string ")\n" 
 (* if the graph was not colorable, print error *)
 ) else (

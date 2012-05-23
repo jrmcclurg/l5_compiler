@@ -37,6 +37,6 @@ let in_stream = if (!filename="") then stdin else (
 ) in
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let (il,v,off,prefix) = Spill_parser.main Spill_lexer.token lexbuf in (* run the parser, producing AST *)
-let il2 = spill il v off prefix in 
+let il2 = spill il v off (get_symbol prefix) in 
 print_instr_list il2;
 exit 0
