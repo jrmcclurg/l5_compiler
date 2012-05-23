@@ -13,6 +13,7 @@
 
 open Lexing;;
 open Parsing;;
+open Flags;;
 
 (* data type for file positions *)
 type pos = NoPos | Pos of string*int*int;; (* file,line,col *)
@@ -210,26 +211,32 @@ let encode_int (i : int) : int64 =
    Int64.add (Int64.mul (Int64.of_int i) 2L) 1L
 ;;
 
-module StringSet = Set.Make(String);;
-
-let debug_table = ref (StringSet.empty : StringSet.t);;
-
-let add_debug (d : string) : unit =
-   debug_table := StringSet.add d !debug_table
+let parse_command_line (banner_text : string) : in_channel =
+   Arg.parse args (fun x -> filename := Some(x)) banner_text;
+   (* use the command-line filename if one exists, otherwise use stdin *)
+   match !filename with
+   | None -> stdin
+   | Some(fn) -> (
+      try (open_in fn)
+      with _ -> die_system_error ("can't read from file: "^fn)
+   )
 ;;
 
-let has_debug (d : string) : bool =
-   StringSet.mem d !debug_table
+
+let open_out_file () : out_channel =
+  match !out_file_name with
+  | None -> stdout
+  | Some(f) -> (
+      try (open_out f)
+      with _ -> die_system_error ("can't read from file: "^f)
+  )
 ;;
 
-let heap_size = ref 1048576;;
-
-type spill_agr = SpillMin
-               | SpillMax
-               | SpillConst of int
-               | SpillPercent of float
-               | SpillDampedEdgeCount
-               | SpillIncrease
+let close_out_file (out : out_channel) : bool =
+  match !out_file_name with
+  | None -> false
+  | Some(f) -> (
+      close_out out;
+      true
+  )
 ;;
-
-let spill_aggressiveness = ref SpillDampedEdgeCount;;

@@ -17,53 +17,21 @@
 open L1_ast;;
 open L1_code;;
 open Utils;;
+open Flags;;
 
-(* flags and defaults for command-line args *)
-let output_file_name   = ref "a.out";;
-let custom_out_file    = ref false;;
-let use_32bit_arch     = ref true;;
-let do_parse_only      = ref false;;
-let do_compile_only    = ref true;;
-let verbose_mode       = ref false;;
+target_lang := 0;;
 
 (* program banner text *)
-let banner_text = "L1 Compiler v. 1.0\n------------------";;
-
+let banner_text = "L1 Compiler v. 1.0\n------------------" in
 (* parse the command-line arguments *)
-let filename = ref "";;
-Arg.parse [
-   ("-v",        Arg.Unit(fun x -> verbose_mode := true),
-                    "Turn on verbose output");
-   ("-parse",    Arg.Unit(fun x -> do_parse_only := true; do_compile_only := false),
-                    "Print the parsed L1 code and exit");
-   ("-compile",  Arg.Unit(fun x -> do_compile_only := true; do_parse_only := false),
-                    "Print the parsed L1 code and exit");
-   ("-debug",    Arg.String(fun x -> add_debug x),
-                    "Add a debug option");
-   ("-heap",     Arg.Int(fun x -> heap_size := x),
-                    "Set the heap size (default 1048576)");
-   ("-o",        Arg.String(fun x -> output_file_name := x; custom_out_file := true),
-                    "Location of the compiled result (default: a.out)")
-] (fun x -> filename := x) banner_text;;
-
-(* use the command-line filename if one exists, otherwise use stdin *)
-let in_stream = if (!filename="") then stdin else (
-   try (open_in !filename)
-   with _ -> die_system_error ("can't read from file: "^
-      (!filename))
-) in
+let in_stream = parse_command_line banner_text in
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let result = L1_parser.main L1_lexer.token lexbuf in (* run the parser, producing AST *)
-(* if we only need to print the parsed L1 code, do so *)
-if !do_parse_only then (
-   let out_stream = if (not !custom_out_file) then stdout else (
-      try (open_out !output_file_name)
-      with _ -> die_system_error ("can't read from file: "^
-         (!output_file_name))
-      ) in
+if !target_lang <= 0 then generate_binary result !binary_file_name
+else (
+   let out_stream = open_out_file () in
    output_program out_stream result;
-   output_string out_stream "\n"
-) else if !do_compile_only then ( (* if we need to actually compile to assembly, do so *)
-   generate_binary result !output_file_name
+   output_string out_stream "\n";
+   let _ = close_out_file out_stream in ()
 );
 exit 0

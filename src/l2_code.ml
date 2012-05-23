@@ -15,6 +15,7 @@
 
 open L2_ast;;
 open Utils;;
+open Flags;;
 
 let debug_enabled () =
    let result = has_debug "2" in 
@@ -431,15 +432,15 @@ let rec compute_adjacency_table (il : (instr * VarSet.t * VarSet.t) list)
       compute_adjacency_table more h false
 ;;
 
-let estimate_spill_num edges diff i max_i = match !spill_aggressiveness with
-   | SpillMax -> min i edges
+let estimate_spill_num edges diff i max_i = match !spill_mode with
    | SpillMin -> 1
-   | SpillConst(c) -> max 1 (min c i)
-   | SpillPercent(p) -> max 1 (min (int_of_float (ceil (p*.(float_of_int diff)))) diff)
-   | SpillDampedEdgeCount ->
+   | SpillMax -> i
+   (*| SpillConst(c) -> max 1 (min c i)
+   | SpillPercent(p) -> max 1 (min (int_of_float (ceil (p*.(float_of_int diff)))) diff)*)
+   | SpillDampedDiff ->
       (int_of_float ((float_of_int diff) /.
          ((float_of_int max_i)/.((float_of_int max_i)**(1.0 -. ((float_of_int i)/.(float_of_int max_i)))))))
-   | SpillIncrease -> i
+   | SpillIncrease -> min i edges
 ;;
 
 (*
@@ -519,8 +520,11 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
       if test > !the_max then the_max := test;
       let diff = max 0 (!the_prev - test) in
       let check = (max 0 (estimate_spill_num test diff (!the_counter+1) (List.length keys2))) in
-      print_string ((string_of_int (!the_counter+1))^"/"^(string_of_int (List.length keys2))^
-                    ". Conflicts: "^(string_of_int test)^" check = "^(string_of_int diff)^" ("^(string_of_int check)^")\n");
+      if has_debug "spill" then (
+         print_string ((string_of_int (!the_counter+1))^"/"^(string_of_int (List.length keys2))^
+                       ". Edges: "^(string_of_int test)^" diff = "^(string_of_int diff)^" (est = "^(string_of_int check)^")\n");
+         flush stdout
+      );
       if (check > !the_prev_max) then (the_num := !the_counter; the_prev_max := check );
       the_prev := test;
       the_counter := !the_counter + 1;
@@ -596,9 +600,11 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
    ) ([],[],true) keys2 in
    (*if debug_enabled () then ( print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
    flush stdout );*)
-   let num_to_spill = max 1 (min !the_num (List.length keys2)) in
-   print_string ("MAX: "^(string_of_int !the_max)^" (should spill "^(string_of_int num_to_spill)^")\n");
-   flush stdout;
+   let num_to_spill = max 1 (min !the_num !the_max) in
+   if has_debug "spill" then (
+      print_string ("Max edges: "^(string_of_int !the_max)^" (spill estimate: "^(string_of_int num_to_spill)^")\n");
+      flush stdout
+   );
    (ag,colors,ok,num_to_spill)
 ;;
 
@@ -1131,6 +1137,8 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
  **  L2-to-L1 CODE GENERATION                           **
  *********************************************************)
 
+let global_spill_count = ref 0;;
+
 (* compile an L2 program into an L1 program *)
 let rec compile_program (p : L2_ast.program) : L1_ast.program =
    match p with
@@ -1140,6 +1148,7 @@ let rec compile_program (p : L2_ast.program) : L1_ast.program =
       let (_,fl2) = List.fold_left (fun (count,res) f ->
          (count+1,res@[compile_func f count])
       ) (0,[]) fl in
+      if debug_enabled () then print_string ("Total spill count: "^(string_of_int !global_spill_count)^"\n");
       L1_ast.Program(p, fl2)
 
 (* compile and L2 function into an L1 function. count should
@@ -1172,6 +1181,7 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    (* compile the instructions to L1 instructions *)
    let h = ((Hashtbl.create 64) : (int,unit) Hashtbl.t) in
    let (il3,num_spilled) = compile_instr_list il2 initial count h in
+   global_spill_count := !global_spill_count + (Hashtbl.length h);
    (* add the stack size adjustment to the beginning of each function *)
    let il4 = (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3 in
    (* add the stack size de-adjustment to the end of the first instruction *)
@@ -1232,7 +1242,10 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
    )
    (* if the graph coloring succeeded *)
    else (
-      if debug_enabled () then print_string ("Function "^(string_of_int count)^" : SUCCESS\n");
+      if debug_enabled () then (
+         print_string ("Function "^(string_of_int count)^" : SUCCESS\n");
+         flush stdout
+      );
       (*print_string ("colored graph properly: "^(string_of_int count)^"\n");*)
       (* set up the replacement table *)
       let h = ((Hashtbl.create (List.length colors)) : (int,L1_ast.reg) Hashtbl.t) in

@@ -13,6 +13,7 @@
  * for issuing the compile/link system calls.
  *)
 
+open Flags;;
 open L1_ast;;
 open Utils;;
 open Unix;;
@@ -636,7 +637,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o ("#define HEAP_SIZE "^(string_of_int !heap_size)^" // the heap size\n");
    output_string o "//#define HEAP_SIZE 1048576  // one megabyte\n";
    output_string o "//#define HEAP_SIZE 20       // small heap size for testing\n";
-   output_string o "#define ENABLE_GC          // uncomment this to enable GC\n";
+   output_string o ((if !gc_enabled then "" else "//")^"#define ENABLE_GC          // uncomment this to enable GC\n");
    output_string o ((if has_debug "gc" then "" else "//")^"#define GC_DEBUG           // uncomment this to enable GC debugging\n");
    output_string o "\n";
    output_string o "void **heap;      // the current heap\n";
