@@ -49,12 +49,7 @@ let print_vars_list vls sp =
 
 (* compares two variables (returns 0 iff they are equal) *)
 let compare_var (v1 : var) (v2 : var) : int =
-   let id1 = get_var_id v1 in
-   let id2 = get_var_id v2 in
-   if id1 = id2 then 0
-   else if id1 > id2 then 1
-   else -1
-  (* compare (get_var_id v1) (get_var_id v2) *)
+   compare (get_var_id v1) (get_var_id v2)
 ;;
 
 module VarSet = Set.Make(struct 
@@ -295,7 +290,7 @@ let liveness (il : instr list) : ((VarSet.t) list * (VarSet.t) list) =
  * corresponding vars).
  *)
 let add_edge (v1 : var) (v2o : var option)
-                  (h : (int, (var * (int,var) Hashtbl.t)) Hashtbl.t) : unit =
+                  (h : (int, VarSet.t) Hashtbl.t) : unit =
    (* leave ebp/esp registers out of the graph *)
    match v1 with
    | EbpReg(_) -> ()
@@ -304,7 +299,7 @@ let add_edge (v1 : var) (v2o : var option)
    | _ -> (
    (* get the name of v1 *)
    let id = (get_var_id v1) in
-   let (_,t) = (
+   let t = (
       (* see if there's a source vertex for "name" in the graph
        * (if there is, "t" will be bound to its table
        * of destinations) *)
@@ -312,9 +307,9 @@ let add_edge (v1 : var) (v2o : var option)
       with _ ->
          (* if there's no source vertex "id" in the graph, add one,
           * along with an empty table for destination vertices *)
-         let t2 = ((Hashtbl.create 10) : (int,var) Hashtbl.t) in
-         Hashtbl.replace h id (v1,t2);
-         (v1,t2)
+         let t2 = VarSet.empty in
+         Hashtbl.replace h id t2;
+         t2
    ) in (
    match v2o with
    (* ignore v2o if it is ebp/esp *)
@@ -326,7 +321,7 @@ let add_edge (v1 : var) (v2o : var option)
       let id2 = (get_var_id v2) in
       (* if v2 is a different variable/register than v1, add
        * an edge (v1,v2) by putting v2 in v1's dest table *)
-      if (id <> id2) then Hashtbl.replace t (get_var_id v2) v2
+      if (id <> id2) then Hashtbl.replace h id (VarSet.add v2 t)
    | _ -> () ))
 ;;
 
@@ -348,7 +343,7 @@ let add_edge (v1 : var) (v2o : var option)
  * as the "h" parameter of the add_edge function.
  *)
 let add_all_edges (vl1 : VarSet.t) (vl2 : VarSet.t) (so : (var * var) option)
-                  (h : (int, (var * (int,var) Hashtbl.t)) Hashtbl.t) : unit =
+                  (h : (int, VarSet.t) Hashtbl.t) : unit =
    (* if vl1 is empty, just add a vertex for each item in vl2 *)
    match (VarSet.is_empty vl1) with
    | true -> VarSet.iter (fun v2 -> add_edge v2 None h) vl2
@@ -409,7 +404,7 @@ let add_all_edges (vl1 : VarSet.t) (vl2 : VarSet.t) (so : (var * var) option)
  * when this function is called normally.
  *)
 let rec compute_adjacency_table (il : (instr * VarSet.t * VarSet.t) list)
-                                (h : (int, (var * (int,var) Hashtbl.t)) Hashtbl.t)
+                                (h : (int, VarSet.t) Hashtbl.t)
                                 (first : bool) : unit =
    match (il) with
    | [] -> ()
@@ -492,7 +487,7 @@ let graph_color (il : instr list) (jumps : (int,VarSet.t) Hashtbl.t) : ((var * V
    let l1 = List.fold_right VarSet.add
             [EaxReg(NoPos);EbxReg(NoPos);EcxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] VarSet.empty in
    (* create an empty hashtable for the graph *)
-   let h = ((Hashtbl.create (VarSet.cardinal l1)) : (int, (var * (int,var) Hashtbl.t)) Hashtbl.t) in
+   let h = ((Hashtbl.create (VarSet.cardinal l1)) : (int, VarSet.t) Hashtbl.t) in
    (* add edges between all the usable registers *)
    (*print_string ("   adding all edges: "^(string_of_int (List.length l1))^"... ");
    flush stdout;*)
@@ -506,13 +501,13 @@ let graph_color (il : instr list) (jumps : (int,VarSet.t) Hashtbl.t) : ((var * V
    (*print_string ("   done.\n");
    flush stdout;*)
    (* find all the source vertices in graph h *)
-   let keys = Hashtbl.fold (fun k (v,tab) res -> 
+   let keys = Hashtbl.fold (fun k tab res -> 
       (k,tab)::res
    ) h [] in
    (* sort the source vertices by (ascending order of) number of conflicts *)
    (*print_string ("   sorting keys: "^(string_of_int (List.length keys))^"... ");
    flush stdout;*)
-   let keyst = List.sort (fun (a,at) (b,bt) -> compare (Hashtbl.length bt) (Hashtbl.length at)) keys in (* XXX *)
+   let keyst = List.sort (fun (a,at) (b,bt) -> compare (VarSet.cardinal bt) (VarSet.cardinal at)) keys in (* XXX *)
    let keys2 = List.map (fun (k,tab) -> k) keyst in
    (*print_string ("   done.\n");
    flush stdout;*)
@@ -534,11 +529,9 @@ let graph_color (il : instr list) (jumps : (int,VarSet.t) Hashtbl.t) : ((var * V
       (* find the current source variable "x" in the graph
        * (v is the corresponding var data structure, and 
        * tb is the hashtable of destinations) *)
-      let (v,tb) = Hashtbl.find h x in
       (* get the list of destination variables *)
-      let tbl = Hashtbl.fold (fun _ vr res2 ->
-         VarSet.add vr res2
-      ) tb VarSet.empty in
+      let tbl = Hashtbl.find h x in
+      let v = Var(NoPos,x) in (* XXX - this is a hack - remove it *)
       let test = VarSet.cardinal tbl in
       if test > !the_max then the_max := test;
       let diff = max 0 (!the_prev - test) in
