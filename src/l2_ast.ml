@@ -72,7 +72,7 @@ type program = Program of pos * func list
            | ShVar of pos * var
 ;;
 
-let rec get_var_id (v : var) : int = match v with
+let get_var_id (v : var) : int = match v with
    | EsiReg(_) -> esi_id
    | EdiReg(_) -> edi_id
    | EbpReg(_) -> ebp_id
@@ -82,6 +82,18 @@ let rec get_var_id (v : var) : int = match v with
    | EdxReg(_) -> edx_id
    | EbxReg(_) -> ebx_id
    | Var(_,id) -> id
+;;
+
+let is_register (id : int) : bool =
+   if id=eax_id then true
+   else if id=ebx_id then true
+   else if id=ecx_id then true
+   else if id=edx_id then true
+   else if id=edi_id then true
+   else if id=esi_id then true
+   else if id=ebp_id then true
+   else if id=esp_id then true
+   else false
 ;;
 
 let rec get_pos_instr (i : instr) : pos = match i with

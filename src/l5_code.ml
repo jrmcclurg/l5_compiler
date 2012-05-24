@@ -272,12 +272,15 @@ let rec replace_in_exp (e : L5_ast.exp) (target : L5_ast.var) (repl : L5_ast.exp
 ;;
 
 let rec get_free_vars (e : L5_ast.exp) (vl : L5_ast.var list) : (L5_ast.var list) =
+   print_string "Get free vars: ";
+   print_exp e;
+   print_string "\n";
    match e with
    | LambdaExp(_,vl2,e) -> get_free_vars e (vl@vl2)
    | VarExp(_, (Var(_,s) as v)) -> 
       if (var_list_contains vl s) then [] else [v]
    | LetExp(_, v, e1, e2) ->
-      let l = (get_free_vars e1 (v::vl)) in
+      let l = (get_free_vars e1 vl) in (* NOTE: the "v" in LET doesn't shadow the e1, but in LETREC it does *)
       l@(get_free_vars e2 (v::(l@vl)))
    | LetRecExp(_, v, e1, e2) ->
       let l = (get_free_vars e1 (v::vl)) in
@@ -321,6 +324,9 @@ let rec compile_program (pr : L5_ast.program) : L4_ast.program =
 and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
    match e with
    | LambdaExp(p,vl,e) -> 
+      print_string "PROCESSING LAMBDA: ";
+      print_exp e;
+      print_string "\n";
       let name = get_unique_symbol l5_prefix in
       let fparam = get_unique_symbol l5_prefix in
       let bparam = get_unique_symbol l5_prefix in
