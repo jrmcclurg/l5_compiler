@@ -251,10 +251,10 @@ let rec replace_in_exp (e : L5_ast.exp) (target : L5_ast.var) (repl : L5_ast.exp
          if (name = s) then repl else e
       | LetExp(p, (Var(p2,s) as v), e1, e2) ->
          LetExp(p,v,replace_in_exp e1 target repl,
-                    if (name = s) then e2 else replace_in_exp e2 target repl)
+                    (if (name = s) then e2 else replace_in_exp e2 target repl))
       | LetRecExp(p, (Var(p2,s) as v), e1, e2) ->
-         LetRecExp(p,v,replace_in_exp e1 target repl,
-                       if (name = s) then e2 else replace_in_exp e2 target repl)
+         LetRecExp(p,v,(if (name = s) then e1 else replace_in_exp e1 target repl),
+                       (if (name = s) then e2 else replace_in_exp e2 target repl))
       | IfExp(p, e1, e2, e3) ->
          IfExp(p,replace_in_exp e1 target repl,
                  replace_in_exp e2 target repl,
@@ -272,9 +272,9 @@ let rec replace_in_exp (e : L5_ast.exp) (target : L5_ast.var) (repl : L5_ast.exp
 ;;
 
 let rec get_free_vars (e : L5_ast.exp) (vl : L5_ast.var list) : (L5_ast.var list) =
-   print_string "Get free vars: ";
+   (*print_string "Get free vars: ";
    print_exp e;
-   print_string "\n";
+   print_string "\n";*)
    match e with
    | LambdaExp(_,vl2,e) -> get_free_vars e (vl@vl2)
    | VarExp(_, (Var(_,s) as v)) -> 
@@ -324,9 +324,9 @@ let rec compile_program (pr : L5_ast.program) : L4_ast.program =
 and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
    match e with
    | LambdaExp(p,vl,e) -> 
-      print_string "PROCESSING LAMBDA: ";
+      (*print_string "PROCESSING LAMBDA: ";
       print_exp e;
-      print_string "\n";
+      print_string "\n";*)
       let name = get_unique_symbol l5_prefix in
       let fparam = get_unique_symbol l5_prefix in
       let bparam = get_unique_symbol l5_prefix in
@@ -426,9 +426,51 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
          (elx@[et], flx@flt)
       ) ([],[]) el in
       (match e with
-      | PrimExp(p,pr) ->
+      (*| PrimExp(p,pr) ->
          let (ex,fl) = compile_prim pr false in
-         (L4_ast.AppExp(p,ex,el2),fl@fl2)
+         (L4_ast.AppExp(p,ex,el2),fl@fl2)*)
+      | PrimExp(p,pr) ->
+         (match pr with
+	 | PlusPrim(p2) ->
+            if List.length el2 <> 2 then die_error p "the '+' operator takes two arguments";
+            (L4_ast.PlusExp(p,List.nth el2 0,List.nth el2 1),fl2)
+	 | MinusPrim(p2) ->
+            if List.length el2 <> 2 then die_error p "the '-' operator takes 2 arguments";
+            (L4_ast.MinusExp(p,List.nth el2 0,List.nth el2 1),fl2)
+	 | TimesPrim(p2) ->
+            if List.length el2 <> 2 then die_error p "the '*' operator takes 2 arguments";
+            (L4_ast.TimesExp(p,List.nth el2 0,List.nth el2 1),fl2)
+         | LtPrim(p2) ->
+            if List.length el2 <> 2 then die_error p "the '<' operator takes 2 arguments";
+            (L4_ast.LtExp(p,List.nth el2 0,List.nth el2 1),fl2)
+         | LeqPrim(p2) ->
+            if List.length el2 <> 2 then die_error p "the '<=' operator takes 2 arguments";
+            (L4_ast.LeqExp(p,List.nth el2 0,List.nth el2 1),fl2)
+         | EqPrim(p2) ->
+            if List.length el2 <> 2 then die_error p "the '=' operator takes 2 arguments";
+            (L4_ast.EqExp(p,List.nth el2 0,List.nth el2 1),fl2)
+         | NumberPredPrim(p2) ->
+            if List.length el2 <> 1 then die_error p "the 'number?' operator takes 1 argument";
+            (L4_ast.NumberPredExp(p,List.nth el2 0),fl2)
+         | ArrayPredPrim(p2) ->
+            if List.length el2 <> 1 then die_error p "the 'array?' operator takes 1 argument";
+            (L4_ast.ArrayPredExp(p,List.nth el2 0),fl2)
+         | PrintPrim(p2) ->
+            if List.length el2 <> 1 then die_error p "the 'print' operator takes 1 argument";
+            (L4_ast.PrintExp(p,List.nth el2 0),fl2)
+         | NewArrayPrim(p2) ->
+            if List.length el2 <> 2 then die_error p "the 'new-array' operator takes 2 arguments";
+            (L4_ast.NewArrayExp(p,List.nth el2 0,List.nth el2 1),fl2)
+         | ArefPrim(p2) ->
+            if List.length el2 <> 2 then die_error p "the 'aref' operator takes 2 arguments";
+            (L4_ast.ArefExp(p,List.nth el2 0,List.nth el2 1),fl2)
+         | AsetPrim(p2) ->
+            if List.length el2 <> 3 then die_error p "the 'aset' operator takes 3 arguments";
+            (L4_ast.AsetExp(p,List.nth el2 0,List.nth el2 1,List.nth el2 2),fl2)
+         | AlenPrim(p2) ->
+            if List.length el2 <> 1 then die_error p "the 'alen' operator takes 1 argument";
+            (L4_ast.AlenExp(p,List.nth el2 0),fl2)
+         )
       | _ ->
          let name = get_unique_symbol l5_prefix in
          let (e2,fl1) = compile_exp e in
