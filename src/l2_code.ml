@@ -49,7 +49,12 @@ let print_vars_list vls sp =
 
 (* compares two variables (returns 0 iff they are equal) *)
 let compare_var (v1 : var) (v2 : var) : int =
-  compare (get_var_id v1) (get_var_id v2)
+   let id1 = get_var_id v1 in
+   let id2 = get_var_id v2 in
+   if id1 = id2 then 0
+   else if id1 > id2 then 1
+   else -1
+  (* compare (get_var_id v1) (get_var_id v2) *)
 ;;
 
 module VarSet = Set.Make(struct 
