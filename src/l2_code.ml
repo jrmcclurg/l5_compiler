@@ -225,6 +225,7 @@ let compute_ins (gens : VarSet.t) (kills : VarSet.t) (outs : VarSet.t) : VarSet.
  * 
  * returns a list of tuples (i, ins, outs) having the final results
  *)
+let count = ref 0;;
 let rec liveness_helper (il : (int,(instr * VarSet.t * VarSet.t * int list * int list * bool)) Hashtbl.t) (currents : int list) : unit =
    (*print_string "liveness_helper: currents = ";
    print_int_list currents;
@@ -246,10 +247,13 @@ let rec liveness_helper (il : (int,(instr * VarSet.t * VarSet.t * int list * int
       (* compute the new "outs" list as the union of the "ins" of
        * the successor instruction(s) *)
       let new_outs = prev_ins in
-      if processed && (VarSet.equal new_ins ins) && (VarSet.equal new_outs outs) then (flag,res) else (
+      if processed && (VarSet.equal new_ins ins) && (VarSet.equal new_outs outs) then
+         (flag,res)
+      else (
+       count := !count + 1;
        Hashtbl.replace il c (i,new_ins,new_outs,prevs,nexts,true);
        (true,prevs@res)
-       )
+      )
    ) (false,[]) currents in
    (* if the "ins" or "outs" changed, process again, otherwise we're done *)
    if change then liveness_helper il new_currents;
@@ -296,7 +300,7 @@ let liveness (il : instr list) : ((instr * VarSet.t * VarSet.t) list) =
       | EqJumpInstr(_,_,_,s1,s2) ->
          Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev,[Hashtbl.find labels s1;Hashtbl.find labels s2], false); (k+1,[k])
       | LabelInstr(_,s) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev@(get_jumps s),(if k+1=len then [] else [k+1]), false); (k+1,[k])
+         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev@(get_jumps s),(if k+1==len then [] else [k+1]), false); (k+1,[k])
       | ReturnInstr(_) ->
          Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev, [],false); (k+1,[k])
       | ArrayErrorInstr(_,_,_) ->
@@ -304,7 +308,7 @@ let liveness (il : instr list) : ((instr * VarSet.t * VarSet.t) list) =
       | TailCallInstr(_,_) ->
          Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev, [],false); (k+1,[k])
       | _ ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev, (if k+1=len then [] else [k+1]),false); (k+1,[k]) );
+         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev, (if k+1==len then [] else [k+1]),false); (k+1,[k]) );
    ) (0,[]) il in ();
    (*Hashtbl.iter (fun k (i,ins,outs,j,next,p) -> 
       print_string (";; Instruction # "^(string_of_int k)^" : ");
@@ -385,7 +389,7 @@ let add_edge (v1 : var) (v2o : var option)
       let id2 = (get_var_id v2) in
       (* if v2 is a different variable/register than v1, add
        * an edge (v1,v2) by putting v2 in v1's dest table *)
-      if (id <> id2) then Hashtbl.replace h id (VarSet.add v2 t)
+      if (id != id2) then Hashtbl.replace h id (VarSet.add v2 t)
    | _ -> () ))
 ;;
 
@@ -430,7 +434,7 @@ let add_all_edges (vl1 : VarSet.t) (vl2 : VarSet.t) (so : (var * var) option)
                let s2t = get_var_id v2t in
                (* if (v1,v2) matches the ignored edge, then
                 * just add disconnected vertices v1 and v2 *)
-               if (((s1=s1t) && (s2=s2t)) || ((s1=s2t) && (s2=s1t))) then (
+               if (((s1==s1t) && (s2==s2t)) || ((s1==s2t) && (s2==s1t))) then (
                   add_edge v1 None h;
                   add_edge v2 None h;
                )
@@ -664,7 +668,7 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
          (* if we found a valid coloring for v, update the list of
           * coloring assignments *)
          (match l2 with
-         | Some(c) -> (r3@[(v,c)],true) 
+         | Some(c) -> (r3@[(v,c)],true)  (* TODO - this is probably slow *)
          | _ -> (r3,false) )
       (* if the current source vertex is a REGISTER, we don't need
        * to add a register assignment *)
@@ -722,13 +726,13 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | AssignInstr(p1,v1,sv) ->
          (* if v1 is equal to the spill variable, the new instruction (i1) will be ((mem ebp offset) <- sv) *)
          let (write,i1,s1) = (match v1 with
-            | Var(p2,s) -> if (s = v) then
+            | Var(p2,s) -> if (s == v) then
                (true,MemWriteInstr(p2,EbpReg(p2),off,sv),Some(s)) else (false,i,None)
             | _ -> (false,i,None)) in
          (* if sv is equal to the spill variable, the new instruction (i2) will be (v1 <- (mem ebp offset)) *)
          let (read,i2,s2) = (match sv with
             | VarSVal(p2,Var(p3,s)) ->
-               if (s = v) then
+               if (s == v) then
                   (true,MemReadInstr(p3,v1,EbpReg(p3),off),Some(s)) else (false,i,None)
             | _ -> (false,i,None)) in
          (* if v1,sv are both equal to the spill variable, we will drop this instruction *)
@@ -746,12 +750,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | MemReadInstr(p1,v1,v2,i) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v3) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if v2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,v4) = (match v2 with
             | Var(p2,s) ->
-               if (s = v) then (true,Var(p2,new_prefix)) else (false,v2)
+               if (s == v) then (true,Var(p2,new_prefix)) else (false,v2)
             | _ -> (false,v2)) in
          (* the new instruction is the same, with v1 and/or v2 possibly replaced by a unique var name *)
          let new_inst = MemReadInstr(p1,v3,v4,i) in
@@ -771,12 +775,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | MemWriteInstr(p1,v1,i,sv) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if sv2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,sv2) = (match sv with
             | VarSVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarSVal(p2,Var(p3,new_prefix))) else (false,sv)
+               if (s == v) then (true,VarSVal(p2,Var(p3,new_prefix))) else (false,sv)
             | _ -> (false,sv)) in
          (* the new instruction is the same, with v1 and/or sv2 possibly replaced by a unique var name *)
          let new_inst = MemWriteInstr(p1,v2,i,sv2) in
@@ -794,12 +798,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | PlusInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,t2) = (match t with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
             | _ -> (false,t)) in
          (* the new instruction is the same, with v1 and/or t possibly replaced by a unique var name *)
          let new_inst = PlusInstr(p1,v2,t2) in
@@ -819,12 +823,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | MinusInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,t2) = (match t with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
             | _ -> (false,t)) in
          (* the new instruction is the same, with v1 and/or t possibly replaced by a unique var name *)
          let new_inst = MinusInstr(p1,v2,t2) in
@@ -844,12 +848,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | TimesInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,t2) = (match t with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
             | _ -> (false,t)) in
          (* the new instruction is the same, with v1 and/or t possibly replaced by a unique var name *)
          let new_inst = TimesInstr(p1,v2,t2) in
@@ -869,12 +873,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | BitAndInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,t2) = (match t with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
             | _ -> (false,t)) in
          (* the new instruction is the same, with v1 and/or t possibly replaced by a unique var name *)
          let new_inst = BitAndInstr(p1,v2,t2) in
@@ -894,12 +898,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | SllInstr(p1,v1,svr) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if svr is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,svr2) = (match svr with
             | ShVar(p2,Var(p3,s)) ->
-               if (s = v) then (true,ShVar(p2,Var(p3,new_prefix))) else (false,svr)
+               if (s == v) then (true,ShVar(p2,Var(p3,new_prefix))) else (false,svr)
             | _ -> (false,svr)) in
          (* the new instruction is the same, with v1 and/or svr possibly replaced by a unique var name *)
          let new_inst = SllInstr(p1,v2,svr2) in
@@ -919,12 +923,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | SrlInstr(p1,v1,svr) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if svr is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,svr2) = (match svr with
             | ShVar(p2,Var(p3,s)) ->
-               if (s = v) then (true,ShVar(p2,Var(p3,new_prefix))) else (false,svr)
+               if (s == v) then (true,ShVar(p2,Var(p3,new_prefix))) else (false,svr)
             | _ -> (false,svr)) in
          (* the new instruction is the same, with v1 and/or svr possibly replaced by a unique var name *)
          let new_inst = SrlInstr(p1,v2,svr2) in
@@ -944,17 +948,17 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | LtInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with v1 and/or t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = LtInstr(p1,v2,t3,t4) in
@@ -974,17 +978,17 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | LeqInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with v1 and/or t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = LeqInstr(p1,v2,t3,t4) in
@@ -1004,17 +1008,17 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | EqInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s = v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with v1 and/or t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = EqInstr(p1,v2,t3,t4) in
@@ -1035,12 +1039,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = LtJumpInstr(p1,t3,t4,s1,s2) in
@@ -1059,12 +1063,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = LeqJumpInstr(p1,t3,t4,s1,s2) in
@@ -1083,12 +1087,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = EqJumpInstr(p1,t3,t4,s1,s2) in
@@ -1107,7 +1111,7 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
          (* if u is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,u2) = (match u with
             | VarUVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarUVal(p2,Var(p3,new_prefix))) else (false,u)
+               if (s == v) then (true,VarUVal(p2,Var(p3,new_prefix))) else (false,u)
             | _ -> (false,u)) in
          (* the new instruction is the same, with u possibly replaced by a unique var name *)
          let new_inst = CallInstr(p1,u2) in
@@ -1126,7 +1130,7 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
          (* if u is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,u2) = (match u with
             | VarUVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarUVal(p2,Var(p3,new_prefix))) else (false,u)
+               if (s == v) then (true,VarUVal(p2,Var(p3,new_prefix))) else (false,u)
             | _ -> (false,u)) in
          (* the new instruction is the same, with u possibly replaced by a unique var name *)
          let new_inst = TailCallInstr(p1,u2) in
@@ -1145,7 +1149,7 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* the new instruction is the same, with t1 possibly replaced by a unique var name *)
          let new_inst = PrintInstr(p1,t3) in
@@ -1164,12 +1168,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = AllocInstr(p1,t3,t4) in
@@ -1188,12 +1192,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
             | VarTVal(p2,Var(p3,s)) ->
-               if (s = v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = ArrayErrorInstr(p1,t3,t4) in
@@ -1228,8 +1232,8 @@ let rec compile_program (p : L2_ast.program) : L1_ast.program =
          (count+1,res@[compile_func f count])
       ) (0,[]) fl in
       if debug_enabled () then print_string ("Total spill count: "^(string_of_int !global_spill_count)^"\n");
-      (*print_string ("Num unions:   "^(string_of_int !num_unions)^"\n");
-      print_string ("Num liveness: "^(string_of_int !liveness_num)^"\n");*)
+      (*print_string ("Count:   "^(string_of_int !count)^"\n");*)
+      (*print_string ("Num liveness: "^(string_of_int !liveness_num)^"\n");*)
       L1_ast.Program(p, fl2)
 
 (* compile and L2 function into an L1 function. count should
