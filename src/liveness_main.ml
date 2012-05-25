@@ -34,7 +34,7 @@ let print_vars_list vls =
          let id2 = L2_ast.get_var_id b in
          String.compare (get_symbol id1) (get_symbol id2)
       ) (VarSet.elements vl));
-      print_string ") ";
+      print_string ")\n";
    ) vls
 ;;
 
@@ -46,10 +46,12 @@ let in_stream = if (!filename="") then stdin else (
 ) in
 let lexbuf = Lexing.from_channel in_stream in  (* instantiate the lexer *)
 let il = Liveness_parser.main Liveness_lexer.token lexbuf in (* run the parser, producing AST *)
-let (il2,ol2) = liveness il in 
-print_string "((in ";
+let ilt2 = liveness il in
+let il2 = List.map (fun (i,ins,outs) -> ins) ilt2 in
+let ol2 = List.map (fun (i,ins,outs) -> outs) ilt2 in
+print_string "((in\n";
 print_vars_list il2;
-print_string ")\n(out ";
+print_string ")\n(out\n";
 print_vars_list ol2;
 print_string "))\n";
 exit 0

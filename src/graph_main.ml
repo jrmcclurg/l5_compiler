@@ -60,7 +60,7 @@ let il = Liveness_parser.main Liveness_lexer.token lexbuf in (* run the parser, 
 (* get the adjacency list (ag),
  * register assignments (colors), and
  * any error message (ok) *)
-let (ag,colors,ok,_) = graph_color il (Hashtbl.create 64) in
+let (ag,colors,ok,_) = graph_color il in
 (* print the adjacency list *)
 print_string "\n\n( ";
 print_vars_list ag "\n";
