@@ -14,14 +14,14 @@
 
 open Utils;;
 
-let esi_id = add_symbol "esi";;
-let edi_id = add_symbol "edi";;
-let ebp_id = add_symbol "ebp";;
-let esp_id = add_symbol "esp";;
-let eax_id = add_symbol "eax";;
-let ecx_id = add_symbol "ecx";;
-let edx_id = add_symbol "edx";;
-let ebx_id = add_symbol "ebx";;
+let esi_id = 1;; Hashtbl.replace symbol_table "esi" esi_id;;
+let edi_id = 2;; Hashtbl.replace symbol_table "edi" edi_id;;
+let ebp_id = 3;; Hashtbl.replace symbol_table "ebp" ebp_id;;
+let esp_id = 4;; Hashtbl.replace symbol_table "esp" esp_id;;
+let eax_id = 5;; Hashtbl.replace symbol_table "eax" eax_id;;
+let ecx_id = 6;; Hashtbl.replace symbol_table "ecx" ecx_id;;
+let edx_id = 7;; Hashtbl.replace symbol_table "edx" edx_id;;
+let ebx_id = 8;; Hashtbl.replace symbol_table "ebx" ebx_id;;
 
 (* data type for L2 programs *)
 type program = Program of pos * func list
@@ -59,21 +59,13 @@ type program = Program of pos * func list
  and tval = VarTVal of pos * var
           | IntTVal of pos * int64
           | LabelTVal of pos * int
- and var = EsiReg of pos
-         | EdiReg of pos
-         | EbpReg of pos
-         | EspReg of pos
-         | EaxReg of pos
-         | EcxReg of pos
-         | EdxReg of pos
-         | EbxReg of pos
-         | Var of pos * int
+ and var = VarOrReg of pos * int * bool
  and svar = IntShVal of pos * int64 
            | ShVar of pos * var
 ;;
 
 let get_var_id (v : var) : int = match v with
-   | EsiReg(_) -> esi_id
+(*   | EsiReg(_) -> esi_id
    | EdiReg(_) -> edi_id
    | EbpReg(_) -> ebp_id
    | EspReg(_) -> esp_id
@@ -81,18 +73,12 @@ let get_var_id (v : var) : int = match v with
    | EcxReg(_) -> ecx_id
    | EdxReg(_) -> edx_id
    | EbxReg(_) -> ebx_id
-   | Var(_,id) -> id
+   | Var(_,id) -> id*)
+   | VarOrReg(_,id,_) -> id
 ;;
 
 let is_register (id : int) : bool =
-   if id=eax_id then true
-   else if id=ebx_id then true
-   else if id=ecx_id then true
-   else if id=edx_id then true
-   else if id=edi_id then true
-   else if id=esi_id then true
-   else if id=ebp_id then true
-   else if id=esp_id then true
+   if id < unique_id_min then true
    else false
 ;;
 
@@ -292,15 +278,7 @@ and output_instr out i = match i with
       output_tval out tv2;
       output_string out "))";
 and output_var out r = match r with
-   | EsiReg(_) -> output_string out "esi"
-   | EdiReg(_) -> output_string out "edi"
-   | EbpReg(_) -> output_string out "ebp"
-   | EspReg(_) -> output_string out "esp"
-   | EaxReg(_) -> output_string out "eax"
-   | EcxReg(_) -> output_string out "ecx"
-   | EdxReg(_) -> output_string out "edx"
-   | EbxReg(_) -> output_string out "ebx"
-   | Var(_,id) -> output_string out (get_symbol id)
+   | VarOrReg(_,id,_) -> output_string out (get_symbol id)
 and output_svar out sr = match sr with
    | IntShVal(_,i) -> output_string out (Int64.to_string i)
    | ShVar(_,v) -> output_var out v

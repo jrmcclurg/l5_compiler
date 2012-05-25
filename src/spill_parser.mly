@@ -67,18 +67,18 @@ instr:
    /* the "var" in the following three rules gets parsed as eax */
    | LPAREN var GETS LPAREN PRINT tval RPAREN RPAREN         { let r = $2 in
                                                                (match r with
-                                                                | EaxReg(_) -> ()
-                                                                | _ -> parse_error "destination must be eax");
+                                                                | VarOrReg(_,id,_) -> if id == eax_id then ()
+                                                                else parse_error "destination must be eax");
                                                                PrintInstr(get_current_pos (), $6) }
    | LPAREN var GETS LPAREN ALLOC tval tval RPAREN RPAREN    { let r = $2 in
                                                                (match r with
-                                                                | EaxReg(_) -> ()
-                                                                | _ -> parse_error "destination must be eax");
+                                                                | VarOrReg(_,id,_) -> if id == eax_id then ()
+                                                                else parse_error "destination must be eax");
                                                                AllocInstr(get_current_pos (), $6, $7) }
    | LPAREN var GETS LPAREN ARRAYERR tval tval RPAREN RPAREN { let r = $2 in
                                                                (match r with
-                                                                | EaxReg(_) -> ()
-                                                                | _ -> parse_error "destination must be eax");
+                                                                | VarOrReg(_,id,_) -> if id == eax_id then ()
+                                                                else parse_error "destination must be eax");
                                                                ArrayErrorInstr(get_current_pos (), $6, $7) }
 ;
 
@@ -88,15 +88,15 @@ instr_list:
 ;
 
 var:
-   | ESI { EsiReg(get_current_pos ()) }
-   | EDI { EdiReg(get_current_pos ()) }
-   | EBP { EbpReg(get_current_pos ()) }
-   | ESP { EspReg(get_current_pos ()) }
-   | EAX { EaxReg(get_current_pos ()) }
-   | ECX { EcxReg(get_current_pos ()) }
-   | EDX { EdxReg(get_current_pos ()) }
-   | EBX { EbxReg(get_current_pos ()) }
-   | IDENT { Var(get_current_pos (), $1)}
+   | ESI { VarOrReg(get_current_pos (), esi_id, false) }
+   | EDI { VarOrReg(get_current_pos (), edi_id, false) }
+   | EBP { VarOrReg(get_current_pos (), ebp_id, false) }
+   | ESP { VarOrReg(get_current_pos (), esp_id, false) }
+   | EAX { VarOrReg(get_current_pos (), eax_id, false) }
+   | ECX { VarOrReg(get_current_pos (), ecx_id, false) }
+   | EDX { VarOrReg(get_current_pos (), edx_id, false) }
+   | EBX { VarOrReg(get_current_pos (), ebx_id, false) }
+   | IDENT { VarOrReg(get_current_pos (), $1, true)}
 ;
 
 svar:

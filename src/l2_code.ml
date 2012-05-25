@@ -29,13 +29,18 @@ let debug_enabled () =
  *********************************************************)
 
 (* compares two variables (returns 0 iff they are equal) *)
-let compare_var (v1 : var) (v2 : var) : int =
+(*let compare_var (v1 : var) (v2 : var) : int =
    compare (get_var_id v1) (get_var_id v2)
-;;
+;;*)
 
-module VarSet = Set.Make(struct 
+(*module VarSet = Set.Make(struct 
                             type t = var
                             let compare = compare_var
+                         end);;*)
+
+module IntSet = Set.Make(struct 
+                            type t = int
+                            let compare = compare
                          end);;
 
 (* prints a list of ints *)
@@ -45,9 +50,9 @@ let print_int_list (vl : int list) =
    print_string "]"
 ;;
 
-let print_var_set (vs : VarSet.t) = 
+let print_var_set (vs : IntSet.t) = 
    print_string "[";
-   VarSet.iter (fun v -> print_var v; print_string ", ") vs;
+   IntSet.iter (fun v -> print_string (get_symbol v); print_string ", ") vs;
    print_string "]"
 ;;
 
@@ -81,124 +86,124 @@ let print_vars_list vls sp =
  *
  * returns a var list of all the "ins" (no duplicates, list not sorted)
  *)
-let rec find_target_ins_helper (il : (instr * VarSet.t * VarSet.t) list) (s1 : int) (s2o : int option) : VarSet.t =
+let rec find_target_ins_helper (il : (instr * IntSet.t * IntSet.t) list) (s1 : int) (s2o : int option) : IntSet.t =
    let find_target_ins_helper_fun = (fun res (i1,ins,_) ->
       match (i1,s2o) with
-      | (LabelInstr(_,s),None) -> if (s1 = s) then (num_unions := !num_unions+1; VarSet.union ins res) else res
-      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then (num_unions := !num_unions+1; VarSet.union ins res) else res
+      | (LabelInstr(_,s),None) -> if (s1 = s) then (num_unions := !num_unions+1; IntSet.union ins res) else res
+      | (LabelInstr(_,s),Some(s2)) -> if ((s1 = s) || (s2 = s)) then (num_unions := !num_unions+1; IntSet.union ins res) else res
       | _ -> res
    ) in
-   List.fold_left find_target_ins_helper_fun VarSet.empty il
+   List.fold_left find_target_ins_helper_fun IntSet.empty il
 
 (* gets the "ins" for a specified target label (see the find_target_ins_helper function)
  * (resulting list is SORTED) *)
-and find_target_ins (il : (instr * VarSet.t * VarSet.t) list) (s1 : int) (s2o : int option)
-                    (jumps : (int,VarSet.t) Hashtbl.t): VarSet.t =
+and find_target_ins (il : (instr * IntSet.t * IntSet.t) list) (s1 : int) (s2o : int option)
+                    (jumps : (int,IntSet.t) Hashtbl.t): IntSet.t =
    let r1 = (try Hashtbl.find jumps s1
-            with _ -> VarSet.empty) in
+            with _ -> IntSet.empty) in
    match s2o with
    | None -> r1
    | Some(s) ->
-      (try VarSet.union (Hashtbl.find jumps s) r1
+      (try IntSet.union (Hashtbl.find jumps s) r1
        with _ -> r1)
 ;;
 *)
 
 (* given instruction i, returns (gens, kills) *)
-let get_gens_kills (i : instr) : (VarSet.t * VarSet.t) =
+let get_gens_kills (i : instr) : (IntSet.t * IntSet.t) =
    match i with
    (* assignment *)
-   | AssignInstr(_,v,VarSVal(_,v2)) -> (VarSet.singleton v2, VarSet.singleton v)
-   | AssignInstr(_,v,_) -> (VarSet.empty, VarSet.singleton v)
+   | AssignInstr(_,VarOrReg(_,v,_),VarSVal(_,VarOrReg(_,v2,_))) -> (IntSet.singleton v2, IntSet.singleton v)
+   | AssignInstr(_,VarOrReg(_,v,_),_) -> (IntSet.empty, IntSet.singleton v)
    (* mem read *)
-   | MemReadInstr(_,v1,v2,_) -> (VarSet.singleton v2,VarSet.singleton v1)
+   | MemReadInstr(_,VarOrReg(_,v1,_),VarOrReg(_,v2,_),_) -> (IntSet.singleton v2,IntSet.singleton v1)
    (* mem write *)
-   | MemWriteInstr(_,v1,_,VarSVal(_,v2)) -> (VarSet.add v2 (VarSet.singleton v1),VarSet.empty)
-   | MemWriteInstr(_,v1,_,_) -> (VarSet.singleton v1,VarSet.empty)
+   | MemWriteInstr(_,VarOrReg(_,v1,_),_,VarSVal(_,VarOrReg(_,v2,_))) -> (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
+   | MemWriteInstr(_,VarOrReg(_,v1,_),_,_) -> (IntSet.singleton v1,IntSet.empty)
    (* plus *)
-   | PlusInstr(_,v,VarTVal(_,v2)) -> (VarSet.add v2 (VarSet.singleton v),VarSet.singleton v)
-   | PlusInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
+   | PlusInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_))) -> (IntSet.add v2 (IntSet.singleton v),IntSet.singleton v)
+   | PlusInstr(_,VarOrReg(_,v,_),_) -> (IntSet.singleton v, IntSet.singleton v)
    (* minus *)
-   | MinusInstr(_,v,VarTVal(_,v2)) -> (VarSet.add v2 (VarSet.singleton v),VarSet.singleton v)
-   | MinusInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
+   | MinusInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_))) -> (IntSet.add v2 (IntSet.singleton v),IntSet.singleton v)
+   | MinusInstr(_,VarOrReg(_,v,_),_) -> (IntSet.singleton v, IntSet.singleton v)
    (* times *)
-   | TimesInstr(_,v,VarTVal(_,v2)) -> (VarSet.add v2 (VarSet.singleton v),VarSet.singleton v)
-   | TimesInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
+   | TimesInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_))) -> (IntSet.add v2 (IntSet.singleton v),IntSet.singleton v)
+   | TimesInstr(_,VarOrReg(_,v,_),_) -> (IntSet.singleton v, IntSet.singleton v)
    (* bitwise and *)
-   | BitAndInstr(_,v,VarTVal(_,v2)) -> (VarSet.add v2 (VarSet.singleton v),VarSet.singleton v)
-   | BitAndInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
+   | BitAndInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_))) -> (IntSet.add v2 (IntSet.singleton v),IntSet.singleton v)
+   | BitAndInstr(_,VarOrReg(_,v,_),_) -> (IntSet.singleton v, IntSet.singleton v)
    (* shift left *)
-   | SllInstr(_,v,ShVar(_,v2)) -> (VarSet.add v2 (VarSet.singleton v),VarSet.singleton v)
-   | SllInstr(_,v,_) -> (VarSet.singleton v, VarSet.singleton v)
+   | SllInstr(_,VarOrReg(_,v,_),ShVar(_,VarOrReg(_,v2,_))) -> (IntSet.add v2 (IntSet.singleton v),IntSet.singleton v)
+   | SllInstr(_,VarOrReg(_,v,_),_) -> (IntSet.singleton v, IntSet.singleton v)
    (* shift right *)
-   | SrlInstr(_,v,ShVar(_,v2)) -> (VarSet.add v2 (VarSet.singleton v),VarSet.singleton v)
-   | SrlInstr(_,v,_) -> ((VarSet.singleton v), (VarSet.singleton v))
+   | SrlInstr(_,VarOrReg(_,v,_),ShVar(_,VarOrReg(_,v2,_))) -> (IntSet.add v2 (IntSet.singleton v),IntSet.singleton v)
+   | SrlInstr(_,VarOrReg(_,v,_),_) -> ((IntSet.singleton v), (IntSet.singleton v))
    (* less-than comparison *)
-   | LtInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (VarSet.add v3 (VarSet.singleton v2),(VarSet.singleton v))
-   | LtInstr(_,v,_,VarTVal(_,v3)) -> ((VarSet.singleton v3),(VarSet.singleton v))
-   | LtInstr(_,v,VarTVal(_,v2),_) -> ((VarSet.singleton v2),(VarSet.singleton v))
-   | LtInstr(_,v,_,_) -> (VarSet.empty, (VarSet.singleton v))
+   | LtInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) -> (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
+   | LtInstr(_,VarOrReg(_,v,_),_,VarTVal(_,VarOrReg(_,v3,_))) -> ((IntSet.singleton v3),(IntSet.singleton v))
+   | LtInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),_) -> ((IntSet.singleton v2),(IntSet.singleton v))
+   | LtInstr(_,VarOrReg(_,v,_),_,_) -> (IntSet.empty, (IntSet.singleton v))
    (* less-than-or-equal-to comparison *)
-   | LeqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (VarSet.add v3 (VarSet.singleton v2),(VarSet.singleton v))
-   | LeqInstr(_,v,_,VarTVal(_,v3)) -> ((VarSet.singleton v3),(VarSet.singleton v))
-   | LeqInstr(_,v,VarTVal(_,v2),_) -> ((VarSet.singleton v2),(VarSet.singleton v))
-   | LeqInstr(_,v,_,_) -> (VarSet.empty, (VarSet.singleton v))
+   | LeqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) -> (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
+   | LeqInstr(_,VarOrReg(_,v,_),_,VarTVal(_,VarOrReg(_,v3,_))) -> ((IntSet.singleton v3),(IntSet.singleton v))
+   | LeqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),_) -> ((IntSet.singleton v2),(IntSet.singleton v))
+   | LeqInstr(_,VarOrReg(_,v,_),_,_) -> (IntSet.empty, (IntSet.singleton v))
    (* equal-to comparison *)
-   | EqInstr(_,v,VarTVal(_,v2),VarTVal(_,v3)) -> (VarSet.add v3 (VarSet.singleton v2),(VarSet.singleton v))
-   | EqInstr(_,v,_,VarTVal(_,v3)) -> ((VarSet.singleton v3),(VarSet.singleton v))
-   | EqInstr(_,v,VarTVal(_,v2),_) -> ((VarSet.singleton v2),(VarSet.singleton v))
-   | EqInstr(_,v,_,_) -> (VarSet.empty, (VarSet.singleton v))
+   | EqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) -> (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
+   | EqInstr(_,VarOrReg(_,v,_),_,VarTVal(_,VarOrReg(_,v3,_))) -> ((IntSet.singleton v3),(IntSet.singleton v))
+   | EqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),_) -> ((IntSet.singleton v2),(IntSet.singleton v))
+   | EqInstr(_,VarOrReg(_,v,_),_,_) -> (IntSet.empty, (IntSet.singleton v))
    (* label *)
-   | LabelInstr(_,_) -> (VarSet.empty,VarSet.empty)
+   | LabelInstr(_,_) -> (IntSet.empty,IntSet.empty)
    (* goto *)
-   | GotoInstr(_,_) -> (VarSet.empty,VarSet.empty)
+   | GotoInstr(_,_) -> (IntSet.empty,IntSet.empty)
    (* less-than jump *)
-   | LtJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (VarSet.add v2 (VarSet.singleton v1),VarSet.empty)
-   | LtJumpInstr(_,_,VarTVal(_,v2),_,_) -> ((VarSet.singleton v2),VarSet.empty)
-   | LtJumpInstr(_,VarTVal(_,v1),_,_,_) -> ((VarSet.singleton v1),VarSet.empty)
+   | LtJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) -> (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
+   | LtJumpInstr(_,_,VarTVal(_,VarOrReg(_,v2,_)),_,_) -> ((IntSet.singleton v2),IntSet.empty)
+   | LtJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),_,_,_) -> ((IntSet.singleton v1),IntSet.empty)
    (* less-than-or-equal-to jump *)
-   | LeqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (VarSet.add v2 (VarSet.singleton v1),VarSet.empty)
-   | LeqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ((VarSet.singleton v2),VarSet.empty)
-   | LeqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ((VarSet.singleton v1),VarSet.empty)
+   | LeqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) -> (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
+   | LeqJumpInstr(_,_,VarTVal(_,VarOrReg(_,v2,_)),_,_) -> ((IntSet.singleton v2),IntSet.empty)
+   | LeqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),_,_,_) -> ((IntSet.singleton v1),IntSet.empty)
    (* equal-to jump *)
-   | EqJumpInstr(_,VarTVal(_,v1),VarTVal(_,v2),_,_) -> (VarSet.add v2 (VarSet.singleton v1),VarSet.empty)
-   | EqJumpInstr(_,_,VarTVal(_,v2),_,_) -> ((VarSet.singleton v2),VarSet.empty)
-   | EqJumpInstr(_,VarTVal(_,v1),_,_,_) -> ((VarSet.singleton v1),VarSet.empty)
+   | EqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) -> (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
+   | EqJumpInstr(_,_,VarTVal(_,VarOrReg(_,v2,_)),_,_) -> ((IntSet.singleton v2),IntSet.empty)
+   | EqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),_,_,_) -> ((IntSet.singleton v1),IntSet.empty)
    (* call *)
-   | CallInstr(_,VarUVal(p,v)) ->
-      let l = VarSet.add v (List.fold_right VarSet.add [EaxReg(p);EdxReg(p);EcxReg(p)] VarSet.empty) in (* TODO - these folds are slow *)
-      (l,(List.fold_right VarSet.add [EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty))
+   | CallInstr(_,VarUVal(p,VarOrReg(_,v,_))) ->
+      let l = IntSet.add v (List.fold_right IntSet.add [eax_id;edx_id;ecx_id] IntSet.empty) in
+      (l,(List.fold_right IntSet.add [eax_id;ebx_id;ecx_id;edx_id] IntSet.empty))
    | CallInstr(p,_) ->
-      (List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty,
-      List.fold_right VarSet.add [EaxReg(p);EbxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+      (List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty,
+      List.fold_right IntSet.add [eax_id;ebx_id;ecx_id;edx_id] IntSet.empty)
    (* tail-call *)
-   | TailCallInstr(_,VarUVal(p,v)) ->
-      let l = VarSet.add v (List.fold_right VarSet.add [EaxReg(p);EdxReg(p);EcxReg(p);EdiReg(p);EsiReg(p)] VarSet.empty) in
-      (l,VarSet.empty)
-   | TailCallInstr(p,_) -> (List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdiReg(p);EdxReg(p);EsiReg(p)] VarSet.empty,
-                            VarSet.empty)
+   | TailCallInstr(_,VarUVal(p,VarOrReg(_,v,_))) ->
+      let l = IntSet.add v (List.fold_right IntSet.add [eax_id;edx_id;ecx_id;edi_id;esi_id] IntSet.empty) in
+      (l,IntSet.empty)
+   | TailCallInstr(p,_) -> (List.fold_right IntSet.add [eax_id;ecx_id;edi_id;edx_id;esi_id] IntSet.empty,
+                            IntSet.empty)
    (* return *)
-   | ReturnInstr(p) -> (List.fold_right VarSet.add [EaxReg(p);EdiReg(p);EsiReg(p)] VarSet.empty,VarSet.empty)
+   | ReturnInstr(p) -> (List.fold_right IntSet.add [eax_id;edi_id;esi_id] IntSet.empty,IntSet.empty)
    (* print *)
-   | PrintInstr(p,VarTVal(_,v)) -> ((VarSet.singleton v),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
-   | PrintInstr(p,_) -> (VarSet.empty,List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | PrintInstr(p,VarTVal(_,VarOrReg(_,v,_))) -> ((IntSet.singleton v),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | PrintInstr(p,_) -> (IntSet.empty,List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
    (* allocate *)
-   | AllocInstr(p,VarTVal(_,v2),VarTVal(_,v3)) ->
-      (VarSet.add v3 (VarSet.singleton v2),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
-   | AllocInstr(p,_,VarTVal(_,v3)) ->
-      ((VarSet.singleton v3),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
-   | AllocInstr(p,VarTVal(_,v2),_) ->
-      ((VarSet.singleton v2),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
-   | AllocInstr(p,_,_) -> (VarSet.empty,List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
+   | AllocInstr(p,VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) ->
+      (IntSet.add v3 (IntSet.singleton v2),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | AllocInstr(p,_,VarTVal(_,VarOrReg(_,v3,_))) ->
+      ((IntSet.singleton v3),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | AllocInstr(p,VarTVal(_,VarOrReg(_,v2,_)),_) ->
+      ((IntSet.singleton v2),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | AllocInstr(p,_,_) -> (IntSet.empty,List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
    (* array-error *)
-   | ArrayErrorInstr(p,VarTVal(_,v2),VarTVal(_,v3)) ->
-      (VarSet.add v3 (VarSet.singleton v2),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
-   | ArrayErrorInstr(p,_,VarTVal(_,v3)) ->
-      ((VarSet.singleton v3),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
-   | ArrayErrorInstr(p,VarTVal(_,v2),_) ->
-      ((VarSet.singleton v2),List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
-   | ArrayErrorInstr(p,_,_) -> (VarSet.empty,List.fold_right VarSet.add [EaxReg(p);EcxReg(p);EdxReg(p)] VarSet.empty)
-   | _ -> (VarSet.empty,VarSet.empty)
+   | ArrayErrorInstr(p,VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) ->
+      (IntSet.add v3 (IntSet.singleton v2),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | ArrayErrorInstr(p,_,VarTVal(_,VarOrReg(_,v3,_))) ->
+      ((IntSet.singleton v3),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | ArrayErrorInstr(p,VarTVal(_,VarOrReg(_,v2,_)),_) ->
+      ((IntSet.singleton v2),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | ArrayErrorInstr(p,_,_) -> (IntSet.empty,List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | _ -> (IntSet.empty,IntSet.empty)
 ;;
 
 (*
@@ -209,8 +214,8 @@ let get_gens_kills (i : instr) : (VarSet.t * VarSet.t) =
  * (where "U" is set union)
  * The result is sorted
  *)
-let compute_ins (gens : VarSet.t) (kills : VarSet.t) (outs : VarSet.t) : VarSet.t =
-   VarSet.union gens (VarSet.diff outs kills)
+let compute_ins (gens : IntSet.t) (kills : IntSet.t) (outs : IntSet.t) : IntSet.t =
+   IntSet.union gens (IntSet.diff outs kills)
 ;;
 
 (*
@@ -226,17 +231,17 @@ let compute_ins (gens : VarSet.t) (kills : VarSet.t) (outs : VarSet.t) : VarSet.
  * returns a list of tuples (i, ins, outs) having the final results
  *)
 let count = ref 0;;
-let rec liveness_helper (il : (int,(instr * VarSet.t * VarSet.t * int list * int list * bool)) Hashtbl.t) (currents : int list) : unit =
+let rec liveness_helper (il : (int,(instr * IntSet.t * IntSet.t * IntSet.t * IntSet.t * bool)) Hashtbl.t) (currents : IntSet.t) : unit =
    (*print_string "liveness_helper: currents = ";
    print_int_list currents;
    print_string "\n";*)
    (* go through the instructions *)
-   let (change,new_currents) = List.fold_left (fun (flag,res) c ->
+   let (change,new_currents) = IntSet.fold (fun c (flag,res) ->
       let (i,ins,outs,prevs,nexts,processed) = Hashtbl.find il c in (* TODO - what if error? *)
-      let prev_ins = List.fold_left (fun res p ->
+      let prev_ins = IntSet.fold (fun p res ->
          let (_,ins,_,_,_,_) = Hashtbl.find il p in
-         VarSet.union ins res
-      ) VarSet.empty nexts in
+         IntSet.union ins res
+      ) nexts IntSet.empty in
    (*print_string ("   current "^(string_of_int c)^" : prev ins: ");
    print_var_set prev_ins;
    print_string "\n";*)
@@ -247,14 +252,14 @@ let rec liveness_helper (il : (int,(instr * VarSet.t * VarSet.t * int list * int
       (* compute the new "outs" list as the union of the "ins" of
        * the successor instruction(s) *)
       let new_outs = prev_ins in
-      if processed && (VarSet.equal new_ins ins) && (VarSet.equal new_outs outs) then
+      if processed && (IntSet.equal new_ins ins) && (IntSet.equal new_outs outs) then
          (flag,res)
       else (
        count := !count + 1;
        Hashtbl.replace il c (i,new_ins,new_outs,prevs,nexts,true);
-       (true,prevs@res)
+       (true,IntSet.union prevs res)
       )
-   ) (false,[]) currents in
+   ) currents (false,IntSet.empty) in
    (* if the "ins" or "outs" changed, process again, otherwise we're done *)
    if change then liveness_helper il new_currents;
 ;;
@@ -270,12 +275,12 @@ let rec liveness_helper (il : (int,(instr * VarSet.t * VarSet.t * int list * int
  * returns (l1, l2) where l1 is a (var list) of the ins and
  *                        l2 is a (var list) of the outs
  *)
-let liveness (il : instr list) : ((instr * VarSet.t * VarSet.t) list) = 
-   let jumps = ((Hashtbl.create 100) : (int, int list) Hashtbl.t) in (* TODO - size? *)
+let liveness (il : instr list) : ((instr * IntSet.t * IntSet.t) list) = 
+   let jumps = ((Hashtbl.create 100) : (int, IntSet.t) Hashtbl.t) in (* TODO - size? *)
    let labels = ((Hashtbl.create 100) : (int, int) Hashtbl.t) in (* TODO - size? *)
-   let get_jumps = (fun (s : int) -> try Hashtbl.find jumps s with _ -> []) in
+   let get_jumps = (fun (s : int) -> try Hashtbl.find jumps s with _ -> IntSet.empty) in
    let add_jump = (fun (s : int) (index : int) ->
-      Hashtbl.replace jumps s (index::(get_jumps s))
+      Hashtbl.replace jumps s (IntSet.add index (get_jumps s))
    ) in
    let _ = List.fold_left (fun k i ->
       (match i with
@@ -287,29 +292,29 @@ let liveness (il : instr list) : ((instr * VarSet.t * VarSet.t) list) =
       | _ -> () );
       (k + 1)
    ) 0 il in ();
-   let itable = ((Hashtbl.create 100) : (int, (instr * VarSet.t * VarSet.t * int list * int list * bool)) Hashtbl.t) in (* TODO - size? *)
+   let itable = ((Hashtbl.create 100) : (int, (instr * IntSet.t * IntSet.t * IntSet.t * IntSet.t * bool)) Hashtbl.t) in (* TODO - size? *)
    let len = List.length il in
    let _ = List.fold_left (fun (k,prev) i ->
       (match i with
       | GotoInstr(_,s) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev,[Hashtbl.find labels s],false); (k+1,[k])  (* TODO -errors !!! *)
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,prev,IntSet.singleton (Hashtbl.find labels s),false); (k+1,IntSet.singleton k)  (* TODO -errors !!! *)
       | LtJumpInstr(_,_,_,s1,s2) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev,[Hashtbl.find labels s1;Hashtbl.find labels s2],false); (k+1,[k])
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,prev,IntSet.add (Hashtbl.find labels s1) (IntSet.singleton (Hashtbl.find labels s2)),false); (k+1,IntSet.singleton k)
       | LeqJumpInstr(_,_,_,s1,s2) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev,[Hashtbl.find labels s1;Hashtbl.find labels s2],false); (k+1,[k])
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,prev,IntSet.add (Hashtbl.find labels s1) (IntSet.singleton (Hashtbl.find labels s2)),false); (k+1,IntSet.singleton k)
       | EqJumpInstr(_,_,_,s1,s2) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev,[Hashtbl.find labels s1;Hashtbl.find labels s2], false); (k+1,[k])
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,prev,IntSet.add (Hashtbl.find labels s1) (IntSet.singleton (Hashtbl.find labels s2)), false); (k+1,IntSet.singleton k)
       | LabelInstr(_,s) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev@(get_jumps s),(if k+1==len then [] else [k+1]), false); (k+1,[k])
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,IntSet.union prev (get_jumps s),(if k+1==len then IntSet.empty else IntSet.singleton (k+1)), false); (k+1,IntSet.singleton k)
       | ReturnInstr(_) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev, [],false); (k+1,[k])
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,prev, IntSet.empty,false); (k+1,IntSet.singleton k)
       | ArrayErrorInstr(_,_,_) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev, [],false); (k+1,[k])
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,prev, IntSet.empty,false); (k+1,IntSet.singleton k)
       | TailCallInstr(_,_) ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev, [],false); (k+1,[k])
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,prev, IntSet.empty,false); (k+1,IntSet.singleton k)
       | _ ->
-         Hashtbl.replace itable k (i,VarSet.empty,VarSet.empty,prev, (if k+1==len then [] else [k+1]),false); (k+1,[k]) );
-   ) (0,[]) il in ();
+         Hashtbl.replace itable k (i,IntSet.empty,IntSet.empty,prev, (if k+1==len then IntSet.empty else IntSet.singleton (k+1)),false); (k+1,IntSet.singleton k) );
+   ) (0,IntSet.empty) il in ();
    (*Hashtbl.iter (fun k (i,ins,outs,j,next,p) -> 
       print_string (";; Instruction # "^(string_of_int k)^" : ");
       print_instr i;
@@ -325,7 +330,7 @@ let liveness (il : instr list) : ((instr * VarSet.t * VarSet.t) list) =
    ) itable;*)
    (* add an empty "in" and "out" list for each instruction *)
    (* get the ins and outs (this is a fixpoint operator *)
-   liveness_helper itable (if len >= 0 then [len-1] else []);
+   liveness_helper itable (if len >= 0 then IntSet.singleton (len-1) else IntSet.empty);
    (*print_string ("List length: "^(string_of_int len)^"\n");*)
    let rec to_list = (fun k arr -> 
       if k < 0 then arr else
@@ -357,16 +362,14 @@ let liveness (il : instr list) : ((instr * VarSet.t * VarSet.t) list) =
  * dests is a hashtable mapping vertex names to their
  * corresponding vars).
  *)
-let add_edge (v1 : var) (v2o : var option)
-                  (h : (int, VarSet.t) Hashtbl.t) : unit =
+let add_edge (id : int) (v2o : int option)
+                  (h : (int, IntSet.t) Hashtbl.t) : unit =
    (* leave ebp/esp registers out of the graph *)
-   match v1 with
-   | EbpReg(_) -> ()
-   | EspReg(_) -> ()
+   if id == ebp_id then ()
+   else if id == esp_id then ()
+   else (
    (* process registers other than ebp/esp... *)
-   | _ -> (
    (* get the name of v1 *)
-   let id = (get_var_id v1) in
    let t = (
       (* see if there's a source vertex for "name" in the graph
        * (if there is, "t" will be bound to its table
@@ -375,21 +378,21 @@ let add_edge (v1 : var) (v2o : var option)
       with _ ->
          (* if there's no source vertex "id" in the graph, add one,
           * along with an empty table for destination vertices *)
-         let t2 = VarSet.empty in
+         let t2 = IntSet.empty in
          Hashtbl.replace h id t2;
          t2
    ) in (
    match v2o with
-   (* ignore v2o if it is ebp/esp *)
-   | Some(EbpReg(_)) -> ()
-   | Some(EspReg(_)) -> ()
-   (* otherwise, if v2o okay... *)
-   | Some(v2) ->
+   | Some(id2) ->
+      (* ignore v2o if it is ebp/esp *)
+      if id2 == ebp_id then ()
+      else if id2 == esp_id then ()
+      (* otherwise, if v2o okay... *)
+      else
       (* get the id of v2 *)
-      let id2 = (get_var_id v2) in
       (* if v2 is a different variable/register than v1, add
        * an edge (v1,v2) by putting v2 in v1's dest table *)
-      if (id != id2) then Hashtbl.replace h id (VarSet.add v2 t)
+      if (id != id2) then Hashtbl.replace h id (IntSet.add id2 t)
    | _ -> () ))
 ;;
 
@@ -410,44 +413,40 @@ let add_edge (v1 : var) (v2o : var option)
  * added as vertices in h.  The graph h has the same structure
  * as the "h" parameter of the add_edge function.
  *)
-let add_all_edges (vl1 : VarSet.t) (vl2 : VarSet.t) (so : (var * var) option)
-                  (h : (int, VarSet.t) Hashtbl.t) : unit =
+let add_all_edges (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
+                  (h : (int, IntSet.t) Hashtbl.t) : unit =
    (* if vl1 is empty, just add a vertex for each item in vl2 *)
-   match (VarSet.is_empty vl1) with
-   | true -> VarSet.iter (fun v2 -> add_edge v2 None h) vl2
+   match (IntSet.is_empty vl1) with
+   | true -> IntSet.iter (fun v2 -> add_edge v2 None h) vl2
    | _ ->
    (* if vl1 is non-empty, iterate through its items *)
-   VarSet.iter (fun v1 ->
-      (match (VarSet.is_empty vl2) with
+   IntSet.iter (fun s1 ->
+      (match (IntSet.is_empty vl2) with
       (* if vl2 is empty, just add a vertex for the current item of vl1 *)
-      | true -> add_edge v1 None h
+      | true -> add_edge s1 None h
       | _ ->
          (* if vl2 is non-empty, iterate through its item *)
-         VarSet.iter (fun v2 ->
+         IntSet.iter (fun s2 ->
             (* get the ids for v1/v2 *)
-            let s1 = get_var_id v1 in
-            let s2 = get_var_id v2 in
             (match so with
             (* if there's an edge we want to ignore... *)
-            | Some(v1t,v2t) ->
-               let s1t = get_var_id v1t in
-               let s2t = get_var_id v2t in
+            | Some(s1t,s2t) ->
                (* if (v1,v2) matches the ignored edge, then
                 * just add disconnected vertices v1 and v2 *)
                if (((s1==s1t) && (s2==s2t)) || ((s1==s2t) && (s2==s1t))) then (
-                  add_edge v1 None h;
-                  add_edge v2 None h;
+                  add_edge s1 None h;
+                  add_edge s2 None h;
                )
                (* if (v1,v2) is not the ignored edge... *)
                else (
                   (* add the edges (v1,v2) and (v2,v1) *)
-                  add_edge v1 (Some(v2)) h;
-                  add_edge v2 (Some(v1)) h )
+                  add_edge s1 (Some(s2)) h;
+                  add_edge s2 (Some(s1)) h )
             (* if there's no edge we want to ignore... *)
             | _ -> 
                (* add the edges (v1,v2) and (v2,v1) *)
-               add_edge v1 (Some(v2)) h;
-               add_edge v2 (Some(v1)) h )
+               add_edge s1 (Some(s2)) h;
+               add_edge s2 (Some(s1)) h )
          ) vl2 )
    ) vl1
 ;;
@@ -471,8 +470,8 @@ let add_all_edges (vl1 : VarSet.t) (vl2 : VarSet.t) (so : (var * var) option)
  * add_edge function.  The "first" argument should be true
  * when this function is called normally.
  *)
-let rec compute_adjacency_table (il : (instr * VarSet.t * VarSet.t) list)
-                                (h : (int, VarSet.t) Hashtbl.t)
+let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
+                                (h : (int, IntSet.t) Hashtbl.t)
                                 (first : bool) : unit =
    match (il) with
    | [] -> ()
@@ -481,14 +480,14 @@ let rec compute_adjacency_table (il : (instr * VarSet.t * VarSet.t) list)
       let temp = (match i with
       (* if this instruction is a <- b, then a,b don't conflict, so
        * we want to ignore the edge (a,b) in the graph *)
-      | AssignInstr(_,v1,VarSVal(_,v2)) -> Some((v1,v2))
+      | AssignInstr(_,VarOrReg(_,v1,_),VarSVal(_,VarOrReg(_,v2,_))) -> Some((v1,v2))
       (* for any other instructions, we don't ignore the edge *)
       | _ -> None ) in
       (* add edges between variables that are live at the same time
        * (this means any variables that appear in any "out" set together,
        * or any variables that appear together in the first instruction's
        * "in" set *)
-      if first then add_all_edges ins ins None h else add_all_edges ins (VarSet.empty) None h;
+      if first then add_all_edges ins ins None h else add_all_edges ins (IntSet.empty) None h;
       add_all_edges outs outs temp h;
       (* add edges between the kills and the out set *)
       let (gens,kills) = get_gens_kills i in
@@ -499,20 +498,20 @@ let rec compute_adjacency_table (il : (instr * VarSet.t * VarSet.t) list)
       add_all_edges kills outs temp h;
       (* handle the special instructions *)
       (* l1 is all the usable registers except ecx *)
-      let l1 = (List.fold_right VarSet.add [EaxReg(NoPos);EbxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] VarSet.empty) in
+      let l1 = (List.fold_right IntSet.add [eax_id;ebx_id;edi_id;edx_id;esi_id] IntSet.empty) in
       (* l2 is the callee-save registers *)
-      let l2 = (List.fold_right VarSet.add [EdiReg(NoPos);EsiReg(NoPos)] VarSet.empty) in
+      let l2 = (List.fold_right IntSet.add [edi_id;esi_id] IntSet.empty) in
       (match i with
       (* any shift variable v will conflict with all usable registers except ecx
        * (since ecx is the only allowable shift register in the x86 instruction) *)
-      | SllInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges (VarSet.singleton v) l1 None h
-      | SrlInstr(_,_,ShVar(_,(Var(_,_) as v))) -> add_all_edges (VarSet.singleton v) l1 None h
+      | SllInstr(_,_,ShVar(_,(VarOrReg(_,v,true)))) -> add_all_edges (IntSet.singleton v) l1 None h
+      | SrlInstr(_,_,ShVar(_,(VarOrReg(_,v,true)))) -> add_all_edges (IntSet.singleton v) l1 None h
       (* a destination variable for comparisons will conflict with the 
        * callee-save registers, since the callER-save registers are the only
        * valid destinations *)
-      | LtInstr(_,(Var(_,_) as v),_,_) -> add_all_edges (VarSet.singleton v) l2 None h
-      | LeqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges (VarSet.singleton v) l2 None h
-      | EqInstr(_,(Var(_,_) as v),_,_) -> add_all_edges (VarSet.singleton v) l2 None h
+      | LtInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2 None h
+      | LeqInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2 None h
+      | EqInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2 None h
       | _ -> ());
       (* recursively process the remaining instructions *)
       compute_adjacency_table more h false
@@ -543,7 +542,7 @@ let estimate_spill_num edges diff i max_i = match !spill_mode with
  * "colors" is the list of (var,reg) coloring assignments, and
  * "ok" is true iff the graph was able to be colored properly
  *)
-let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * bool * int) =
+let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * bool * int) =
    (*if debug_enabled () then (print_string ("   graph color: "^(string_of_int (List.length il))^"... ");
    flush stdout );*)
    (* perform the liveness analysis based on the instruction list *)
@@ -551,10 +550,10 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
    (*print_string ("   done.\n");
    flush stdout;*)
    (* make sure all of the usable registers are connected *)
-   let l1 = List.fold_right VarSet.add
-            [EaxReg(NoPos);EbxReg(NoPos);EcxReg(NoPos);EdiReg(NoPos);EdxReg(NoPos);EsiReg(NoPos)] VarSet.empty in
+   let l1 = List.fold_right IntSet.add
+            [eax_id;ebx_id;ecx_id;edi_id;edx_id;esi_id] IntSet.empty in
    (* create an empty hashtable for the graph *)
-   let h = ((Hashtbl.create (VarSet.cardinal l1)) : (int, VarSet.t) Hashtbl.t) in
+   let h = ((Hashtbl.create (IntSet.cardinal l1)) : (int, IntSet.t) Hashtbl.t) in
    (* add edges between all the usable registers *)
    (*print_string ("   adding all edges: "^(string_of_int (List.length l1))^"... ");
    flush stdout;*)
@@ -574,13 +573,13 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
    (* sort the source vertices by (ascending order of) number of conflicts *)
    (*print_string ("   sorting keys: "^(string_of_int (List.length keys))^"... ");
    flush stdout;*)
-   let keyst = List.sort (fun (a,at) (b,bt) -> compare (VarSet.cardinal bt) (VarSet.cardinal at)) keys in (* XXX *)
+   let keyst = List.sort (fun (a,at) (b,bt) -> compare (IntSet.cardinal bt) (IntSet.cardinal at)) keys in (* XXX *)
    let keys2 = List.map (fun (k,tab) -> k) keyst in
    (*print_string ("   done.\n");
    flush stdout;*)
    (* now we do the heuristic graph coloring *)
    (* create a hashtable for mapping variable ids to their register (color) assignments *)
-   let assignments = ((Hashtbl.create (VarSet.cardinal l1)) : (int,var) Hashtbl.t) in
+   let assignments = ((Hashtbl.create (IntSet.cardinal l1)) : (int,int) Hashtbl.t) in
    (* go through the graph (via the sorted keys2 list)
     * and compute the return values (ag,colors,ok) *)
    (*print_string ("   folding: "^(string_of_int (List.length keys2))^"... ");
@@ -598,8 +597,8 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
        * tb is the hashtable of destinations) *)
       (* get the list of destination variables *)
       let tbl = Hashtbl.find h x in
-      let v = Var(NoPos,x) in (* XXX - this is a hack - remove it *)
-      let test = VarSet.cardinal tbl in
+      (*let v = Var(NoPos,x) in*) (* XXX - this is a hack - remove it *)
+      let test = IntSet.cardinal tbl in
       if test > !the_max then the_max := test;
       let diff = max 0 (!the_prev - test) in
       let check = (max 0 (estimate_spill_num test diff (!the_counter+1) (List.length keys2))) in
@@ -611,30 +610,31 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
       if (check > !the_prev_max) then (the_num := !the_counter; the_prev_max := check );
       the_prev := test;
       the_counter := !the_counter + 1;
-      (*if debug_enabled () then ( print_string ("   "^(string_of_int (VarSet.cardinal tbl))^" conflicts\n");
+      (*if debug_enabled () then ( print_string ("   "^(string_of_int (IntSet.cardinal tbl))^" conflicts\n");
       flush stdout );*)
       (* go through all of the usable registers l1, 
        * and compute an optional color (register)
        * assignment l2 *)
-      let l2 = VarSet.fold (fun l3 r ->
+      let l2 = IntSet.fold (fun the_id r ->
          (* the_id is the current register id *)
-         let the_id = (get_var_id l3) in
+         (*let the_id = (get_var_id l3) in*)
          (* check if "r" already contains a coloring *)
          match r with
          (* if "r" does not contain a coloring yet... *)
          | None ->
             (* go through the list tbl of destination vertices to see
              * if register the_id is contained there *)
-            let found = (VarSet.fold (fun t flag ->
+            let found = (IntSet.fold (fun t flag ->
                let f = 
-               (match t with
+               (
                (* if this destination vertex is a variable... *)
-               | Var(_,s) ->
+               if (not (is_register t)) then
                   (* look it up in the assigned reg table *)
-                  (try let test = Hashtbl.find assignments s in ((get_var_id test)=the_id)
+                  (try let test = Hashtbl.find assignments t in (test == the_id)
                   with _ -> false)
+               else
                (* if this destination vertex is a register... *)
-               | _ -> if ((get_var_id t)=the_id) then true else false) in
+               if (t == the_id) then true else false) in
                (flag || f)
             ) tbl false) in
             (* if register the_id was found in the dest list,
@@ -644,7 +644,7 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
              * it as a coloring assignment (and add it to the
              * table of assignments) *)
             else (
-               Hashtbl.add assignments x l3;
+               Hashtbl.add assignments x the_id;
       (*if debug_enabled () then (
       print_string "   Computed assignment: ";
       print_string (get_symbol x);
@@ -652,7 +652,7 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
       print_var l3;
       print_string "\n";
       flush stdout );*)
-               (Some(l3))
+               (Some(the_id))
             )
          (* if "r" already contains a coloring, just use that one *)
          | Some(_) -> r
@@ -662,24 +662,28 @@ let graph_color (il : instr list) : ((var * VarSet.t) list * (var * var) list * 
        * the updated list of coloring assignments, and
        * f, the updated status of the coloring (true iff successful
        * coloring) *)
-      let (newl,f) = (match v with
+      (*print_string "Checking var: ";
+      print_string (get_symbol x);
+      print_string "\n";*)
+      let (newl,f) = (
       (* if the current source vertex is a variable... *)
-      | Var(_,_) ->
+      if (not (is_register x)) then (
+         (*print_string "   IT IS A VAR\n";*)
          (* if we found a valid coloring for v, update the list of
           * coloring assignments *)
          (match l2 with
-         | Some(c) -> (r3@[(v,c)],true)  (* TODO - this is probably slow *)
-         | _ -> (r3,false) )
+         | Some(c) -> (r3@[(x,c)],true)  (* TODO - this is probably slow *)
+         | _ -> (r3,false) ) )
       (* if the current source vertex is a REGISTER, we don't need
        * to add a register assignment *)
-      | _ -> (r3,true)) in
+      else (r3,true)) in
       (* add the row (v,dest1,dest2,dest3,...) to the adjacency
        * table, where [dest1;dest2;dest] is the sorted version of
        * destination list tbl.  also update the coloring assignment
        * list (newl) and the result status (f && flag) which is
        * true iff ALL source vertices are able to be assigned a
        * color properly *)
-      (r2@[(v,tbl)],newl,f && flag)
+      (r2@[(x,tbl)],newl,f && flag)
    ) ([],[],true) keys2 in
    (*if debug_enabled () then ( print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
    flush stdout );*)
@@ -714,10 +718,10 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
                                                     * and i is the current instruction to process *)
       let p = get_pos_instr i in (* the the Pos of the instruction *)
       let new_prefix = add_symbol (prefix^(string_of_int k)) in (* compute a unique variable name *)
-      let header = MemReadInstr(p,Var(p,new_prefix),EbpReg(p),off) in (* a 'header' instruction (i.e. one that
+      let header = MemReadInstr(p,VarOrReg(p,new_prefix,true),VarOrReg(p,ebp_id,false),off) in (* a 'header' instruction (i.e. one that
                                                                        * does (unique_var <- (mem ebp offset)) *)
-      let footer = MemWriteInstr(p,EbpReg(p),off,
-                                   VarSVal(p,Var(p,new_prefix))) in (* a 'footer' instruction (i.e.
+      let footer = MemWriteInstr(p,VarOrReg(p,ebp_id,false),off,
+                                   VarSVal(p,VarOrReg(p,new_prefix,true))) in (* a 'footer' instruction (i.e.
                                                                      * one that does
                                                                      * ((mem ebp offset) <- unique_var)) *)
       (* check to see what instruction we have *)
@@ -726,14 +730,14 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | AssignInstr(p1,v1,sv) ->
          (* if v1 is equal to the spill variable, the new instruction (i1) will be ((mem ebp offset) <- sv) *)
          let (write,i1,s1) = (match v1 with
-            | Var(p2,s) -> if (s == v) then
-               (true,MemWriteInstr(p2,EbpReg(p2),off,sv),Some(s)) else (false,i,None)
+            | VarOrReg(p2,s,true) -> if (s == v) then
+               (true,MemWriteInstr(p2,VarOrReg(p2,ebp_id,false),off,sv),Some(s)) else (false,i,None)
             | _ -> (false,i,None)) in
          (* if sv is equal to the spill variable, the new instruction (i2) will be (v1 <- (mem ebp offset)) *)
          let (read,i2,s2) = (match sv with
-            | VarSVal(p2,Var(p3,s)) ->
+            | VarSVal(p2,VarOrReg(p3,s,true)) ->
                if (s == v) then
-                  (true,MemReadInstr(p3,v1,EbpReg(p3),off),Some(s)) else (false,i,None)
+                  (true,MemReadInstr(p3,v1,VarOrReg(p3,ebp_id,false),off),Some(s)) else (false,i,None)
             | _ -> (false,i,None)) in
          (* if v1,sv are both equal to the spill variable, we will drop this instruction *)
          let drop = (match (s1,s2) with
@@ -750,12 +754,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | MemReadInstr(p1,v1,v2,i) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v3) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if v2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,v4) = (match v2 with
-            | Var(p2,s) ->
-               if (s == v) then (true,Var(p2,new_prefix)) else (false,v2)
+            | VarOrReg(p2,s,true) ->
+               if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v2)
             | _ -> (false,v2)) in
          (* the new instruction is the same, with v1 and/or v2 possibly replaced by a unique var name *)
          let new_inst = MemReadInstr(p1,v3,v4,i) in
@@ -775,12 +779,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | MemWriteInstr(p1,v1,i,sv) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if sv2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,sv2) = (match sv with
-            | VarSVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarSVal(p2,Var(p3,new_prefix))) else (false,sv)
+            | VarSVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarSVal(p2,VarOrReg(p3,new_prefix,true))) else (false,sv)
             | _ -> (false,sv)) in
          (* the new instruction is the same, with v1 and/or sv2 possibly replaced by a unique var name *)
          let new_inst = MemWriteInstr(p1,v2,i,sv2) in
@@ -798,12 +802,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | PlusInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,t2) = (match t with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t)
             | _ -> (false,t)) in
          (* the new instruction is the same, with v1 and/or t possibly replaced by a unique var name *)
          let new_inst = PlusInstr(p1,v2,t2) in
@@ -823,12 +827,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | MinusInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,t2) = (match t with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t)
             | _ -> (false,t)) in
          (* the new instruction is the same, with v1 and/or t possibly replaced by a unique var name *)
          let new_inst = MinusInstr(p1,v2,t2) in
@@ -848,12 +852,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | TimesInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,t2) = (match t with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t)
             | _ -> (false,t)) in
          (* the new instruction is the same, with v1 and/or t possibly replaced by a unique var name *)
          let new_inst = TimesInstr(p1,v2,t2) in
@@ -873,12 +877,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | BitAndInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,t2) = (match t with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t)
             | _ -> (false,t)) in
          (* the new instruction is the same, with v1 and/or t possibly replaced by a unique var name *)
          let new_inst = BitAndInstr(p1,v2,t2) in
@@ -898,12 +902,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | SllInstr(p1,v1,svr) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if svr is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,svr2) = (match svr with
-            | ShVar(p2,Var(p3,s)) ->
-               if (s == v) then (true,ShVar(p2,Var(p3,new_prefix))) else (false,svr)
+            | ShVar(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,ShVar(p2,VarOrReg(p3,new_prefix,true))) else (false,svr)
             | _ -> (false,svr)) in
          (* the new instruction is the same, with v1 and/or svr possibly replaced by a unique var name *)
          let new_inst = SllInstr(p1,v2,svr2) in
@@ -923,12 +927,12 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | SrlInstr(p1,v1,svr) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if svr is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read,svr2) = (match svr with
-            | ShVar(p2,Var(p3,s)) ->
-               if (s == v) then (true,ShVar(p2,Var(p3,new_prefix))) else (false,svr)
+            | ShVar(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,ShVar(p2,VarOrReg(p3,new_prefix,true))) else (false,svr)
             | _ -> (false,svr)) in
          (* the new instruction is the same, with v1 and/or svr possibly replaced by a unique var name *)
          let new_inst = SrlInstr(p1,v2,svr2) in
@@ -948,17 +952,17 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | LtInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with v1 and/or t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = LtInstr(p1,v2,t3,t4) in
@@ -978,17 +982,17 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | LeqInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with v1 and/or t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = LeqInstr(p1,v2,t3,t4) in
@@ -1008,17 +1012,17 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | EqInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (write,v2) = (match v1 with
-            | Var(p2,s) -> if (s == v) then (true,Var(p2,new_prefix)) else (false,v1)
+            | VarOrReg(p2,s,true) -> if (s == v) then (true,VarOrReg(p2,new_prefix,true)) else (false,v1)
             | _ -> (false,v1)) in
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with v1 and/or t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = EqInstr(p1,v2,t3,t4) in
@@ -1038,13 +1042,13 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | LtJumpInstr(p1,t1,t2,s1,s2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = LtJumpInstr(p1,t3,t4,s1,s2) in
@@ -1062,13 +1066,13 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | LeqJumpInstr(p1,t1,t2,s1,s2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = LeqJumpInstr(p1,t3,t4,s1,s2) in
@@ -1086,13 +1090,13 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | EqJumpInstr(p1,t1,t2,s1,s2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = EqJumpInstr(p1,t3,t4,s1,s2) in
@@ -1110,8 +1114,8 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | CallInstr(p1,u) ->
          (* if u is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,u2) = (match u with
-            | VarUVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarUVal(p2,Var(p3,new_prefix))) else (false,u)
+            | VarUVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarUVal(p2,VarOrReg(p3,new_prefix,true))) else (false,u)
             | _ -> (false,u)) in
          (* the new instruction is the same, with u possibly replaced by a unique var name *)
          let new_inst = CallInstr(p1,u2) in
@@ -1129,8 +1133,8 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | TailCallInstr(p1,u) ->
          (* if u is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,u2) = (match u with
-            | VarUVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarUVal(p2,Var(p3,new_prefix))) else (false,u)
+            | VarUVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarUVal(p2,VarOrReg(p3,new_prefix,true))) else (false,u)
             | _ -> (false,u)) in
          (* the new instruction is the same, with u possibly replaced by a unique var name *)
          let new_inst = TailCallInstr(p1,u2) in
@@ -1148,8 +1152,8 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | PrintInstr(p1,t1) ->
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* the new instruction is the same, with t1 possibly replaced by a unique var name *)
          let new_inst = PrintInstr(p1,t3) in
@@ -1167,13 +1171,13 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | AllocInstr(p1,t1,t2) ->
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = AllocInstr(p1,t3,t4) in
@@ -1191,13 +1195,13 @@ let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : inst
       | ArrayErrorInstr(p1,t1,t2) ->
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read1,t3) = (match t1 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t1)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t1)
             | _ -> (false,t1)) in
          (* if t2 is equal to the spill variable, it will be replaced by a unique variable name *)
          let (read2,t4) = (match t2 with
-            | VarTVal(p2,Var(p3,s)) ->
-               if (s == v) then (true,VarTVal(p2,Var(p3,new_prefix))) else (false,t2)
+            | VarTVal(p2,VarOrReg(p3,s,true)) ->
+               if (s == v) then (true,VarTVal(p2,VarOrReg(p3,new_prefix,true))) else (false,t2)
             | _ -> (false,t2)) in
          (* the new instruction is the same, with t1 and/or t2 possibly replaced by a unique var name *)
          let new_inst = ArrayErrorInstr(p1,t3,t4) in
@@ -1247,10 +1251,10 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    (* TODO XXX - this is a hack to make it work with my wrong
     * test cases.  It can be changed to 1L for normal behavior *)
    let init_offset = 1L in (* number of spots on the stack to allow *)
-   let save    = [MemWriteInstr(p,EbpReg(p),Int64.mul init_offset (-4L),VarSVal(p,EdiReg(p)));
-                  MemWriteInstr(p,EbpReg(p),Int64.sub (Int64.mul init_offset (-4L)) 4L,VarSVal(p,EsiReg(p)))] in
-   let restore = [MemReadInstr(p,EdiReg(p),EbpReg(p),Int64.mul init_offset (-4L));
-                  MemReadInstr(p,EsiReg(p),EbpReg(p),Int64.sub (Int64.mul init_offset (-4L)) 4L)] in
+   let save    = [MemWriteInstr(p,VarOrReg(p,ebp_id,false),Int64.mul init_offset (-4L),VarSVal(p,VarOrReg(p,edi_id,false)));
+                  MemWriteInstr(p,VarOrReg(p,ebp_id,false),Int64.sub (Int64.mul init_offset (-4L)) 4L,VarSVal(p,VarOrReg(p,esi_id,false)))] in
+   let restore = [MemReadInstr(p,VarOrReg(p,edi_id,false),VarOrReg(p,ebp_id,false),Int64.mul init_offset (-4L));
+                  MemReadInstr(p,VarOrReg(p,esi_id,false),VarOrReg(p,ebp_id,false),Int64.sub (Int64.mul init_offset (-4L)) 4L)] in
    (* add save to the front of list, and restore before each tail-call and return *)
    let il2t = List.fold_left (fun res i ->
       match (count,i) with
@@ -1265,7 +1269,7 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    let initial = (Int64.add 1L init_offset) in
    (* compile the instructions to L1 instructions *)
    let h = ((Hashtbl.create 64) : (int,unit) Hashtbl.t) in
-   let j = ((Hashtbl.create 64) : (int,VarSet.t) Hashtbl.t) in
+   let j = ((Hashtbl.create 64) : (int,IntSet.t) Hashtbl.t) in
    let (il3,num_spilled) = compile_instr_list il2 initial count h j in
    global_spill_count := !global_spill_count + (Hashtbl.length h);
    (* add the stack size adjustment to the beginning of each function *)
@@ -1277,7 +1281,7 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    L1_ast.Function(p,so,il5)
 
 (* this is a fixpoint operator where i is the current number of spilled vars *)
-and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spilled : (int,unit) Hashtbl.t) (jumps : (int,VarSet.t) Hashtbl.t) :
+and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spilled : (int,unit) Hashtbl.t) (jumps : (int,IntSet.t) Hashtbl.t) :
                                                               (L1_ast.instr list * int64) =
    (* try to do the register allocation *)
    (*if debug_enabled () then (print_string ("compile_instr_list: "^(Int64.to_string num)^"\n");
@@ -1293,12 +1297,11 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
       flush stdout );*)
       (*print_string ("Table size = "^(string_of_int (List.length at))^"\n");*)
       if debug_enabled () then print_string ("Function "^(string_of_int count)^" : spilling "^(string_of_int num_to_spill)^" registers\n");
-      let (nameop,il2,ns) = List.fold_left (fun (res,ilt,tnum) (hd,vl) -> 
+      let (nameop,il2,ns) = List.fold_left (fun (res,ilt,tnum) (id,vl) -> 
          (*print_var hd;
          print_string "\n";*)
-         match (res,hd) with
          (* only look at variables we haven't already spilled *)
-	 | (_,Var(_,id)) -> 
+         if (not (is_register id)) then (
              if (tnum >= num_to_spill) then (res,ilt,tnum) else
              (try Hashtbl.find spilled id; (res,ilt,tnum)
                              with _ -> (
@@ -1309,8 +1312,8 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
                         flush stdout );*)
                         let il2t = spill ilt id (Int64.mul (-4L) (Int64.add new_num (1L))) spill_name in
                              (Some(id),il2t,tnum + 1)
-             ) ) (* this is the "not already spilled" case *)
-	 | _ -> (res,ilt,tnum)
+             ) ) ) (* this is the "not already spilled" case *)
+	 else (res,ilt,tnum)
       ) (None,il,0) at in
       (* spill and try again *)
       match nameop with
@@ -1335,18 +1338,17 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
       (*print_string ("colored graph properly: "^(string_of_int count)^"\n");*)
       (* set up the replacement table *)
       let h = ((Hashtbl.create (List.length colors)) : (int,L1_ast.reg) Hashtbl.t) in
-      List.iter (fun (v,c) -> 
-         let id = get_var_id v in
-         let r = (match c with
-	 | EsiReg(p) -> L1_ast.EsiReg(p)
-	 | EdiReg(p) -> L1_ast.EdiReg(p)
-	 | EbpReg(p) -> L1_ast.EbpReg(p)
-	 | EspReg(p) -> L1_ast.EspReg(p)
-	 | EaxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EaxReg(p))
-	 | EcxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EcxReg(p))
-	 | EdxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EdxReg(p))
-	 | EbxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EbxReg(p))
-	 | Var(p,_) -> die_error p "invalid register coloring" (* TODO this should never happen *)
+      List.iter (fun (id,c) -> 
+         let r = (
+         if c == esi_id then L1_ast.EsiReg(NoPos)
+	 else if c == edi_id then L1_ast.EdiReg(NoPos)
+	 else if c == ebp_id then L1_ast.EbpReg(NoPos)
+	 else if c == esp_id then L1_ast.EspReg(NoPos)
+	 else if c == eax_id then L1_ast.CallerSaveReg(NoPos,L1_ast.EaxReg(NoPos))
+	 else if c == ecx_id then L1_ast.CallerSaveReg(NoPos,L1_ast.EcxReg(NoPos))
+	 else if c == edx_id then L1_ast.CallerSaveReg(NoPos,L1_ast.EdxReg(NoPos))
+	 else if c == ebx_id then L1_ast.CallerSaveReg(NoPos,L1_ast.EbxReg(NoPos))
+	 else parse_error "invalid register coloring" (* TODO this should never happen *)
 	 ) in
 	 Hashtbl.replace h id r
       ) colors;
@@ -1433,17 +1435,17 @@ and compile_tval (tv : tval) (h : (int,L1_ast.reg) Hashtbl.t) : L1_ast.tval =
  * has the variable register assignments *)
 and compile_var (v : var) (h : (int,L1_ast.reg) Hashtbl.t) : L1_ast.reg =
    match v with
-   | EsiReg(p) -> L1_ast.EsiReg(p)
-   | EdiReg(p) -> L1_ast.EdiReg(p)
-   | EbpReg(p) -> L1_ast.EbpReg(p)
-   | EspReg(p) -> L1_ast.EspReg(p)
-   | EaxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EaxReg(p))
-   | EcxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EcxReg(p))
-   | EdxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EdxReg(p))
-   | EbxReg(p) -> L1_ast.CallerSaveReg(p,L1_ast.EbxReg(p))
-   | Var(p,s) ->
+   | VarOrReg(p,s,_) -> (
+      if s == esi_id then L1_ast.EsiReg(p)
+      else if s == edi_id then L1_ast.EdiReg(p)
+      else if s == ebp_id then L1_ast.EbpReg(p)
+      else if s == esp_id then L1_ast.EspReg(p)
+      else if s == eax_id then L1_ast.CallerSaveReg(p,L1_ast.EaxReg(p))
+      else if s == ecx_id then L1_ast.CallerSaveReg(p,L1_ast.EcxReg(p))
+      else if s == edx_id then L1_ast.CallerSaveReg(p,L1_ast.EdxReg(p))
+      else if s == ebx_id then L1_ast.CallerSaveReg(p,L1_ast.EbxReg(p))
       (* print_string ("compile_var: "^s^"\n"); *)
-      Hashtbl.find h s
+      else Hashtbl.find h s )
 
 (* compiles an L2 svar into an L1 sreg. the hashtable
  * has the variable register assignments *)

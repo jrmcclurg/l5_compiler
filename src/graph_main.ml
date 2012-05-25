@@ -25,24 +25,20 @@ Arg.parse [
 
 (* print a list of (var list) *)
 let print_vars_list vls sp =
-   let vls2 = (List.sort (fun (a,_) (b,_) ->
-      let id1 = get_var_id a in
-      let id2 = get_var_id b in
+   let vls2 = (List.sort (fun (id1,_) (id2,_) ->
       String.compare (get_symbol id1) (get_symbol id2)
    ) vls) in
    List.iter (fun (v,vl) ->
       print_string "(";
-      print_var v;
+      print_string (get_symbol v);
       print_string " ";
-      let vl2 = (List.sort (fun a b ->
-         let id1 = get_var_id a in
-         let id2 = get_var_id b in
+      let vl2 = (List.sort (fun id1 id2 ->
          (* print_string (">>> comparing "^(get_symbol id1)^" with "^(get_symbol id2)^"<<<\n");
          flush stdout; *)
          String.compare (get_symbol id1) (get_symbol id2)
-      ) (VarSet.elements vl)) in
+      ) (IntSet.elements vl)) in
       List.iter (fun v -> 
-         print_var v;
+         print_string (get_symbol v);
          print_string " "
       ) vl2;
       print_string (")"^sp);
@@ -72,13 +68,11 @@ print_string "(";
 (* print assignments of colors (i.e. registers) to variables *)
 List.iter (fun (v,c) -> 
    print_string "(";
-   print_var v;
+   print_string (get_symbol v);
    print_string " ";
-   print_var c;
+   print_string (get_symbol c);
    print_string ")\n"
-) (List.sort (fun (a,_) (b,_) -> 
-   let id1 = get_var_id a in
-   let id2 = get_var_id b in
+) (List.sort (fun (id1,_) (id2,_) -> 
    String.compare (get_symbol id1) (get_symbol id2)
 ) colors);
 print_string ")\n" 
