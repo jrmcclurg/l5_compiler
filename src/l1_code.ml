@@ -603,8 +603,9 @@ and compile_strlit (o : out_channel) (s : string) (p : pos) (first : bool) (j : 
  *)
 let compile_and_link (filename : string) (assembly_file_name : string) (runtime_file_name : string) : unit =
    let r1c = ("as --32 -o "^assembly_file_name^".o "^assembly_file_name) in
-   let r2c = ("gcc -m32 -c -O2 -o "^runtime_file_name^".o "^runtime_file_name) in
-   let r3c = ("gcc -m32 -o "^filename^" "^assembly_file_name^".o "^runtime_file_name^".o") in
+   let r2c = ("gcc -m32 "^(if has_debug "gdb" then "-g " else "")^"-c -O2 -o "^runtime_file_name^".o "^runtime_file_name) in
+   let r3c = ("gcc -m32 "^(if has_debug "gdb" then "-g " else "")^"-o "^
+      filename^" "^assembly_file_name^".o "^runtime_file_name^".o") in
    let r1 = Sys.command (r1c^" 2> /dev/null")  in
    let r2 = Sys.command (r2c^" 2> /dev/null") in
    let r3 = Sys.command (r3c^" 2> /dev/null") in
@@ -741,6 +742,12 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   // new heap, so the first location of array will contain the new address\n";
    output_string o "   if(size == -1) {\n";
    output_string o "       return (int*)old_array[1];\n";
+   output_string o "   }\n";
+   output_string o "\n";
+   output_string o "   // If the size is zero, we still have one word of data to copy to the\n";
+   output_string o "   // new heap\n";
+   output_string o "   else if(size == 0) {\n";
+   output_string o "       ++size;\n";
    output_string o "   }\n";
    output_string o "\n";
    output_string o "   // Mark the old array as invalid, create the new array\n";
@@ -893,14 +900,14 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   array_size = (data_size == 0) ? 2 : data_size + 1;\n";
    output_string o "\n";
    output_string o "   // Check if the heap has space for the allocation\n";
-   output_string o "   if(words_allocated + data_size >= HEAP_SIZE)\n";
+   output_string o "   if(words_allocated + array_size >= HEAP_SIZE)\n";
    output_string o "   {\n";
    output_string o "#ifdef ENABLE_GC\n";
    output_string o "      // Garbage collect\n";
    output_string o "      gc(esp);\n";
    output_string o "\n";
    output_string o "      // Check if the garbage collection free enough space for the allocation\n";
-   output_string o "      if(words_allocated + data_size >= HEAP_SIZE) {\n";
+   output_string o "      if(words_allocated + array_size >= HEAP_SIZE) {\n";
    output_string o "#endif\n";
    output_string o "         printf(\"out of memory\\n\"); // NOTE: we've added a newline\n";
    output_string o "         exit(-1);\n";

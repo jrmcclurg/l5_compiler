@@ -58,6 +58,7 @@ let rec output_program out p = match p with
      let _ = List.fold_left (fun flag f ->
         if flag then output_string out "\n";
         output_func out f;
+        output_string out "\n";
         true
      ) false fl in ();
      output_string out "\n)\n"

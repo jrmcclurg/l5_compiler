@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define HEAP_SIZE 1048576  // one megabyte
+//#define HEAP_SIZE 1048576  // one megabyte
 //#define HEAP_SIZE 20       // small heap size for testing
 #define ENABLE_GC          // uncomment this to enable GC
 //#define GC_DEBUG           // uncomment this to enable GC debugging
@@ -108,6 +108,12 @@ int *gc_copy(int *old)  {
    // new heap, so the first location of array will contain the new address
    if(size == -1) {
        return (int*)old_array[1];
+   }
+
+   // If the size is zero, we still have one word of data to copy to the
+   // new heap
+   else if(size == 0) {
+       ++size;
    }
 
    // Mark the old array as invalid, create the new array
@@ -220,7 +226,7 @@ asm(
    "popl %edi\n"  // restore edi
    "pushl %edx\n" // put back arg 2
    "pushl %ecx\n" // put back arg 1
-   "subl $8, %esp\n" // skip over the temp ebx
+   "subl $8, %esp\n" // skip over old ebx
    "popl %edx\n"  // original return addr
    "popl %ecx\n"  // junk
    "pushl %edx\n"  // restore return addr
@@ -260,14 +266,14 @@ void* allocate_helper(int fw_size, void *fw_fill, int *esp)
    array_size = (data_size == 0) ? 2 : data_size + 1;
 
    // Check if the heap has space for the allocation
-   if(words_allocated + data_size >= HEAP_SIZE)
+   if(words_allocated + array_size >= HEAP_SIZE)
    {
 #ifdef ENABLE_GC
       // Garbage collect
       gc(esp);
 
       // Check if the garbage collection free enough space for the allocation
-      if(words_allocated + data_size >= HEAP_SIZE) {
+      if(words_allocated + array_size >= HEAP_SIZE) {
 #endif
          printf("out of memory\n"); // NOTE: we've added a newline
          exit(-1);
