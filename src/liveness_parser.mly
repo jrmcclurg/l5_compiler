@@ -76,7 +76,7 @@ instr:
    | LPAREN var GETS LPAREN ARRAYERR tval tval RPAREN RPAREN { let r = $2 in
                                                                (match r with
                                                                 | VarOrReg(_,id,_) -> if id == eax_id then ()
-                                                                | _ -> parse_error "destination must be eax");
+                                                                else parse_error "destination must be eax");
                                                                ArrayErrorInstr(get_current_pos (), $6, $7) }
 ;
 

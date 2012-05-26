@@ -17,8 +17,6 @@ open L2_ast;;
 open Utils;;
 open Flags;;
 
-let num_unions = ref 0;;
-
 let debug_enabled () =
    let result = has_debug "2" in 
    result
@@ -230,13 +228,13 @@ let compute_ins (gens : IntSet.t) (kills : IntSet.t) (outs : IntSet.t) : IntSet.
  * 
  * returns a list of tuples (i, ins, outs) having the final results
  *)
-let count = ref 0;;
 let rec liveness_helper (il : (int,(instr * IntSet.t * IntSet.t * IntSet.t * IntSet.t * bool)) Hashtbl.t) (currents : IntSet.t) : unit =
    (*print_string "liveness_helper: currents = ";
    print_int_list currents;
    print_string "\n";*)
    (* go through the instructions *)
    let (change,new_currents) = IntSet.fold (fun c (flag,res) ->
+      (*print_string ("current: "^(string_of_int c)^"\n");*)
       let (i,ins,outs,prevs,nexts,processed) = Hashtbl.find il c in (* TODO - what if error? *)
       let prev_ins = IntSet.fold (fun p res ->
          let (_,ins,_,_,_,_) = Hashtbl.find il p in
@@ -255,7 +253,6 @@ let rec liveness_helper (il : (int,(instr * IntSet.t * IntSet.t * IntSet.t * Int
       if processed && (IntSet.equal new_ins ins) && (IntSet.equal new_outs outs) then
          (flag,res)
       else (
-       count := !count + 1;
        Hashtbl.replace il c (i,new_ins,new_outs,prevs,nexts,true);
        (true,IntSet.union prevs res)
       )
@@ -330,7 +327,7 @@ let liveness (il : instr list) : ((instr * IntSet.t * IntSet.t) list) =
    ) itable;*)
    (* add an empty "in" and "out" list for each instruction *)
    (* get the ins and outs (this is a fixpoint operator *)
-   liveness_helper itable (if len >= 0 then IntSet.singleton (len-1) else IntSet.empty);
+   liveness_helper itable (if len > 0 then IntSet.singleton (len-1) else IntSet.empty);
    (*print_string ("List length: "^(string_of_int len)^"\n");*)
    let rec to_list = (fun k arr -> 
       if k < 0 then arr else
