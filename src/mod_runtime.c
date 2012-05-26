@@ -2,18 +2,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define HEAP_SIZE 1048576 // the heap size
-//#define HEAP_SIZE 1048576  // one megabyte
+#define HEAP_SIZE 1048576  // one megabyte
 //#define HEAP_SIZE 20       // small heap size for testing
 #define ENABLE_GC          // uncomment this to enable GC
-#define GC_DEBUG           // uncomment this to enable GC debugging
+//#define GC_DEBUG           // uncomment this to enable GC debugging
 
-void **heap;      // the current heap
-void **heap2;     // the heap for copying
-void **heap_temp; // a pointer used for swapping heap/heap2
+typedef struct {
+   int *allocptr;           // current allocation position
+   int words_allocated;
+   void **data;
+   char *valid;
+} heap_t;
 
-int *allocptr;           // current allocation position
-int words_allocated = 0;
+heap_t heap;      // the current heap
+heap_t heap2;     // the heap for copying
 
 int *stack; // pointer to the bottom of the stack (i.e. value
             // upon program startup)
@@ -62,30 +64,35 @@ int print(void *l) {
    return 1;
 }
 
-/*
- * Runtime function for printing an array as a string
- */
-void print_str(int **in) {
-   int i, x, size;
-   int **data;
-   int c;
+void reset_heap(heap_t *h) {
+   h->allocptr = (int*)h->data;
+   h->words_allocated = 0;
+}
 
-   if(in == NULL) {
-      printf("nil");
-      return;
-   }
-   x = (int)in;
-   if(x & 1) {
-      printf("%i\n", x >> 1);
-   } else {
-      size= (int)(*in);
-      data = in + 1;
-      //fwrite(data,sizeof(char),size,stdout);
-      for(i = 0; i < size; i++) {
-         c = (int)data[i];
-         putchar(c >> 1);
-      }
-   }
+int alloc_heap(heap_t *h) {
+   h->data = (void*)malloc(HEAP_SIZE * sizeof(void*));
+   h->valid = (void*)malloc(HEAP_SIZE * sizeof(char));
+   reset_heap(h);
+   return (h->data != NULL && h->valid != NULL);
+}
+
+void switch_heaps() {
+   int *temp_allocptr = heap.allocptr;
+   int temp_words_allocated = heap.words_allocated;
+   void **temp_data = heap.data;
+   char *temp_valid = heap.valid;
+
+   heap.allocptr = heap2.allocptr;
+   heap.words_allocated = heap2.words_allocated;
+   heap.data = heap2.data;
+   heap.valid = heap2.valid;
+
+   heap2.allocptr = temp_allocptr;
+   heap2.words_allocated = temp_words_allocated;
+   heap2.data = temp_data;
+   heap2.valid = temp_valid;
+
+   reset_heap(&heap);
 }
 
 /*
@@ -96,10 +103,20 @@ void print_str(int **in) {
 int *gc_copy(int *old)  {
    int i, size, array_size;
    int *old_array, *new_array, *first_array_location;
+   int valid_index;
+   char is_valid;
+   char *valid;
 
    // If not a pointer or not a pointer to a heap location, return input value
-   if((int)old % 4 != 0 || (void**)old < heap2 || (void**)old >= heap2 + HEAP_SIZE) {
-       return old;
+   if((int)old % 4 != 0 || (void**)old < heap2.data || (void**)old >= heap2.data + heap2.words_allocated) {
+      return old;
+   }
+   
+   // if not pointing at a valid heap object, return input value
+   valid_index = (int)((void**)old - heap2.data);
+   is_valid = heap2.valid[valid_index];
+   if(!is_valid) {
+      return old;
    }
 
    old_array = (int*)old;
@@ -118,15 +135,16 @@ int *gc_copy(int *old)  {
    }
 
 #ifdef GC_DEBUG
-   printf("gc_copy(): old=%p new=%p: size=%d asize=%d total=%d\n", old, allocptr, size, array_size, words_allocated);
-   fflush(stdout);
+   printf("gc_copy(): valid=%d old=%p new=%p: size=%d asize=%d total=%d\n", is_valid, old, heap.allocptr, size, array_size, heap.words_allocated);
 #endif
+
+   valid = heap.valid + heap.words_allocated;
 
    // Mark the old array as invalid, create the new array
    old_array[0] = -1;
-   new_array = allocptr;
-   allocptr += array_size;
-   words_allocated += array_size;
+   new_array = heap.allocptr;
+   heap.allocptr += array_size;
+   heap.words_allocated += array_size;
 
    // The value of old_array[1] needs to be handled specially
    // since it holds a pointer to the new heap object
@@ -137,9 +155,13 @@ int *gc_copy(int *old)  {
    new_array[0] = size;
    new_array[1] = (int)gc_copy(first_array_location);
 
+   valid[0] = 1;
+   valid[1] = 0;
+
    // Call gc_copy on the remaining values of the array
    for (i = 2; i < array_size; i++) {
       new_array[i] = (int)gc_copy((int*)old_array[i]);
+      valid[i] = 0;
    }
 
    return new_array;
@@ -151,21 +173,15 @@ int *gc_copy(int *old)  {
 void gc(int *esp) {
    int i;
    int stack_size = stack - esp + 1;       // calculate the stack size
-   int prev_words_alloc = words_allocated;
+   int prev_words_alloc = heap.words_allocated;
 
 #ifdef GC_DEBUG
-   //printf("GC: stack=(%p,%p) (size %d): ", esp, stack, stack_size);
+   printf("GC: stack=(%p,%p) (size %d): ", esp, stack, stack_size);
 #endif
 
    // swap in the empty heap to use for storing
    // compacted objects
-   heap_temp = heap;
-   heap = heap2;
-   heap2 = heap_temp;
-
-   // reset heap position
-   allocptr = (int*)heap;
-   words_allocated = 0;
+   switch_heaps();
 
    // NOTE: the edi/esi register contents could also be
    // roots, but these have been placed in the stack
@@ -179,7 +195,7 @@ void gc(int *esp) {
    }
 
 #ifdef GC_DEBUG
-   //printf("reclaimed %d words\n", (prev_words_alloc - words_allocated));
+   printf("reclaimed %d words\n", (prev_words_alloc - heap.words_allocated));
 #endif
 }
 
@@ -246,6 +262,7 @@ asm(
 void* allocate_helper(int fw_size, void *fw_fill, int *esp)
 {
    int i, data_size, array_size;
+   char *valid;
    int *ret;
 
    if(!(fw_size & 1)) {
@@ -262,9 +279,9 @@ void* allocate_helper(int fw_size, void *fw_fill, int *esp)
    }
 
 #ifdef GC_DEBUG
-   printf("runtime.c: allocate(%d,%d (%p)) @ %p: ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\n",
-          data_size, fw_fill, fw_fill, allocptr, esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);
-   fflush(stdout);
+   //printf("runtime.c: allocate(%d,%d (%p)) @ %p: ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\n",
+   //       data_size, (int)fw_fill, fw_fill, heap.allocptr, esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);
+   //fflush(stdout);
 #endif
 
    // Even if there is no data, allocate an array of two words
@@ -273,14 +290,14 @@ void* allocate_helper(int fw_size, void *fw_fill, int *esp)
    array_size = (data_size == 0) ? 2 : data_size + 1;
 
    // Check if the heap has space for the allocation
-   if(words_allocated + array_size >= HEAP_SIZE)
+   if(heap.words_allocated + array_size >= HEAP_SIZE)
    {
 #ifdef ENABLE_GC
       // Garbage collect
       gc(esp);
 
       // Check if the garbage collection free enough space for the allocation
-      if(words_allocated + array_size >= HEAP_SIZE) {
+      if(heap.words_allocated + array_size >= HEAP_SIZE) {
 #endif
          printf("out of memory\n"); // NOTE: we've added a newline
          exit(-1);
@@ -290,27 +307,33 @@ void* allocate_helper(int fw_size, void *fw_fill, int *esp)
    }
 
    // Do the allocation
-   ret = allocptr;
-   allocptr += array_size;
-   words_allocated += array_size;
+   ret = heap.allocptr;
+   valid = heap.valid + heap.words_allocated;
+   heap.allocptr += array_size;
+   heap.words_allocated += array_size;
 
    // Set the size of the array to be the desired size
    ret[0] = data_size;
+
+   // record this as a heap object
+   valid[0] = 1;
 
    // If there is no data, set the value of the array to be a number
    // so it can be properly garbage collected
    if(data_size == 0) {
       ret[1] = 1;
-      printf(" set %p to 1\n", &ret[1]);
-      fflush(stdout);
+      valid[1] = 0;
+      //printf(" set %p to 1\n", &ret[1]);
+      //fflush(stdout);
    } else {
       // Fill the array with the fill value
       for(i = 1; i < array_size; i++) {
          ret[i] = (int)fw_fill;
-         printf(" set %p to %d (%p)", &ret[i], fw_fill, fw_fill);
+         valid[i] = 0;
+         //printf(" set %p to %d (%p)", &ret[i], fw_fill, fw_fill);
       }
-      printf("\n");
-      fflush(stdout);
+      //printf("\n");
+      //fflush(stdout);
    }
 
    return ret;
@@ -325,17 +348,17 @@ int print_error(int *array, int fw_x) {
    exit(0);
 }
 
+
 /*
  * Program entry-point
  */
 int main() {
-   heap  = (void*)malloc(HEAP_SIZE * sizeof(void*));
-   heap2 = (void*)malloc(HEAP_SIZE * sizeof(void*));
-   allocptr = (int*)heap;
+   int b1 = alloc_heap(&heap);
+   int b2 = alloc_heap(&heap2);
    // NOTE: allocptr needs to appear in the following check, because otherwise
    // gcc apparently optimizes away the assignment (i.e. the allocate_helper function
    // sees allocptr as NULL)
-   if(!allocptr || !heap2) {
+   if(!b1 || !b2) {
       printf("malloc failed\n");
       exit(-1);
    }

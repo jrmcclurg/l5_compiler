@@ -934,16 +934,16 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   // so it can be properly garbage collected\n";
    output_string o "   if(data_size == 0) {\n";
    output_string o "      ret[1] = 1;\n";
-   output_string o "      printf(\" set %p to 1\\n\", &ret[1]);\n";
-   output_string o "      fflush(stdout);\n";
+   output_string o "      //printf(\" set %p to 1\\n\", &ret[1]);\n";
+   output_string o "      //fflush(stdout);\n";
    output_string o "   } else {\n";
    output_string o "      // Fill the array with the fill value\n";
    output_string o "      for(i = 1; i < array_size; i++) {\n";
    output_string o "         ret[i] = (int)fw_fill;\n";
-   output_string o "         printf(\" set %p to %d (%p)\", &ret[i], fw_fill, fw_fill);\n";
+   output_string o "         //printf(\" set %p to %d (%p)\", &ret[i], fw_fill, fw_fill);\n";
    output_string o "      }\n";
-   output_string o "      printf(\"\\n\");\n";
-   output_string o "      fflush(stdout);\n";
+   output_string o "      //printf(\"\\n\");\n";
+   output_string o "      //fflush(stdout);\n";
    output_string o "   }\n";
    output_string o "\n";
    output_string o "   return ret;\n";
@@ -998,15 +998,15 @@ let generate_runtime (o : out_channel) : unit =
 
 (* this dumps the binary, given a program AST *)
 let generate_binary (result : program) (output_file_name : string) : unit = 
-   let runtime_file_name = (Filename.temp_file ?temp_dir:(Some("")) "runtime_" ".c") in
+   let runtime_file_name = "runtime.c" (*(Filename.temp_file ?temp_dir:(Some("")) "runtime_" ".c")*) in
    let assembly_file_name = (Filename.temp_file ?temp_dir:(Some("")) "prog_" ".S") in
    (* generate the C runtime *)
-   let out1 = (try (open_out runtime_file_name)
+   (*let out1 = (try (open_out runtime_file_name)
       with _ -> die_system_error ("can't write to file: "^
          (Sys.getcwd ())^"/"^(runtime_file_name))
    ) in
    generate_runtime out1;
-   close_out out1;
+   close_out out1;*) (* TODO XXX - enable this *)
    (* generate the assembly code *)
    let out2 = (try (open_out assembly_file_name)
       with _ -> die_system_error ("can't write to file: "^
