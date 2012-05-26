@@ -613,10 +613,10 @@ let compile_and_link (filename : string) (assembly_file_name : string) (runtime_
    if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));
    if (r3 <> 0) then die_system_error ("compiler/linker failed: \""^r3c^"\" returned "^(string_of_int r3));
    (* delete all the temporary files *)
-   Unix.unlink assembly_file_name;
+   (*Unix.unlink assembly_file_name;
    Unix.unlink (assembly_file_name^".o");
    Unix.unlink runtime_file_name;
-   Unix.unlink (runtime_file_name^".o");
+   Unix.unlink (runtime_file_name^".o");*)
 ;;
 
 (*
@@ -727,7 +727,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o " * the empty heap\n";
    output_string o " */\n";
    output_string o "int *gc_copy(int *old)  {\n";
-   output_string o "   int i, size;\n";
+   output_string o "   int i, size, array_size;\n";
    output_string o "   int *old_array, *new_array, *first_array_location;\n";
    output_string o "\n";
    output_string o "   // If not a pointer or not a pointer to a heap location, return input value\n";
@@ -737,24 +737,29 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "\n";
    output_string o "   old_array = (int*)old;\n";
    output_string o "   size = old_array[0];\n";
+   output_string o "   array_size = size + 1;\n";
    output_string o "\n";
    output_string o "   // If the size is negative, the array has already been copied to the\n";
    output_string o "   // new heap, so the first location of array will contain the new address\n";
    output_string o "   if(size == -1) {\n";
    output_string o "       return (int*)old_array[1];\n";
    output_string o "   }\n";
-   output_string o "\n";
    output_string o "   // If the size is zero, we still have one word of data to copy to the\n";
    output_string o "   // new heap\n";
    output_string o "   else if(size == 0) {\n";
-   output_string o "       ++size;\n";
+   output_string o "       array_size = 2;\n";
    output_string o "   }\n";
+   output_string o "\n";
+   output_string o "#ifdef GC_DEBUG\n";
+   output_string o "   printf(\"gc_copy(): old=%p new=%p: size=%d asize=%d total=%d\\n\", old, allocptr, size, array_size, words_allocated);\n";
+   output_string o "   fflush(stdout);\n";
+   output_string o "#endif\n";
    output_string o "\n";
    output_string o "   // Mark the old array as invalid, create the new array\n";
    output_string o "   old_array[0] = -1;\n";
    output_string o "   new_array = allocptr;\n";
-   output_string o "   allocptr += (size + 1);\n";
-   output_string o "   words_allocated += (size + 1);\n";
+   output_string o "   allocptr += array_size;\n";
+   output_string o "   words_allocated += array_size;\n";
    output_string o "\n";
    output_string o "   // The value of old_array[1] needs to be handled specially\n";
    output_string o "   // since it holds a pointer to the new heap object\n";
@@ -766,7 +771,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   new_array[1] = (int)gc_copy(first_array_location);\n";
    output_string o "\n";
    output_string o "   // Call gc_copy on the remaining values of the array\n";
-   output_string o "   for (i = 2; i <= size; i++) {\n";
+   output_string o "   for (i = 2; i < array_size; i++) {\n";
    output_string o "      new_array[i] = (int)gc_copy((int*)old_array[i]);\n";
    output_string o "   }\n";
    output_string o "\n";
@@ -782,7 +787,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   int prev_words_alloc = words_allocated;\n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   printf(\"GC: stack=(%p,%p) (size %d): \", esp, stack, stack_size);\n";
+   output_string o "   //printf(\"GC: stack=(%p,%p) (size %d): \", esp, stack, stack_size);\n";
    output_string o "#endif\n";
    output_string o "\n";
    output_string o "   // swap in the empty heap to use for storing\n";
@@ -807,7 +812,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   }\n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   printf(\"reclaimed %d words\\n\", (prev_words_alloc - words_allocated));\n";
+   output_string o "   //printf(\"reclaimed %d words\\n\", (prev_words_alloc - words_allocated));\n";
    output_string o "#endif\n";
    output_string o "}\n";
    output_string o "\n";
@@ -876,11 +881,6 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   int i, data_size, array_size;\n";
    output_string o "   int *ret;\n";
    output_string o "\n";
-   output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   printf(\"runtime.c: allocate(): ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\\n\",\n";
-   output_string o "          esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
-   output_string o "#endif\n";
-   output_string o "\n";
    output_string o "   if(!(fw_size & 1)) {\n";
    output_string o "      printf(\"allocate called with size input that was not an encoded integer, %i\\n\",\n";
    output_string o "             fw_size);\n";
@@ -893,6 +893,12 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "      printf(\"allocate called with size of %i\\n\", data_size);\n";
    output_string o "      exit(-1);\n";
    output_string o "   }\n";
+   output_string o "\n";
+   output_string o "#ifdef GC_DEBUG\n";
+   output_string o "   printf(\"runtime.c: allocate(%d,%d (%p)) @ %p: ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\\n\",\n";
+   output_string o "          data_size, fw_fill, fw_fill, allocptr, esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
+   output_string o "   fflush(stdout);\n";
+   output_string o "#endif\n";
    output_string o "\n";
    output_string o "   // Even if there is no data, allocate an array of two words\n";
    output_string o "   // so we can hold a forwarding pointer and an int representing if\n";
@@ -928,11 +934,16 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   // so it can be properly garbage collected\n";
    output_string o "   if(data_size == 0) {\n";
    output_string o "      ret[1] = 1;\n";
+   output_string o "      printf(\" set %p to 1\\n\", &ret[1]);\n";
+   output_string o "      fflush(stdout);\n";
    output_string o "   } else {\n";
    output_string o "      // Fill the array with the fill value\n";
-   output_string o "      for(i = 0; i < data_size; i++) {\n";
-   output_string o "         ret[i+1] = (int)fw_fill;\n";
+   output_string o "      for(i = 1; i < array_size; i++) {\n";
+   output_string o "         ret[i] = (int)fw_fill;\n";
+   output_string o "         printf(\" set %p to %d (%p)\", &ret[i], fw_fill, fw_fill);\n";
    output_string o "      }\n";
+   output_string o "      printf(\"\\n\");\n";
+   output_string o "      fflush(stdout);\n";
    output_string o "   }\n";
    output_string o "\n";
    output_string o "   return ret;\n";

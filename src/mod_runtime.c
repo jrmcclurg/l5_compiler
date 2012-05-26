@@ -2,10 +2,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define HEAP_SIZE 1048576 // the heap size
 //#define HEAP_SIZE 1048576  // one megabyte
 //#define HEAP_SIZE 20       // small heap size for testing
 #define ENABLE_GC          // uncomment this to enable GC
-//#define GC_DEBUG           // uncomment this to enable GC debugging
+#define GC_DEBUG           // uncomment this to enable GC debugging
 
 void **heap;      // the current heap
 void **heap2;     // the heap for copying
@@ -93,7 +94,7 @@ void print_str(int **in) {
  * the empty heap
  */
 int *gc_copy(int *old)  {
-   int i, size;
+   int i, size, array_size;
    int *old_array, *new_array, *first_array_location;
 
    // If not a pointer or not a pointer to a heap location, return input value
@@ -103,24 +104,29 @@ int *gc_copy(int *old)  {
 
    old_array = (int*)old;
    size = old_array[0];
+   array_size = size + 1;
 
    // If the size is negative, the array has already been copied to the
    // new heap, so the first location of array will contain the new address
    if(size == -1) {
        return (int*)old_array[1];
    }
-
    // If the size is zero, we still have one word of data to copy to the
    // new heap
    else if(size == 0) {
-       ++size;
+       array_size = 2;
    }
+
+#ifdef GC_DEBUG
+   printf("gc_copy(): old=%p new=%p: size=%d asize=%d total=%d\n", old, allocptr, size, array_size, words_allocated);
+   fflush(stdout);
+#endif
 
    // Mark the old array as invalid, create the new array
    old_array[0] = -1;
    new_array = allocptr;
-   allocptr += (size + 1);
-   words_allocated += (size + 1);
+   allocptr += array_size;
+   words_allocated += array_size;
 
    // The value of old_array[1] needs to be handled specially
    // since it holds a pointer to the new heap object
@@ -132,7 +138,7 @@ int *gc_copy(int *old)  {
    new_array[1] = (int)gc_copy(first_array_location);
 
    // Call gc_copy on the remaining values of the array
-   for (i = 2; i <= size; i++) {
+   for (i = 2; i < array_size; i++) {
       new_array[i] = (int)gc_copy((int*)old_array[i]);
    }
 
@@ -148,7 +154,7 @@ void gc(int *esp) {
    int prev_words_alloc = words_allocated;
 
 #ifdef GC_DEBUG
-   printf("GC: stack=(%p,%p) (size %d): ", esp, stack, stack_size);
+   //printf("GC: stack=(%p,%p) (size %d): ", esp, stack, stack_size);
 #endif
 
    // swap in the empty heap to use for storing
@@ -173,7 +179,7 @@ void gc(int *esp) {
    }
 
 #ifdef GC_DEBUG
-   printf("reclaimed %d words\n", (prev_words_alloc - words_allocated));
+   //printf("reclaimed %d words\n", (prev_words_alloc - words_allocated));
 #endif
 }
 
@@ -242,11 +248,6 @@ void* allocate_helper(int fw_size, void *fw_fill, int *esp)
    int i, data_size, array_size;
    int *ret;
 
-#ifdef GC_DEBUG
-   printf("runtime.c: allocate(): ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\n",
-          esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);
-#endif
-
    if(!(fw_size & 1)) {
       printf("allocate called with size input that was not an encoded integer, %i\n",
              fw_size);
@@ -259,6 +260,12 @@ void* allocate_helper(int fw_size, void *fw_fill, int *esp)
       printf("allocate called with size of %i\n", data_size);
       exit(-1);
    }
+
+#ifdef GC_DEBUG
+   printf("runtime.c: allocate(%d,%d (%p)) @ %p: ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\n",
+          data_size, fw_fill, fw_fill, allocptr, esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);
+   fflush(stdout);
+#endif
 
    // Even if there is no data, allocate an array of two words
    // so we can hold a forwarding pointer and an int representing if
@@ -294,11 +301,16 @@ void* allocate_helper(int fw_size, void *fw_fill, int *esp)
    // so it can be properly garbage collected
    if(data_size == 0) {
       ret[1] = 1;
+      printf(" set %p to 1\n", &ret[1]);
+      fflush(stdout);
    } else {
       // Fill the array with the fill value
-      for(i = 0; i < data_size; i++) {
-         ret[i+1] = (int)fw_fill;
+      for(i = 1; i < array_size; i++) {
+         ret[i] = (int)fw_fill;
+         printf(" set %p to %d (%p)", &ret[i], fw_fill, fw_fill);
       }
+      printf("\n");
+      fflush(stdout);
    }
 
    return ret;
