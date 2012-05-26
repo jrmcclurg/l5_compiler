@@ -544,77 +544,52 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
    flush stdout );*)
    (* perform the liveness analysis based on the instruction list *)
    let il2 = liveness il in
-   (*print_string ("   done.\n");
-   flush stdout;*)
    (* make sure all of the usable registers are connected *)
    let l1 = List.fold_right IntSet.add
             [eax_id;ebx_id;ecx_id;edi_id;edx_id;esi_id] IntSet.empty in
    (* create an empty hashtable for the graph *)
    let h = ((Hashtbl.create (IntSet.cardinal l1)) : (int, IntSet.t) Hashtbl.t) in
    (* add edges between all the usable registers *)
-   (*print_string ("   adding all edges: "^(string_of_int (List.length l1))^"... ");
-   flush stdout;*)
    add_all_edges l1 l1 None h;
-   (*print_string ("   done.\n");
-   flush stdout;*)
    (* populate h with the conflict graph *)
-   (*print_string ("   computing adj table: "^(string_of_int (List.length il2))^"... ");
-   flush stdout;*)
    compute_adjacency_table il2 h true;
-   (*print_string ("   done.\n");
-   flush stdout;*)
    (* find all the source vertices in graph h *)
    let keys = Hashtbl.fold (fun k tab res -> 
       (k,tab)::res
    ) h [] in
    (* sort the source vertices by (ascending order of) number of conflicts *)
-   (*print_string ("   sorting keys: "^(string_of_int (List.length keys))^"... ");
-   flush stdout;*)
    let keyst = List.sort (fun (a,at) (b,bt) -> compare (IntSet.cardinal bt) (IntSet.cardinal at)) keys in (* XXX *)
    let keys2 = List.map (fun (k,tab) -> k) keyst in
-   (*print_string ("   done.\n");
-   flush stdout;*)
    (* now we do the heuristic graph coloring *)
    (* create a hashtable for mapping variable ids to their register (color) assignments *)
    let assignments = ((Hashtbl.create (IntSet.cardinal l1)) : (int,int) Hashtbl.t) in
    (* go through the graph (via the sorted keys2 list)
     * and compute the return values (ag,colors,ok) *)
-   (*print_string ("   folding: "^(string_of_int (List.length keys2))^"... ");
-   flush stdout;*)
-   let the_max = ref 0 in
-   let the_num = ref 0 in
-   let the_prev = ref 0 in
-   let the_prev_max = ref 0 in
-   let the_counter = ref 0 in
-   let (ag,colors,ok) = List.fold_left (fun (r2,r3,flag) x -> 
-      (*if debug_enabled () then ( print_string ("Examining key: "^(get_symbol x)^"\n");
-      flush stdout );*)
+   let (ag,colors,ok,the_max,the_num,_,_,_) =
+   List.fold_left (fun (r2,r3,flag,the_max_local,the_num_local,the_prev_local,the_prev_max_local,the_counter_local) x -> 
       (* find the current source variable "x" in the graph
        * (v is the corresponding var data structure, and 
        * tb is the hashtable of destinations) *)
       (* get the list of destination variables *)
       let tbl = Hashtbl.find h x in
-      (*let v = Var(NoPos,x) in*) (* XXX - this is a hack - remove it *)
       let test = IntSet.cardinal tbl in
-      if test > !the_max then the_max := test;
-      let diff = max 0 (!the_prev - test) in
-      let check = (max 0 (estimate_spill_num test diff (!the_counter+1) (List.length keys2))) in
+      let the_max_local_2 = if test > the_max_local then test else the_max_local in
+      let diff = max 0 (the_prev_local - test) in
+      let check = (max 0 (estimate_spill_num test diff (the_counter_local+1) (List.length keys2))) in
       if has_debug "spill" then (
-         print_string ((string_of_int (!the_counter+1))^"/"^(string_of_int (List.length keys2))^
+         print_string ((string_of_int (the_counter_local+1))^"/"^(string_of_int (List.length keys2))^
                        ". Edges: "^(string_of_int test)^" diff = "^(string_of_int diff)^" (est = "^(string_of_int check)^")\n");
          flush stdout
       );
-      if (check > !the_prev_max) then (the_num := !the_counter; the_prev_max := check );
-      the_prev := test;
-      the_counter := !the_counter + 1;
-      (*if debug_enabled () then ( print_string ("   "^(string_of_int (IntSet.cardinal tbl))^" conflicts\n");
-      flush stdout );*)
+      let the_num_local_2 = if check > the_prev_max_local then the_counter_local else the_num_local in
+      let the_prev_max_local_2 = if check > the_prev_max_local then check else the_prev_max_local in
+      let the_prev_local_2 = test in
+      let the_counter_local_2 = the_counter_local + 1 in
       (* go through all of the usable registers l1, 
        * and compute an optional color (register)
        * assignment l2 *)
       let l2 = IntSet.fold (fun the_id r ->
          (* the_id is the current register id *)
-         (*let the_id = (get_var_id l3) in*)
          (* check if "r" already contains a coloring *)
          match r with
          (* if "r" does not contain a coloring yet... *)
@@ -642,13 +617,6 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
              * table of assignments) *)
             else (
                Hashtbl.add assignments x the_id;
-      (*if debug_enabled () then (
-      print_string "   Computed assignment: ";
-      print_string (get_symbol x);
-      print_string " -> ";
-      print_var l3;
-      print_string "\n";
-      flush stdout );*)
                (Some(the_id))
             )
          (* if "r" already contains a coloring, just use that one *)
@@ -659,13 +627,9 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
        * the updated list of coloring assignments, and
        * f, the updated status of the coloring (true iff successful
        * coloring) *)
-      (*print_string "Checking var: ";
-      print_string (get_symbol x);
-      print_string "\n";*)
       let (newl,f) = (
       (* if the current source vertex is a variable... *)
       if (not (is_register x)) then (
-         (*print_string "   IT IS A VAR\n";*)
          (* if we found a valid coloring for v, update the list of
           * coloring assignments *)
          (match l2 with
@@ -680,13 +644,11 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
        * list (newl) and the result status (f && flag) which is
        * true iff ALL source vertices are able to be assigned a
        * color properly *)
-      (r2@[(x,tbl)],newl,f && flag)
-   ) ([],[],true) keys2 in
-   (*if debug_enabled () then ( print_string ("   DONE COLORING = \n"^(if ok then "SUCCESS" else "FAIL")^"\n");
-   flush stdout );*)
-   let num_to_spill = max 1 (min !the_num !the_max) in
+      (r2@[(x,tbl)],newl,f && flag,the_max_local_2,the_num_local_2,the_prev_local_2,the_prev_max_local_2,the_counter_local_2)
+   ) ([],[],true,0,0,0,0,0) keys2 in
+   let num_to_spill = max 1 (min the_num the_max) in
    if has_debug "spill" then (
-      print_string ("Max edges: "^(string_of_int !the_max)^" (spill estimate: "^(string_of_int num_to_spill)^")\n");
+      print_string ("Max edges: "^(string_of_int the_max)^" (spill estimate: "^(string_of_int num_to_spill)^")\n");
       flush stdout
    );
    (ag,colors,ok,num_to_spill)
