@@ -53,7 +53,6 @@ void print_content(void **in, int depth) {
    }
 }
 
-
 /*
  * Runtime "print" function
  */

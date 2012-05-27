@@ -641,12 +641,15 @@ let generate_runtime (o : out_channel) : unit =
    output_string o ((if !gc_enabled then "" else "//")^"#define ENABLE_GC          // uncomment this to enable GC\n");
    output_string o ((if has_debug "gc" then "" else "//")^"#define GC_DEBUG           // uncomment this to enable GC debugging\n");
    output_string o "\n";
-   output_string o "void **heap;      // the current heap\n";
-   output_string o "void **heap2;     // the heap for copying\n";
-   output_string o "void **heap_temp; // a pointer used for swapping heap/heap2\n";
+   output_string o "typedef struct {\n";
+   output_string o "   int *allocptr;           // current allocation position\n";
+   output_string o "   int words_allocated;\n";
+   output_string o "   void **data;\n";
+   output_string o "   char *valid;\n";
+   output_string o "} heap_t;\n";
    output_string o "\n";
-   output_string o "int *allocptr;           // current allocation position\n";
-   output_string o "int words_allocated = 0;\n";
+   output_string o "heap_t heap;      // the current heap\n";
+   output_string o "heap_t heap2;     // the heap for copying\n";
    output_string o "\n";
    output_string o "int *stack; // pointer to the bottom of the stack (i.e. value\n";
    output_string o "            // upon program startup)\n";
@@ -684,7 +687,6 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   }\n";
    output_string o "}\n";
    output_string o "\n";
-   output_string o "\n";
    output_string o "/*\n";
    output_string o " * Runtime \"print\" function\n";
    output_string o " */\n";
@@ -695,30 +697,35 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   return 1;\n";
    output_string o "}\n";
    output_string o "\n";
-   output_string o "/*\n";
-   output_string o " * Runtime function for printing an array as a string\n";
-   output_string o " */\n";
-   output_string o "void print_str(int **in) {\n";
-   output_string o "   int i, x, size;\n";
-   output_string o "   int **data;\n";
-   output_string o "   int c;\n";
+   output_string o "void reset_heap(heap_t *h) {\n";
+   output_string o "   h->allocptr = (int*)h->data;\n";
+   output_string o "   h->words_allocated = 0;\n";
+   output_string o "}\n";
    output_string o "\n";
-   output_string o "   if(in == NULL) {\n";
-   output_string o "      printf(\"nil\");\n";
-   output_string o "      return;\n";
-   output_string o "   }\n";
-   output_string o "   x = (int)in;\n";
-   output_string o "   if(x & 1) {\n";
-   output_string o "      printf(\"%i\\n\", x >> 1);\n";
-   output_string o "   } else {\n";
-   output_string o "      size= (int)(*in);\n";
-   output_string o "      data = in + 1;\n";
-   output_string o "      //fwrite(data,sizeof(char),size,stdout);\n";
-   output_string o "      for(i = 0; i < size; i++) {\n";
-   output_string o "         c = (int)data[i];\n";
-   output_string o "         putchar(c >> 1);\n";
-   output_string o "      }\n";
-   output_string o "   }\n";
+   output_string o "int alloc_heap(heap_t *h) {\n";
+   output_string o "   h->data = (void*)malloc(HEAP_SIZE * sizeof(void*));\n";
+   output_string o "   h->valid = (void*)malloc(HEAP_SIZE * sizeof(char));\n";
+   output_string o "   reset_heap(h);\n";
+   output_string o "   return (h->data != NULL && h->valid != NULL);\n";
+   output_string o "}\n";
+   output_string o "\n";
+   output_string o "void switch_heaps() {\n";
+   output_string o "   int *temp_allocptr = heap.allocptr;\n";
+   output_string o "   int temp_words_allocated = heap.words_allocated;\n";
+   output_string o "   void **temp_data = heap.data;\n";
+   output_string o "   char *temp_valid = heap.valid;\n";
+   output_string o "\n";
+   output_string o "   heap.allocptr = heap2.allocptr;\n";
+   output_string o "   heap.words_allocated = heap2.words_allocated;\n";
+   output_string o "   heap.data = heap2.data;\n";
+   output_string o "   heap.valid = heap2.valid;\n";
+   output_string o "\n";
+   output_string o "   heap2.allocptr = temp_allocptr;\n";
+   output_string o "   heap2.words_allocated = temp_words_allocated;\n";
+   output_string o "   heap2.data = temp_data;\n";
+   output_string o "   heap2.valid = temp_valid;\n";
+   output_string o "\n";
+   output_string o "   reset_heap(&heap);\n";
    output_string o "}\n";
    output_string o "\n";
    output_string o "/*\n";
@@ -729,10 +736,20 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "int *gc_copy(int *old)  {\n";
    output_string o "   int i, size, array_size;\n";
    output_string o "   int *old_array, *new_array, *first_array_location;\n";
+   output_string o "   int valid_index;\n";
+   output_string o "   char is_valid;\n";
+   output_string o "   char *valid;\n";
    output_string o "\n";
    output_string o "   // If not a pointer or not a pointer to a heap location, return input value\n";
-   output_string o "   if((int)old % 4 != 0 || (void**)old < heap2 || (void**)old >= heap2 + HEAP_SIZE) {\n";
-   output_string o "       return old;\n";
+   output_string o "   if((int)old % 4 != 0 || (void**)old < heap2.data || (void**)old >= heap2.data + heap2.words_allocated) {\n";
+   output_string o "      return old;\n";
+   output_string o "   }\n";
+   output_string o "   \n";
+   output_string o "   // if not pointing at a valid heap object, return input value\n";
+   output_string o "   valid_index = (int)((void**)old - heap2.data);\n";
+   output_string o "   is_valid = heap2.valid[valid_index];\n";
+   output_string o "   if(!is_valid) {\n";
+   output_string o "      return old;\n";
    output_string o "   }\n";
    output_string o "\n";
    output_string o "   old_array = (int*)old;\n";
@@ -751,15 +768,16 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   }\n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   printf(\"gc_copy(): old=%p new=%p: size=%d asize=%d total=%d\\n\", old, allocptr, size, array_size, words_allocated);\n";
-   output_string o "   fflush(stdout);\n";
+   output_string o "   printf(\"gc_copy(): valid=%d old=%p new=%p: size=%d asize=%d total=%d\\n\", is_valid, old, heap.allocptr, size, array_size, heap.words_allocated);\n";
    output_string o "#endif\n";
+   output_string o "\n";
+   output_string o "   valid = heap.valid + heap.words_allocated;\n";
    output_string o "\n";
    output_string o "   // Mark the old array as invalid, create the new array\n";
    output_string o "   old_array[0] = -1;\n";
-   output_string o "   new_array = allocptr;\n";
-   output_string o "   allocptr += array_size;\n";
-   output_string o "   words_allocated += array_size;\n";
+   output_string o "   new_array = heap.allocptr;\n";
+   output_string o "   heap.allocptr += array_size;\n";
+   output_string o "   heap.words_allocated += array_size;\n";
    output_string o "\n";
    output_string o "   // The value of old_array[1] needs to be handled specially\n";
    output_string o "   // since it holds a pointer to the new heap object\n";
@@ -770,9 +788,13 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   new_array[0] = size;\n";
    output_string o "   new_array[1] = (int)gc_copy(first_array_location);\n";
    output_string o "\n";
+   output_string o "   valid[0] = 1;\n";
+   output_string o "   valid[1] = 0;\n";
+   output_string o "\n";
    output_string o "   // Call gc_copy on the remaining values of the array\n";
    output_string o "   for (i = 2; i < array_size; i++) {\n";
    output_string o "      new_array[i] = (int)gc_copy((int*)old_array[i]);\n";
+   output_string o "      valid[i] = 0;\n";
    output_string o "   }\n";
    output_string o "\n";
    output_string o "   return new_array;\n";
@@ -784,21 +806,15 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "void gc(int *esp) {\n";
    output_string o "   int i;\n";
    output_string o "   int stack_size = stack - esp + 1;       // calculate the stack size\n";
-   output_string o "   int prev_words_alloc = words_allocated;\n";
+   output_string o "   int prev_words_alloc = heap.words_allocated;\n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   //printf(\"GC: stack=(%p,%p) (size %d): \", esp, stack, stack_size);\n";
+   output_string o "   printf(\"GC: stack=(%p,%p) (size %d): \", esp, stack, stack_size);\n";
    output_string o "#endif\n";
    output_string o "\n";
    output_string o "   // swap in the empty heap to use for storing\n";
    output_string o "   // compacted objects\n";
-   output_string o "   heap_temp = heap;\n";
-   output_string o "   heap = heap2;\n";
-   output_string o "   heap2 = heap_temp;\n";
-   output_string o "\n";
-   output_string o "   // reset heap position\n";
-   output_string o "   allocptr = (int*)heap;\n";
-   output_string o "   words_allocated = 0;\n";
+   output_string o "   switch_heaps();\n";
    output_string o "\n";
    output_string o "   // NOTE: the edi/esi register contents could also be\n";
    output_string o "   // roots, but these have been placed in the stack\n";
@@ -812,7 +828,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   }\n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   //printf(\"reclaimed %d words\\n\", (prev_words_alloc - words_allocated));\n";
+   output_string o "   printf(\"reclaimed %d words\\n\", (prev_words_alloc - heap.words_allocated));\n";
    output_string o "#endif\n";
    output_string o "}\n";
    output_string o "\n";
@@ -879,6 +895,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "void* allocate_helper(int fw_size, void *fw_fill, int *esp)\n";
    output_string o "{\n";
    output_string o "   int i, data_size, array_size;\n";
+   output_string o "   char *valid;\n";
    output_string o "   int *ret;\n";
    output_string o "\n";
    output_string o "   if(!(fw_size & 1)) {\n";
@@ -895,9 +912,9 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   }\n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   printf(\"runtime.c: allocate(%d,%d (%p)) @ %p: ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\\n\",\n";
-   output_string o "          data_size, fw_fill, fw_fill, allocptr, esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
-   output_string o "   fflush(stdout);\n";
+   output_string o "   //printf(\"runtime.c: allocate(%d,%d (%p)) @ %p: ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\\n\",\n";
+   output_string o "   //       data_size, (int)fw_fill, fw_fill, heap.allocptr, esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
+   output_string o "   //fflush(stdout);\n";
    output_string o "#endif\n";
    output_string o "\n";
    output_string o "   // Even if there is no data, allocate an array of two words\n";
@@ -906,14 +923,14 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   array_size = (data_size == 0) ? 2 : data_size + 1;\n";
    output_string o "\n";
    output_string o "   // Check if the heap has space for the allocation\n";
-   output_string o "   if(words_allocated + array_size >= HEAP_SIZE)\n";
+   output_string o "   if(heap.words_allocated + array_size >= HEAP_SIZE)\n";
    output_string o "   {\n";
    output_string o "#ifdef ENABLE_GC\n";
    output_string o "      // Garbage collect\n";
    output_string o "      gc(esp);\n";
    output_string o "\n";
    output_string o "      // Check if the garbage collection free enough space for the allocation\n";
-   output_string o "      if(words_allocated + array_size >= HEAP_SIZE) {\n";
+   output_string o "      if(heap.words_allocated + array_size >= HEAP_SIZE) {\n";
    output_string o "#endif\n";
    output_string o "         printf(\"out of memory\\n\"); // NOTE: we've added a newline\n";
    output_string o "         exit(-1);\n";
@@ -923,23 +940,29 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   }\n";
    output_string o "\n";
    output_string o "   // Do the allocation\n";
-   output_string o "   ret = allocptr;\n";
-   output_string o "   allocptr += array_size;\n";
-   output_string o "   words_allocated += array_size;\n";
+   output_string o "   ret = heap.allocptr;\n";
+   output_string o "   valid = heap.valid + heap.words_allocated;\n";
+   output_string o "   heap.allocptr += array_size;\n";
+   output_string o "   heap.words_allocated += array_size;\n";
    output_string o "\n";
    output_string o "   // Set the size of the array to be the desired size\n";
    output_string o "   ret[0] = data_size;\n";
+   output_string o "\n";
+   output_string o "   // record this as a heap object\n";
+   output_string o "   valid[0] = 1;\n";
    output_string o "\n";
    output_string o "   // If there is no data, set the value of the array to be a number\n";
    output_string o "   // so it can be properly garbage collected\n";
    output_string o "   if(data_size == 0) {\n";
    output_string o "      ret[1] = 1;\n";
+   output_string o "      valid[1] = 0;\n";
    output_string o "      //printf(\" set %p to 1\\n\", &ret[1]);\n";
    output_string o "      //fflush(stdout);\n";
    output_string o "   } else {\n";
    output_string o "      // Fill the array with the fill value\n";
    output_string o "      for(i = 1; i < array_size; i++) {\n";
    output_string o "         ret[i] = (int)fw_fill;\n";
+   output_string o "         valid[i] = 0;\n";
    output_string o "         //printf(\" set %p to %d (%p)\", &ret[i], fw_fill, fw_fill);\n";
    output_string o "      }\n";
    output_string o "      //printf(\"\\n\");\n";
@@ -958,17 +981,17 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   exit(0);\n";
    output_string o "}\n";
    output_string o "\n";
+   output_string o "\n";
    output_string o "/*\n";
    output_string o " * Program entry-point\n";
    output_string o " */\n";
    output_string o "int main() {\n";
-   output_string o "   heap  = (void*)malloc(HEAP_SIZE * sizeof(void*));\n";
-   output_string o "   heap2 = (void*)malloc(HEAP_SIZE * sizeof(void*));\n";
-   output_string o "   allocptr = (int*)heap;\n";
+   output_string o "   int b1 = alloc_heap(&heap);\n";
+   output_string o "   int b2 = alloc_heap(&heap2);\n";
    output_string o "   // NOTE: allocptr needs to appear in the following check, because otherwise\n";
    output_string o "   // gcc apparently optimizes away the assignment (i.e. the allocate_helper function\n";
    output_string o "   // sees allocptr as NULL)\n";
-   output_string o "   if(!allocptr || !heap2) {\n";
+   output_string o "   if(!b1 || !b2) {\n";
    output_string o "      printf(\"malloc failed\\n\");\n";
    output_string o "      exit(-1);\n";
    output_string o "   }\n";
@@ -998,15 +1021,15 @@ let generate_runtime (o : out_channel) : unit =
 
 (* this dumps the binary, given a program AST *)
 let generate_binary (result : program) (output_file_name : string) : unit = 
-   let runtime_file_name = "runtime.c" (*(Filename.temp_file ?temp_dir:(Some("")) "runtime_" ".c")*) in
+   let runtime_file_name = (Filename.temp_file ?temp_dir:(Some("")) "runtime_" ".c") in
    let assembly_file_name = (Filename.temp_file ?temp_dir:(Some("")) "prog_" ".S") in
    (* generate the C runtime *)
-   (*let out1 = (try (open_out runtime_file_name)
+   let out1 = (try (open_out runtime_file_name)
       with _ -> die_system_error ("can't write to file: "^
          (Sys.getcwd ())^"/"^(runtime_file_name))
    ) in
    generate_runtime out1;
-   close_out out1;*) (* TODO XXX - enable this *)
+   close_out out1; (* TODO XXX - enable this *)
    (* generate the assembly code *)
    let out2 = (try (open_out assembly_file_name)
       with _ -> die_system_error ("can't write to file: "^
