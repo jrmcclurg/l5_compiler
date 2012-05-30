@@ -1,3 +1,23 @@
+/*
+ * EECS 322 Compiler Construction
+ * Northwestern University
+ *
+ * L1 language runtime, including
+ * garbage collector functionality.
+ *
+ * Use the "-m32" GCC flag during compilation!
+ *
+ * For proper GC behavior, L1 programs 
+ * should adhere to the following constraints:
+ * 1. immediately before each call to allocate(),
+ *    the callee-save registers ebx/edi/esi
+ *    should contain either a pointer value, or
+ *    a numeric value x ENCODED as 2*x+1 (no
+ *    unencoded numeric values!)
+ * 2. similarly, immediately before a call to
+ *    allocate(), the stack should not contain
+ *    unencoded numeric values
+ */
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -134,7 +154,7 @@ int *gc_copy(int *old)  {
    }
 
 #ifdef GC_DEBUG
-   printf("gc_copy(): valid=%d old=%p new=%p: size=%d asize=%d total=%d\n", is_valid, old, heap.allocptr, size, array_size, heap.words_allocated);
+   // printf("gc_copy(): valid=%d old=%p new=%p: size=%d asize=%d total=%d\n", is_valid, old, heap.allocptr, size, array_size, heap.words_allocated);
 #endif
 
    valid = heap.valid + heap.words_allocated;
@@ -172,9 +192,9 @@ int *gc_copy(int *old)  {
 void gc(int *esp) {
    int i;
    int stack_size = stack - esp + 1;       // calculate the stack size
+#ifdef GC_DEBUG
    int prev_words_alloc = heap.words_allocated;
 
-#ifdef GC_DEBUG
    printf("GC: stack=(%p,%p) (size %d): ", esp, stack, stack_size);
 #endif
 
@@ -347,7 +367,6 @@ int print_error(int *array, int fw_x) {
    exit(0);
 }
 
-
 /*
  * Program entry-point
  */
@@ -371,10 +390,13 @@ int main() {
    asm ("movl %%esp, %%eax;"
         "subl $24, %%eax;" // 6 * 4
         "movl %%eax, %0;"
+        "movl $1, %%ebx;"
+        "movl $1, %%edi;"
+        "movl $1, %%esi;"
         "call go;"
       : "=m"(stack) // outputs
       :             // inputs (none)
-      : "%eax"      // clobbered registers (eax)
+      : "%eax", "%ebx", "%edi", "%esi" // clobbered registers (eax)
    );  
 
 #ifdef GC_DEBUG

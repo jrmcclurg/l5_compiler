@@ -613,10 +613,10 @@ let compile_and_link (filename : string) (assembly_file_name : string) (runtime_
    if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));
    if (r3 <> 0) then die_system_error ("compiler/linker failed: \""^r3c^"\" returned "^(string_of_int r3));
    (* delete all the temporary files *)
-   (*Unix.unlink assembly_file_name;
+   Unix.unlink assembly_file_name;
    Unix.unlink (assembly_file_name^".o");
    Unix.unlink runtime_file_name;
-   Unix.unlink (runtime_file_name^".o");*)
+   Unix.unlink (runtime_file_name^".o");
 ;;
 
 (*
@@ -631,6 +631,26 @@ let compile_and_link (filename : string) (assembly_file_name : string) (runtime_
  * returns unit
  *)
 let generate_runtime (o : out_channel) : unit =
+   output_string o "/*\n";
+   output_string o " * EECS 322 Compiler Construction\n";
+   output_string o " * Northwestern University\n";
+   output_string o " *\n";
+   output_string o " * L1 language runtime, including\n";
+   output_string o " * garbage collector functionality.\n";
+   output_string o " *\n";
+   output_string o " * Use the \"-m32\" GCC flag during compilation!\n";
+   output_string o " *\n";
+   output_string o " * For proper GC behavior, L1 programs \n";
+   output_string o " * should adhere to the following constraints:\n";
+   output_string o " * 1. immediately before each call to allocate(),\n";
+   output_string o " *    the callee-save registers ebx/edi/esi\n";
+   output_string o " *    should contain either a pointer value, or\n";
+   output_string o " *    a numeric value x ENCODED as 2*x+1 (no\n";
+   output_string o " *    unencoded numeric values!)\n";
+   output_string o " * 2. similarly, immediately before a call to\n";
+   output_string o " *    allocate(), the stack should not contain\n";
+   output_string o " *    unencoded numeric values\n";
+   output_string o " */\n";
    output_string o "#include <string.h>\n";
    output_string o "#include <stdlib.h>\n";
    output_string o "#include <stdio.h>\n";
@@ -768,7 +788,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   }\n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
-   output_string o "   printf(\"gc_copy(): valid=%d old=%p new=%p: size=%d asize=%d total=%d\\n\", is_valid, old, heap.allocptr, size, array_size, heap.words_allocated);\n";
+   output_string o "   // printf(\"gc_copy(): valid=%d old=%p new=%p: size=%d asize=%d total=%d\\n\", is_valid, old, heap.allocptr, size, array_size, heap.words_allocated);\n";
    output_string o "#endif\n";
    output_string o "\n";
    output_string o "   valid = heap.valid + heap.words_allocated;\n";
@@ -806,9 +826,9 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "void gc(int *esp) {\n";
    output_string o "   int i;\n";
    output_string o "   int stack_size = stack - esp + 1;       // calculate the stack size\n";
+   output_string o "#ifdef GC_DEBUG\n";
    output_string o "   int prev_words_alloc = heap.words_allocated;\n";
    output_string o "\n";
-   output_string o "#ifdef GC_DEBUG\n";
    output_string o "   printf(\"GC: stack=(%p,%p) (size %d): \", esp, stack, stack_size);\n";
    output_string o "#endif\n";
    output_string o "\n";
@@ -1005,10 +1025,13 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   asm (\"movl %%esp, %%eax;\"\n";
    output_string o "        \"subl $24, %%eax;\" // 6 * 4\n";
    output_string o "        \"movl %%eax, %0;\"\n";
+   output_string o "        \"movl $1, %%ebx;\"\n";
+   output_string o "        \"movl $1, %%edi;\"\n";
+   output_string o "        \"movl $1, %%esi;\"\n";
    output_string o "        \"call go;\"\n";
    output_string o "      : \"=m\"(stack) // outputs\n";
    output_string o "      :             // inputs (none)\n";
-   output_string o "      : \"%eax\"      // clobbered registers (eax)\n";
+   output_string o "      : \"%eax\", \"%ebx\", \"%edi\", \"%esi\" // clobbered registers (eax)\n";
    output_string o "   );  \n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
