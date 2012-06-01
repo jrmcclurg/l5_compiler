@@ -364,7 +364,7 @@ lc_tarball:		Lc clean
 			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tLc/g" > Makefile_temp
 			mv Makefile_temp Makefile
 			tar -cvzf mcclurg.Lc.tar.gz Lc* Makefile lc* l5* l5_code.ml l4_code.ml l3_code.ml l2_code.ml l1_code.ml \
-			l5_ast.ml l4_ast.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml flags.ml
+			l5_ast.ml l4_ast.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml flags.ml mcclurg.L5
 			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
 			mv Makefile_temp Makefile
 
