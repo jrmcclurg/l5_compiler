@@ -581,7 +581,7 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
                        ". Edges: "^(string_of_int test)^" diff = "^(string_of_int diff)^" (est = "^(string_of_int check)^")\n");
          flush stdout
       );
-      let the_num_local_2 = if check > the_prev_max_local then the_counter_local else the_num_local in
+      let the_num_local_2 = if check > the_prev_max_local then check else the_num_local in
       let the_prev_max_local_2 = if check > the_prev_max_local then check else the_prev_max_local in
       let the_prev_local_2 = test in
       let the_counter_local_2 = the_counter_local + 1 in

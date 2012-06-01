@@ -211,15 +211,17 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) : L2_ast.i
    | AsetDExp(p,sv1,sv2,sv3,do_check) ->
       let sv1t = (compile_sval sv1) in
       let tv1 = L2_ast.get_tval sv1t in
-      let sv2t = (compile_sval sv2) in
+      let (sv2t,const,the_const) = (match (compile_sval sv2) with
+      | (L2_ast.IntSVal(p,i) as ex) -> if (not do_check) then
+         (ex,true,Int32.add (Int32.mul (Int32.shift_right_logical i 1) 4l) 4l) else (ex,false,-1l)
+      | ex -> (ex,false,-1l)) in
       let sv3t = (compile_sval sv3) in
       let tmpd = L2_ast.VarOrReg(p,get_unique_symbol l3_prefix,true (*prefix 0*)) in
       let tmp = L2_ast.VarOrReg(p,get_unique_symbol l3_prefix,true (*prefix 1*)) in
       let tl1 = get_unique_symbol l3_prefix (*prefix 2*) in
       let tl2 = get_unique_symbol l3_prefix (*prefix 3*) in
       let fl = get_unique_symbol l3_prefix (*prefix n4*) in
-      [L2_ast.AssignInstr(p,tmpd,sv2t);
-       L2_ast.SrlInstr(p,tmpd,L2_ast.IntShVal(p,1l))]@
+       (if const then [L2_ast.AssignInstr(p,tmpd,sv1t)] else [L2_ast.AssignInstr(p,tmpd,sv2t);L2_ast.SrlInstr(p,tmpd,L2_ast.IntShVal(p,1l))])@
        (if do_check then (
        [L2_ast.MemReadInstr(p,tmp,L2_ast.get_var sv1t,0l);
        L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,tmpd),L2_ast.VarTVal(p,tmp),tl1,fl);
@@ -230,13 +232,13 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) : L2_ast.i
        L2_ast.LabelInstr(p,tl1); (* success label 1 *)
        L2_ast.LtJumpInstr(p,L2_ast.VarTVal(p,tmpd),L2_ast.IntTVal(p,0l),fl,tl2);
        L2_ast.LabelInstr(p,tl2)] (* success label 2 *)
-       ) else [])@[
+       ) else [])@(if const then [] else [
        L2_ast.TimesInstr(p,tmpd,L2_ast.IntTVal(p,4l));
-       L2_ast.PlusInstr(p,tmpd,tv1);
-       L2_ast.MemWriteInstr(p,tmpd,4l,sv3t);
-       L2_ast.AssignInstr(p,tmpd,L2_ast.IntSVal(p,1l))]@
-       (if do_check then [L2_ast.AssignInstr(p,tmp,L2_ast.IntSVal(p,1l))] else [])
-       @[L2_ast.AssignInstr(p,dest,L2_ast.IntSVal(p,1l))
+       L2_ast.PlusInstr(p,tmpd,tv1)])@
+       (if const then [L2_ast.MemWriteInstr(p,tmpd,the_const,sv3t)] else [L2_ast.MemWriteInstr(p,tmpd,4l,sv3t)])@
+       (if do_check then [
+          L2_ast.AssignInstr(p,tmp,L2_ast.IntSVal(p,1l))] else [])
+       @[L2_ast.AssignInstr(p,tmpd,L2_ast.IntSVal(p,1l));L2_ast.AssignInstr(p,dest,L2_ast.IntSVal(p,1l))
        ]
    | AlenDExp(p,sv) ->
       let v = L2_ast.get_var (compile_sval sv) in

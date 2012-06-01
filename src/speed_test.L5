@@ -1,6 +1,6 @@
 (let ([ARRAY_MAX_ITEM 100000])
 (let ([ARRAY_MIN_ITEM -100000])
-(let ([TRIANGLE_TEST_ITERATIONS 0]) ;; 50
+(let ([TRIANGLE_TEST_ITERATIONS 50]) ;; 50
 (let ([clauses (new-tuple
 (new-tuple 4 -18 19) 
 (new-tuple 3 18 -5) 
@@ -210,5 +210,5 @@
 (let ([the_inc (mk_triangle_tuple 11)])
 (let ([the_rev2 (reverse the_inc)])
 (let ([t (triangle_test TRIANGLE_TEST_ITERATIONS)])
-(begin (print 1) (begin (print 1) (begin (print (sat clauses)) (print t))))
+(begin (print test4) (begin (print the_sorted) (begin (print (sat clauses)) (print t))))
 )))))))))))))))))))))))))))))))))))))))))))))))))))))

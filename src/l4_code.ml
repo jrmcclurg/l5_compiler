@@ -356,9 +356,9 @@ let rec optimize_tuples (e : L4_ast.exp) : L4_ast.exp =
       let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
       let (asets,el2,_,flag) = List.fold_left (fun (asets,el2,n,flag) e ->
          let (a,e2,f) = (match e with
-         | VarExp(_,_) -> ([],e,false)
+         (*| VarExp(_,_) -> ([],e,false)
          | IntExp(_,_) -> ([],e,false)
-         | LabelExp(_,_) -> ([],e,false)
+         | LabelExp(_,_) -> ([],e,false)*)
          | _ -> ([AsetExp(p,VarExp(p,uv),IntExp(p,Int32.of_int n),optimize_tuples e,false)],IntExp(p,Int32.of_int n),true)
          ) in
          (a@asets,el2@[e2],n+1,(flag || f))
@@ -405,7 +405,7 @@ and compile_func (f : L4_ast.func) : L3_ast.func =
    | Function(p,name,vl,e) -> L3_ast.Function(p, name, List.map (fun v -> compile_var v) vl, compile_exp e)
 
 and compile_exp (e2 : L4_ast.exp) : L3_ast.exp = 
-   let e = optimize_tuples e2 in
+   let e = (*optimize_tuples*) e2 in
    let the_exp = normalize_exp e in
    match the_exp with
    | LetExp(p,v,e1,e2) -> L3_ast.LetExp(p,compile_var v,compile_exp_to_dexp e1,compile_exp e2)
