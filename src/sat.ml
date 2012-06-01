@@ -1,4 +1,4 @@
-let print_list l = List.iter (fun i -> print_int i; print_string ", ") l; print_string "\n";;
+let print_list l = List.iter (fun i -> print_int i; print_string " ") l; print_string "\n";;
 
 let clauses = [[4;-18;19];
 [3;18;-5];
@@ -160,7 +160,9 @@ let rec sat_helper (clauses: (int list) list) (temp_answer : int list) (temp_ans
    ));;
 let sat (clauses : (int list) list) : (bool * int list) =
    let literals = (get_all_vars clauses) in
-   sat_helper clauses [] [] literals;;
+   let (is_sat,assignment) = sat_helper clauses [] [] literals in
+   (is_sat,List.sort compare assignment)
+;;
 
 let (is_sat,assignment) = sat clauses in
 print_string ("SAT? "^(if is_sat then "YES" else "NO")^"\n");
