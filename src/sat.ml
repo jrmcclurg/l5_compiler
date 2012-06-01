@@ -1,6 +1,7 @@
 let print_list l = List.iter (fun i -> print_int i; print_string " ") l; print_string "\n";;
 
-let clauses = [[4;-18;19];
+let clauses = [
+[4;-18;19];
 [3;18;-5];
 [-5;-8;-15];
 [-20;7;-16];
@@ -90,14 +91,15 @@ let clauses = [[4;-18;19];
 [-9;1;-5];
 [-19;9;17];
 [12;-2;17];
-[4;-16;-5]];;
+[4;-16;-5]
+];;
 
 let answer = [1;-2;-3;-14];;
 (*let clauses = [[-1;-2;3;4;5;6];[1;2;-3;14];[1;-2;3;6]];;*)
 let abs x = if 0 < x then x else 0 - x;;
 let rec clause_contains cs x =
    if (List.length cs <= 0) then false else (if ((abs (List.hd cs)) == (abs x)) then true else (clause_contains (List.tl cs) x));;
-let rec concat_all l = if (List.length l <= 0) then [] else ((List.hd l)@(concat_all (List.tl l)));;
+let rec concat_all (l : (int list) list) = if (List.length l <= 0) then [] else ((List.hd l)@(concat_all (List.tl l)));;
 let rec get_all_vars_helper l = if (List.length l <= 0) then [] else
    (let x = (abs (List.hd l)) in let y = (get_all_vars_helper (List.tl l)) in if (clause_contains y x) then y else x::y);;
 let get_all_vars cs = let l = concat_all cs in List.rev (List.sort compare (get_all_vars_helper l));;
@@ -135,7 +137,8 @@ let rec propagate (clauses : (int list) list) (temp_answer : int list) : (int li
 let rec add_guess (temp_answer : int list) (flags : int list) (literals : int list) : (int list * int list * bool) =
    if (List.length literals) <= 0 then (temp_answer,flags,false)
    else let (rest,rest_flags,b) = (add_guess temp_answer flags (List.tl literals)) in
-   (if (clause_contains temp_answer (List.hd literals)) || b then (rest,rest_flags,b) else (rest@[(List.hd literals)],rest_flags@[1],true));;
+   (if (clause_contains temp_answer (List.hd literals)) || b then (rest,rest_flags,b) else
+   (rest@[(List.hd literals)],rest_flags@[1],true));;
 let rec add_propagated (temp_answer : int list) (flags : int list) (to_add : int list) : (int list * int list) =
    if (List.length to_add) <= 0 then (temp_answer,flags) else
    let (ans2,flags2) = add_propagated temp_answer flags (List.tl to_add) in (ans2@[List.hd to_add],flags2@[0]);;
@@ -144,23 +147,24 @@ let rec undo_guess (temp_answer : int list) (flags : int list) : (int list * int
    let (ans2,flags2,t) = undo_guess (List.tl temp_answer) (List.tl flags) in
    if t then ((List.hd temp_answer)::ans2,(List.hd flags)::flags2,t) else
    (if (List.hd flags)==1 then (ans2@[0 - (List.hd temp_answer)],flags2@[(List.hd flags)+1],true) else (ans2,flags2,t)));;
-let rec sat_helper (clauses: (int list) list) (temp_answer : int list) (temp_answer_flags : int list) (literals : int list) : (bool * int list) =
+let rec sat_helper (clauses: (int list) list) (temp_answer : int list) (temp_answer_flags : int list) (literals : int list) (n : int) : (bool * int list * int) =
    let (temp_answer2,temp_answer_flags2,_) = add_guess temp_answer temp_answer_flags literals in
-   print_string "Trying: ";
-   print_list temp_answer2;
+   (*print_string "Trying: ";
+   print_list temp_answer2;*)
    let (res,x) = propagate clauses temp_answer2 in
-   if x==1 then (true,clause_union temp_answer2 res) else
+   if x==1 then (true,clause_union temp_answer2 res,n) else
    (if x==(-1) || (List.length temp_answer2)==(List.length literals) then (
       let (temp_answer3,temp_answer_flags3,_) = undo_guess temp_answer2 temp_answer_flags2 in
-      if (List.length temp_answer3 <= 0) then (false,[])
-      else sat_helper clauses temp_answer3 temp_answer_flags3 literals
+      if (List.length temp_answer3 <= 0) then (false,[],n)
+      else sat_helper clauses temp_answer3 temp_answer_flags3 literals (n+1)
    ) else (
       let (new_answer,new_answer_flags) = add_propagated temp_answer2 temp_answer_flags2 res in
-      sat_helper clauses new_answer new_answer_flags literals
+      sat_helper clauses new_answer new_answer_flags literals (n+1)
    ));;
 let sat (clauses : (int list) list) : (bool * int list) =
    let literals = (get_all_vars clauses) in
-   let (is_sat,assignment) = sat_helper clauses [] [] literals in
+   let (is_sat,assignment,n) = sat_helper clauses [] [] literals 1 in
+   print_string ("Iterations: "^(string_of_int n)^"\n");
    (is_sat,List.sort compare assignment)
 ;;
 
