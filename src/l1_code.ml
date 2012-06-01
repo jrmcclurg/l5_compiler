@@ -143,7 +143,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
    | MemReadInstr(ps,r,br,off) ->
       (* movl off(br), r *)
       output_string o ("\t"^"movl"^"\t");
-      output_string o (Int64.to_string off);
+      output_string o (Int32.to_string off);
       output_string o "(";
       compile_reg o br;
       output_string o "), ";
@@ -154,7 +154,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       output_string o ("\t"^"movl"^"\t");
       compile_sval o sv;
       output_string o ", ";
-      output_string o (Int64.to_string off);
+      output_string o (Int32.to_string off);
       output_string o "(";
       compile_reg o br;
       output_string o ")\n";
@@ -510,9 +510,9 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
    | StringInstr(ps,id) ->
       let s = (get_symbol id) in
       let len = String.length s in
-      let elen = Int64.add (Int64.mul (Int64.of_int len) 2L) 1L in
+      let elen = Int32.add (Int32.mul (Int32.of_int len) 2l) 1l in
       let tv1 = IntTVal(ps,elen) in
-      let tv2 = IntTVal(ps,Int64.of_int 1) in
+      let tv2 = IntTVal(ps,1l) in
       (* pushl tv2 *)
       output_string o ("\t"^"pushl"^"\t");
       compile_tval o tv2;
@@ -558,24 +558,24 @@ and compile_creg (o : out_channel) (cr : creg) : unit = match cr with
 (* compiles an L1 "sx" nonterminal into x86 assembly *)
 and compile_sreg (o : out_channel) (sr : sreg) : unit = match sr with
    | EcxShReg(ps) -> output_string o "%ecx"
-   | IntShVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
+   | IntShVal(ps,i) -> output_string o ("$"^(Int32.to_string i))
 
 (* compiles an L1 "s" nonterminal into x86 assembly *)
 and compile_sval (o : out_channel) (sv : sval) : unit = match sv with
    | RegSVal(ps,r) -> compile_reg o r;
-   | IntSVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
+   | IntSVal(ps,i) -> output_string o ("$"^(Int32.to_string i))
    | LabelSVal(ps,l) -> output_string o ("$_"^(get_symbol l))
 
 (* compiles an L1 "u" nonterminal into x86 assembly *)
 and compile_uval (o : out_channel) (uv : uval) : unit = match uv with
    | RegUVal(ps,r) -> output_string o "*"; compile_reg o r
-   | IntUVal(ps,i) -> output_string o (Int64.to_string i)
+   | IntUVal(ps,i) -> output_string o (Int32.to_string i)
    | LabelUVal(ps,l) -> output_string o ("_"^(get_symbol l))
 
 (* compiles an L1 "t" nonterminal into x86 assembly *)
 and compile_tval (o : out_channel) (t : tval) : unit = match t with
    | RegTVal(ps,r) -> compile_reg o r
-   | IntTVal(ps,i) -> output_string o ("$"^(Int64.to_string i))
+   | IntTVal(ps,i) -> output_string o ("$"^(Int32.to_string i))
    | LabelTVal(ps,l) -> output_string o ("$_"^(get_symbol l))
 
 (* compiles an L1 label l into x86 assembly *)
@@ -585,7 +585,7 @@ and compile_strlit (o : out_channel) (s : string) (p : pos) (first : bool) (j : 
    let cl = explode s in
    let _ = List.fold_left (fun k c -> 
       let v = encode_int (Char.code c) in
-      let i = MemWriteInstr(p,CallerSaveReg(p,EaxReg(p)),Int64.of_int k,IntSVal(p,v)) in
+      let i = MemWriteInstr(p,CallerSaveReg(p,EaxReg(p)),Int32.of_int k,IntSVal(p,v)) in
       compile_instr o i first j k;
       (k + 4)
    ) 4 cl in ()

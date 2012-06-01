@@ -15,7 +15,7 @@
    open L4_ast;;
    open Utils;;
 %}
-%token <int64> INT
+%token <int32> INT
 %token <int> LABEL
 %token <int> IDENT 
 %token CLOSUREPROC CLOSUREVARS MAKECLOSURE NEWARRAY NEWTUPLE PRINT
@@ -53,7 +53,7 @@ exp:
    | LPAREN NEWARRAY exp exp RPAREN                             { NewArrayExp(get_current_pos (), $3, $4) }
    | LPAREN NEWTUPLE exp_list RPAREN                            { NewTupleExp(get_current_pos (), $3) }
    | LPAREN AREF exp exp RPAREN                                 { ArefExp(get_current_pos (), $3, $4) }
-   | LPAREN ASET exp exp exp RPAREN                             { AsetExp(get_current_pos (), $3, $4, $5) }
+   | LPAREN ASET exp exp exp RPAREN                             { AsetExp(get_current_pos (), $3, $4, $5, true) }
    | LPAREN ALEN exp RPAREN                                     { AlenExp(get_current_pos (), $3) }
    | LPAREN BEGIN exp exp RPAREN                                { BeginExp(get_current_pos (), $3, $4) }
    | LPAREN PRINT exp RPAREN                                    { PrintExp(get_current_pos (), $3) }

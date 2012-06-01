@@ -15,7 +15,7 @@
    open L3_ast;;
    open Utils;;
 %}
-%token <int64> INT
+%token <int32> INT
 %token <int> LABEL
 %token <int> IDENT 
 %token CLOSUREPROC CLOSUREVARS MAKECLOSURE NEWARRAY NEWTUPLE PRINT
@@ -65,7 +65,7 @@ dexp:
    | LPAREN NEWARRAY sval sval RPAREN      { NewArrayDExp(get_current_pos (), $3, $4) }
    | LPAREN NEWTUPLE sval_list RPAREN      { NewTupleDExp(get_current_pos (), $3) }
    | LPAREN AREF sval sval RPAREN          { ArefDExp(get_current_pos (), $3, $4) }
-   | LPAREN ASET sval sval sval RPAREN     { AsetDExp(get_current_pos (), $3, $4, $5) }
+   | LPAREN ASET sval sval sval RPAREN     { AsetDExp(get_current_pos (), $3, $4, $5, true) }
    | LPAREN ALEN sval RPAREN               { AlenDExp(get_current_pos (), $3) }
    | LPAREN PRINT sval RPAREN              { PrintDExp(get_current_pos (), $3) }
    | LPAREN MAKECLOSURE LABEL sval RPAREN  { MakeClosureDExp(get_current_pos (), $3, $4) }

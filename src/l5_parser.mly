@@ -15,7 +15,7 @@
    open L5_ast;;
    open Utils;;
 %}
-%token <int64> INT
+%token <int32> INT
 %token <int> IDENT 
 %token NEWARRAY NEWTUPLE PRINT
 %token ASET AREF ALEN NUMBERQ ARRAYQ BEGIN

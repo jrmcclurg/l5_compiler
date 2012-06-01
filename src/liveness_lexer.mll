@@ -21,9 +21,9 @@ rule token = parse
   [' ' '\t']                 { token lexbuf }                     (* skip blanks *)
 | ['\r']                     { token lexbuf }                    (* skip blanks *)
 | ['\n']                     { do_newline lexbuf; token lexbuf } (* skip newlines (but count them) *)
-| (['-']? ['0'-'9']+) as s   { let i = Int64.of_string s in
+| (['-']? ['0'-'9']+) as s   { let i = Int32.of_string s in
                                check_int_range i;
-                               INT(Int64.of_string s) }          (* pos/neg integers *)
+                               INT(Int32.of_string s) }          (* pos/neg integers *)
 | "array-error"              { ARRAYERR }                        (* keywords *)
 | "tail-call"                { TAILCALL }
 | "allocate"                 { ALLOC }

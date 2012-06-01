@@ -26,7 +26,7 @@ type program = Program of pos * exp * func list
          | NewArrayExp of pos * exp * exp
          | NewTupleExp of pos * exp list
          | ArefExp of pos * exp * exp
-         | AsetExp of pos * exp * exp * exp
+         | AsetExp of pos * exp * exp * exp * bool
          | AlenExp of pos * exp
          | BeginExp of pos * exp * exp
          | PrintExp of pos * exp
@@ -42,7 +42,7 @@ type program = Program of pos * exp * func list
          | NumberPredExp of pos * exp
          | ArrayPredExp of pos * exp
          | VarExp of pos * var
-         | IntExp of pos * int64
+         | IntExp of pos * int32
          | LabelExp of pos * int
  and var = Var of pos * int
 ;;
@@ -117,7 +117,7 @@ and output_exp out (e : exp) = match e with
       output_string out " ";
       output_exp out e2;
       output_string out ")"
-   | AsetExp(_,e1,e2,e3) ->
+   | AsetExp(_,e1,e2,e3,c) ->
       output_string out "(aset ";
       output_exp out e1;
       output_string out " ";
@@ -198,7 +198,7 @@ and output_exp out (e : exp) = match e with
       output_exp out e;
       output_string out ")"
    | VarExp(_, r) -> output_var out r
-   | IntExp(_, i) -> output_string out (Int64.to_string i)
+   | IntExp(_, i) -> output_string out (Int32.to_string i)
    | LabelExp(_,s) -> output_string out (":"^(get_symbol s))
 and output_var out r = match r with
    | Var(_,s) -> output_string out (get_symbol s)

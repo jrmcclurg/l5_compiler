@@ -28,8 +28,8 @@ type program = Program of pos * func list
  and func = Function of pos * int option * instr list
  and instr = 
              AssignInstr of pos * var * sval
-           | MemReadInstr of pos * var * var * int64 
-           | MemWriteInstr of pos * var * int64 * sval
+           | MemReadInstr of pos * var * var * int32 
+           | MemWriteInstr of pos * var * int32 * sval
            | PlusInstr of pos * var * tval
            | MinusInstr of pos * var * tval
            | TimesInstr of pos * var * tval
@@ -51,16 +51,16 @@ type program = Program of pos * func list
            | AllocInstr of pos * tval * tval
            | ArrayErrorInstr of pos * tval * tval
  and sval = VarSVal of pos * var
-          | IntSVal of pos * int64
+          | IntSVal of pos * int32
           | LabelSVal of pos * int
  and uval = VarUVal of pos * var
-          | IntUVal of pos * int64
+          | IntUVal of pos * int32
           | LabelUVal of pos * int
  and tval = VarTVal of pos * var
-          | IntTVal of pos * int64
+          | IntTVal of pos * int32
           | LabelTVal of pos * int
  and var = VarOrReg of pos * int * bool
- and svar = IntShVal of pos * int64 
+ and svar = IntShVal of pos * int32 
            | ShVar of pos * var
 ;;
 
@@ -145,13 +145,13 @@ and output_instr out i = match i with
       output_string out " <- (mem ";
       output_var out r2;
       output_string out " ";
-      output_string out (Int64.to_string i);
+      output_string out (Int32.to_string i);
       output_string out "))";
    | MemWriteInstr(_,r,i,sv) ->
       output_string out "((mem ";
       output_var out r;
       output_string out " ";
-      output_string out (Int64.to_string i);
+      output_string out (Int32.to_string i);
       output_string out ") <- ";
       output_sval out sv;
       output_string out ")";
@@ -280,19 +280,19 @@ and output_instr out i = match i with
 and output_var out r = match r with
    | VarOrReg(_,id,_) -> output_string out (get_symbol id)
 and output_svar out sr = match sr with
-   | IntShVal(_,i) -> output_string out (Int64.to_string i)
+   | IntShVal(_,i) -> output_string out (Int32.to_string i)
    | ShVar(_,v) -> output_var out v
 and output_sval out s = match s with
    | VarSVal(_, r) -> output_var out r
-   | IntSVal(_, i) -> output_string out (Int64.to_string i)
+   | IntSVal(_, i) -> output_string out (Int32.to_string i)
    | LabelSVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_uval out u = match u with
    | VarUVal(_,r) -> output_var out r
-   | IntUVal(_, i) -> output_string out (Int64.to_string i)
+   | IntUVal(_, i) -> output_string out (Int32.to_string i)
    | LabelUVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_tval out t = match t with
    | VarTVal(_,r) -> output_var out r
-   | IntTVal(_,i) -> output_string out (Int64.to_string i)
+   | IntTVal(_,i) -> output_string out (Int32.to_string i)
    | LabelTVal(_,s) -> output_string out (":"^(get_symbol s))
 ;;
 

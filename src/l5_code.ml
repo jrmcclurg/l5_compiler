@@ -53,8 +53,8 @@ let get_plus_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.PlusExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L))));
+             L4_ast.PlusExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.PlusExp(p,L4_ast.VarExp(p,List.nth fvars 0),L4_ast.VarExp(p,List.nth fvars 1)))
             ])
@@ -67,8 +67,8 @@ let get_minus_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.MinusExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L))));
+             L4_ast.MinusExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.MinusExp(p,L4_ast.VarExp(p,List.nth fvars 0),L4_ast.VarExp(p,List.nth fvars 1)))
             ])
@@ -81,8 +81,8 @@ let get_times_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.TimesExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L))));
+             L4_ast.TimesExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.TimesExp(p,L4_ast.VarExp(p,List.nth fvars 0),L4_ast.VarExp(p,List.nth fvars 1)))
             ])
@@ -95,8 +95,8 @@ let get_lt_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.LtExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L))));
+             L4_ast.LtExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.LtExp(p,L4_ast.VarExp(p,List.nth fvars 0),L4_ast.VarExp(p,List.nth fvars 1)))
             ])
@@ -109,8 +109,8 @@ let get_leq_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.LeqExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L))));
+             L4_ast.LeqExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.LeqExp(p,L4_ast.VarExp(p,List.nth fvars 0),L4_ast.VarExp(p,List.nth fvars 1)))
             ])
@@ -123,8 +123,8 @@ let get_eq_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.EqExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L))));
+             L4_ast.EqExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.EqExp(p,L4_ast.VarExp(p,List.nth fvars 0),L4_ast.VarExp(p,List.nth fvars 1)))
             ])
@@ -137,7 +137,7 @@ let get_numberq_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.NumberPredExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L))));
+             L4_ast.NumberPredExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.NumberPredExp(p,L4_ast.VarExp(p,List.nth fvars 0)))
             ])
@@ -150,7 +150,7 @@ let get_arrayq_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.ArrayPredExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L))));
+             L4_ast.ArrayPredExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.ArrayPredExp(p,L4_ast.VarExp(p,List.nth fvars 0)))
             ])
@@ -163,7 +163,7 @@ let get_print_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.PrintExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L))));
+             L4_ast.PrintExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.PrintExp(p,L4_ast.VarExp(p,List.nth fvars 0)))
             ])
@@ -176,8 +176,8 @@ let get_newarr_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.NewArrayExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L))));
+             L4_ast.NewArrayExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.NewArrayExp(p,L4_ast.VarExp(p,List.nth fvars 0),L4_ast.VarExp(p,List.nth fvars 1)))
             ])
@@ -190,8 +190,8 @@ let get_aref_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.ArefExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L))));
+             L4_ast.ArefExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.ArefExp(p,L4_ast.VarExp(p,List.nth fvars 0),L4_ast.VarExp(p,List.nth fvars 1)))
             ])
@@ -204,13 +204,13 @@ let get_aset_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.AsetExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1L)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,2L))));
+             L4_ast.AsetExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l)),
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,2l)),true));
              L4_ast.Function(p,fname,fvars,
              L4_ast.AsetExp(p,L4_ast.VarExp(p,List.nth fvars 0),
                               L4_ast.VarExp(p,List.nth fvars 1),
-                              L4_ast.VarExp(p,List.nth fvars 2)))
+                              L4_ast.VarExp(p,List.nth fvars 2),true))
             ])
    | _ -> (name,fname,[])
 ;;
@@ -221,7 +221,7 @@ let get_alen_func (p : pos) : (int * int * L4_ast.func list) =
    match bvo with
    | Some(bv) ->
       (name,fname,[L4_ast.Function(p,name,vars,
-             L4_ast.AlenExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0L))));
+             L4_ast.AlenExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.AlenExp(p,L4_ast.VarExp(p,List.nth fvars 0)))
             ])
@@ -334,11 +334,11 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
       let (e2,fl) = compile_exp e in
       let (e3,_) = List.fold_right (fun v (ex,k) ->
          (L4_ast.LetExp(p,compile_var v,L4_ast.ArefExp(p,L4_ast.VarExp(p,L4_ast.Var(p,bparam)),
-                                           L4_ast.IntExp(p,Int64.of_int k)),ex), k-1)
+                                           L4_ast.IntExp(p,Int32.of_int k)),ex), k-1)
       ) vl (e2,(List.length vl)-1) in
       let (e4,_) = List.fold_right (fun v (ex,k) ->
          (L4_ast.LetExp(p,compile_var v,L4_ast.ArefExp(p,L4_ast.VarExp(p,L4_ast.Var(p,fparam)),
-                                           L4_ast.IntExp(p,Int64.of_int k)),ex), k-1)
+                                           L4_ast.IntExp(p,Int32.of_int k)),ex), k-1)
       ) free_vars (e3,(List.length free_vars)-1) in
       (L4_ast.MakeClosureExp(p,name,
          L4_ast.NewTupleExp(p,List.map (fun f -> L4_ast.VarExp(p,compile_var f)) free_vars)),
@@ -355,7 +355,7 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
       print_exp e2;
       print_string "\n";*)
       let x = VarExp(p,v) in
-      let zero = IntExp(p,0L) in
+      let zero = IntExp(p,0l) in
       let arf = AppExp(p,PrimExp(p,ArefPrim(p)),[x;zero]) in
       let e1_rep = replace_in_exp e1 v arf in
       let e2_rep = replace_in_exp e2 v arf in
@@ -404,7 +404,7 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
       let (x2,_) = compile_exp x in
       (L4_ast.LetExp(p,v2,
          L4_ast.NewTupleExp(p,[zero2]),
-         L4_ast.BeginExp(p,L4_ast.AsetExp(p,x2,zero2,e1n),e2n)),fl1@fl2)
+         L4_ast.BeginExp(p,L4_ast.AsetExp(p,x2,zero2,e1n,true),e2n)),fl1@fl2)
    | IfExp(p,e1,e2,e3) ->
       let (e1n,fl1) = compile_exp e1 in
       let (e2n,fl2) = compile_exp e2 in
@@ -466,7 +466,7 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
             (L4_ast.ArefExp(p,List.nth el2 0,List.nth el2 1),fl2)
          | AsetPrim(p2) ->
             if List.length el2 <> 3 then die_error p "the 'aset' operator takes 3 arguments";
-            (L4_ast.AsetExp(p,List.nth el2 0,List.nth el2 1,List.nth el2 2),fl2)
+            (L4_ast.AsetExp(p,List.nth el2 0,List.nth el2 1,List.nth el2 2,true),fl2)
          | AlenPrim(p2) ->
             if List.length el2 <> 1 then die_error p "the 'alen' operator takes 1 argument";
             (L4_ast.AlenExp(p,List.nth el2 0),fl2)

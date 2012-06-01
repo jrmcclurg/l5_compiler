@@ -28,7 +28,7 @@ type program = Program of pos * exp
          | BeginExp of pos * exp * exp
          | AppExp of pos * exp * exp list
          | PrimExp of pos * prim
-         | IntExp of pos * int64
+         | IntExp of pos * int32
  and prim = PlusPrim of pos
           | MinusPrim of pos
           | TimesPrim of pos
@@ -111,7 +111,7 @@ and output_exp out (e : exp) = match e with
       output_string out ")"
    | PrimExp(_, p) ->
       output_prim out p
-   | IntExp(_, i) -> output_string out (Int64.to_string i)
+   | IntExp(_, i) -> output_string out (Int32.to_string i)
 and output_prim out (pr : prim) = match pr with
    | PlusPrim(_) ->
       output_string out "+";

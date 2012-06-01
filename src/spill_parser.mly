@@ -15,7 +15,7 @@
    open L2_ast;;
    open Utils;;
 %}
-%token <int64> INT
+%token <int32> INT
 %token <int> LABEL
 %token <int> IDENT 
 %token ARRAYERR TAILCALL ALLOC RETURN PRINT CJUMP GOTO MEM CALL
@@ -29,7 +29,7 @@
 %token EOF
 /* last tokens have highest precedence */
 %start main /* the entry point */
-%type <L2_ast.instr list * int * int64 * int> main
+%type <L2_ast.instr list * int * int32 * int> main
 %%
 main:
    LPAREN instr_list RPAREN var INT var { let i = $5 in

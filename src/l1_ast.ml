@@ -19,8 +19,8 @@ type program = Program of pos * func list
  and func = Function of pos * int option * instr list
  and instr = 
              AssignInstr of pos * reg * sval
-           | MemReadInstr of pos * reg * reg * int64 
-           | MemWriteInstr of pos * reg * int64 * sval
+           | MemReadInstr of pos * reg * reg * int32 
+           | MemWriteInstr of pos * reg * int32 * sval
            | PlusInstr of pos * reg * tval
            | MinusInstr of pos * reg * tval
            | TimesInstr of pos * reg * tval
@@ -53,15 +53,15 @@ type program = Program of pos * func list
           | EdxReg of pos
           | EbxReg of pos
  and sreg = EcxShReg of pos
-           | IntShVal of pos * int64 
+           | IntShVal of pos * int32 
  and sval = RegSVal of pos * reg
-          | IntSVal of pos * int64
+          | IntSVal of pos * int32
           | LabelSVal of pos * int
  and uval = RegUVal of pos * reg
-          | IntUVal of pos * int64
+          | IntUVal of pos * int32
           | LabelUVal of pos * int
  and tval = RegTVal of pos * reg
-          | IntTVal of pos * int64
+          | IntTVal of pos * int32
           | LabelTVal of pos * int
 ;;
 
@@ -102,13 +102,13 @@ and output_instr out i = match i with
       output_string out " <- (mem ";
       output_reg out r2;
       output_string out " ";
-      output_string out (Int64.to_string i);
+      output_string out (Int32.to_string i);
       output_string out "))";
    | MemWriteInstr(_,r,i,sv) ->
       output_string out "((mem ";
       output_reg out r;
       output_string out " ";
-      output_string out (Int64.to_string i);
+      output_string out (Int32.to_string i);
       output_string out ") <- ";
       output_sval out sv;
       output_string out ")";
@@ -255,18 +255,18 @@ and output_creg out cr = match cr with
    | EbxReg(_) -> output_string out "ebx"
 and output_sreg out sr = match sr with
    | EcxShReg(_) -> output_string out "ecx"
-   | IntShVal(_,i) -> output_string out (Int64.to_string i)
+   | IntShVal(_,i) -> output_string out (Int32.to_string i)
 and output_sval out s = match s with
    | RegSVal(_, r) -> output_reg out r
-   | IntSVal(_, i) -> output_string out (Int64.to_string i)
+   | IntSVal(_, i) -> output_string out (Int32.to_string i)
    | LabelSVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_uval out u = match u with
    | RegUVal(_,r) -> output_reg out r
-   | IntUVal(_, i) -> output_string out (Int64.to_string i)
+   | IntUVal(_, i) -> output_string out (Int32.to_string i)
    | LabelUVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_tval out t = match t with
    | RegTVal(_,r) -> output_reg out r
-   | IntTVal(_,i) -> output_string out (Int64.to_string i)
+   | IntTVal(_,i) -> output_string out (Int32.to_string i)
    | LabelTVal(_,s) -> output_string out (":"^(get_symbol s))
 and output_stringlit out s =
    output_string out s (* TODO - encode special chars *)

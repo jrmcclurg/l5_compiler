@@ -35,7 +35,7 @@ type program = Program of pos * exp * func list
           | NewArrayDExp of pos * sval * sval
           | NewTupleDExp of pos * sval list
           | ArefDExp of pos * sval * sval
-          | AsetDExp of pos * sval * sval * sval
+          | AsetDExp of pos * sval * sval * sval * bool
           | AlenDExp of pos * sval
           | PrintDExp of pos * sval
           | MakeClosureDExp of pos * int * sval
@@ -43,7 +43,7 @@ type program = Program of pos * exp * func list
           | ClosureVarsDExp of pos * sval
           | SValDExp of pos * sval
  and sval = VarSVal of pos * var
-          | IntSVal of pos * int64
+          | IntSVal of pos * int32
           | LabelSVal of pos * int
  and var = Var of pos * int
 ;;
@@ -165,7 +165,7 @@ and output_dexp out de = match de with
       output_string out " ";
       output_sval out sv2;
       output_string out ")"
-   | AsetDExp(_,sv1,sv2,sv3) ->
+   | AsetDExp(_,sv1,sv2,sv3,_) ->
       output_string out "(aset ";
       output_sval out sv1;
       output_string out " ";
@@ -201,7 +201,7 @@ and output_var out r = match r with
    | Var(_,s) -> output_string out (get_symbol s)
 and output_sval out s = match s with
    | VarSVal(_, r) -> output_var out r
-   | IntSVal(_, i) -> output_string out (Int64.to_string i)
+   | IntSVal(_, i) -> output_string out (Int32.to_string i)
    | LabelSVal(_,s) -> output_string out (":"^(get_symbol s))
 ;;
 

@@ -99,17 +99,17 @@ let die_system_error (s : string) =
    exit 1
 ;;
 
-let max_int = 2147483647L ;;
-let min_int = -2147483648L ;;
+let max_int = 2147483647l ;;
+let min_int = -2147483648l ;;
 
 (* does an integer range check *)
-let check_int_range (i : int64) =
+let check_int_range (i : int32) =
    if ((i < min_int) or (i > max_int)) then parse_error "integer out of range"
 ;;
 
 (* does a check to see if integer is divisible by 4 *)
-let check_int_alignment (i : int64) =
-   if ((Int64.rem i 4L) <> 0L) then parse_error "offset must be divisible by 4"
+let check_int_alignment (i : int32) =
+   if ((Int32.rem i 4l) <> 0l) then parse_error "offset must be divisible by 4"
 ;;
 
 let prefix_chr = "0";;
@@ -208,8 +208,8 @@ let rec implode (cl : char list) : string =
    | c::more -> ((String.make 1 c)^(implode more))
 ;;
 
-let encode_int (i : int) : int64 =
-   Int64.add (Int64.mul (Int64.of_int i) 2L) 1L
+let encode_int (i : int) : int32 =
+   Int32.add (Int32.mul (Int32.of_int i) 2l) 1l
 ;;
 
 let parse_command_line (banner_text : string) : in_channel =

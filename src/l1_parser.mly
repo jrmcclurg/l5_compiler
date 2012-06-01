@@ -16,7 +16,7 @@
    open Utils;;
 %}
 %token <int> STRING
-%token <int64> INT
+%token <int32> INT
 %token <int> LABEL
 %token ARRAYERR TAILCALL ALLOC RETURN PRINT PRINTSTR CJUMP GOTO MEM CALL
 %token ESI EDI EBP ESP

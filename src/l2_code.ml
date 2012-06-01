@@ -671,7 +671,7 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
  *
  * returns l1, an (instr list) with the variabled spilled properly
  *)
-let rec spill (il : instr list) (v : int) (off : int64) (prefix : string) : instr list =
+let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : instr list =
    (* go through the list of instructions... *)
    let (result,_) = List.fold_left (fun (l,k) i -> (* l is the cumulative list, k is the unique number,
                                                     * and i is the current instruction to process *)
@@ -1211,12 +1211,12 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
    match f with
    | Function(p,so,il) -> 
    (* TODO XXX - this is a hack to make it work with my wrong
-    * test cases.  It can be changed to 1L for normal behavior *)
-   let init_offset = 1L in (* number of spots on the stack to allow *)
-   let save    = [MemWriteInstr(p,VarOrReg(p,ebp_id,false),Int64.mul init_offset (-4L),VarSVal(p,VarOrReg(p,edi_id,false)));
-                  MemWriteInstr(p,VarOrReg(p,ebp_id,false),Int64.sub (Int64.mul init_offset (-4L)) 4L,VarSVal(p,VarOrReg(p,esi_id,false)))] in
-   let restore = [MemReadInstr(p,VarOrReg(p,edi_id,false),VarOrReg(p,ebp_id,false),Int64.mul init_offset (-4L));
-                  MemReadInstr(p,VarOrReg(p,esi_id,false),VarOrReg(p,ebp_id,false),Int64.sub (Int64.mul init_offset (-4L)) 4L)] in
+    * test cases.  It can be changed to 1l for normal behavior *)
+   let init_offset = 1l in (* number of spots on the stack to allow *)
+   let save    = [MemWriteInstr(p,VarOrReg(p,ebp_id,false),Int32.mul init_offset (-4l),VarSVal(p,VarOrReg(p,edi_id,false)));
+                  MemWriteInstr(p,VarOrReg(p,ebp_id,false),Int32.sub (Int32.mul init_offset (-4l)) 4l,VarSVal(p,VarOrReg(p,esi_id,false)))] in
+   let restore = [MemReadInstr(p,VarOrReg(p,edi_id,false),VarOrReg(p,ebp_id,false),Int32.mul init_offset (-4l));
+                  MemReadInstr(p,VarOrReg(p,esi_id,false),VarOrReg(p,ebp_id,false),Int32.sub (Int32.mul init_offset (-4l)) 4l)] in
    (* add save to the front of list, and restore before each tail-call and return *)
    let il2t = List.fold_left (fun res i ->
       match (count,i) with
@@ -1228,30 +1228,30 @@ and compile_func (f : L2_ast.func) (count : int) : L1_ast.func =
     * (presumably the other functions end with return) *)
    let il2 = if first then il2t@restore else il2t in
    (* increase the initial stack size by 2 instructions (for edi/esi save) *)
-   let initial = (Int64.add 1L init_offset) in
+   let initial = (Int32.add 1l init_offset) in
    (* compile the instructions to L1 instructions *)
    let h = ((Hashtbl.create 64) : (int,unit) Hashtbl.t) in
    let j = ((Hashtbl.create 64) : (int,IntSet.t) Hashtbl.t) in
    let (il3,num_spilled) = compile_instr_list il2 initial count h j in
    global_spill_count := !global_spill_count + (Hashtbl.length h);
    (* add the stack size adjustment to the beginning of each function *)
-   let il4 = (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled))))::il3 in
+   let il4 = (L1_ast.MinusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int32.mul 4l num_spilled))))::il3 in
    (* add the stack size de-adjustment to the end of the first instruction *)
    let il5 = if first then
-      il4@[L1_ast.PlusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int64.mul 4L num_spilled)))]
+      il4@[L1_ast.PlusInstr(p,L1_ast.EspReg(p),L1_ast.IntTVal(p, (Int32.mul 4l num_spilled)))]
    else il4 in
    L1_ast.Function(p,so,il5)
 
 (* this is a fixpoint operator where i is the current number of spilled vars *)
-and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spilled : (int,unit) Hashtbl.t) (jumps : (int,IntSet.t) Hashtbl.t) :
-                                                              (L1_ast.instr list * int64) =
+and compile_instr_list (il : L2_ast.instr list) (num : int32) (count : int) (spilled : (int,unit) Hashtbl.t) (jumps : (int,IntSet.t) Hashtbl.t) :
+                                                              (L1_ast.instr list * int32) =
    (* try to do the register allocation *)
-   (*if debug_enabled () then (print_string ("compile_instr_list: "^(Int64.to_string num)^"\n");
+   (*if debug_enabled () then (print_string ("compile_instr_list: "^(Int32.to_string num)^"\n");
    flush stdout );*)
    let (at,colors,ok,num_to_spill) = graph_color il in
-   (*print_string ((Int64.to_string num)^", table size = "^(string_of_int (List.length at))^" : ");
+   (*print_string ((Int32.to_string num)^", table size = "^(string_of_int (List.length at))^" : ");
    flush stdout;*)
-   (*if (num > 50L) then parse_error "register allocation took too long";*) (* TODO XXX *)
+   (*if (num > 50l) then parse_error "register allocation took too long";*) (* TODO XXX *)
    (* if the graph coloring failed... *)
    if (not ok) then (
       (* just pick any old variable to spill *)
@@ -1270,12 +1270,12 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
              if (tnum >= num_to_spill) then (res,ilt,tnum) else
              (try Hashtbl.find spilled id; (res,ilt,tnum)
                              with _ -> (
-                        let new_num = (Int64.add num (Int64.of_int tnum)) in
-                        let spill_name = ("<s_"^(string_of_int count)^"_"^(Int64.to_string new_num)^">") in
+                        let new_num = (Int32.add num (Int32.of_int tnum)) in
+                        let spill_name = ("<s_"^(string_of_int count)^"_"^(Int32.to_string new_num)^">") in
                         Hashtbl.replace spilled id ();
                         (*if debug_enabled () then ( print_string ("spilling: "^(get_symbol id)^" to "^spill_name^"\n");
                         flush stdout );*)
-                        let il2t = spill ilt id (Int64.mul (-4L) (Int64.add new_num (1L))) spill_name in
+                        let il2t = spill ilt id (Int32.mul (-4l) (Int32.add new_num (1l))) spill_name in
                              (Some(id),il2t,tnum + 1)
              ) ) ) (* this is the "not already spilled" case *)
 	 else (res,ilt,tnum)
@@ -1285,14 +1285,14 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
       (* if there's nothing left to spill, fail *)
       | None -> parse_error ("Function "^(string_of_int count)^" : register allocation FAILED!\n") (* TODO don't use parse_error for this message *)
       | Some(id) ->
-         let new_num = (Int64.add num (Int64.of_int ns)) in
+         let new_num = (Int32.add num (Int32.of_int ns)) in
          (* pick a unique name for the spill variable (it starts with "<" to prevent
           * collisions with normal varialbes) *)
          (*List.iter (fun i -> print_instr i; print_string "\n") il2;*)
          (*print_string "done.\n";
          flush stdout;*)
          (* try to compile again *)
-         compile_instr_list il2 (Int64.add new_num (1L)) count spilled jumps
+         compile_instr_list il2 (Int32.add new_num (1l)) count spilled jumps
    )
    (* if the graph coloring succeeded *)
    else (
