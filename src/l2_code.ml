@@ -1194,7 +1194,10 @@ let rec compile_program (p : L2_ast.program) : L1_ast.program =
       let (_,fl2) = List.fold_left (fun (count,res) f ->
          (count+1,res@[compile_func f count])
       ) (0,[]) fl in
-      if debug_enabled () then print_string ("Total spill count: "^(string_of_int !global_spill_count)^"\n");
+      if debug_enabled () then (
+         print_string ("Total spill count: "^(string_of_int !global_spill_count)^"\n");
+         flush stdout
+      );
       (*print_string ("Count:   "^(string_of_int !count)^"\n");*)
       (*print_string ("Num liveness: "^(string_of_int !liveness_num)^"\n");*)
       L1_ast.Program(p, fl2)
@@ -1255,7 +1258,10 @@ and compile_instr_list (il : L2_ast.instr list) (num : int64) (count : int) (spi
       (*if debug_enabled () then ( print_string ("Looking through: "^(string_of_int (List.length at))^"\n");
       flush stdout );*)
       (*print_string ("Table size = "^(string_of_int (List.length at))^"\n");*)
-      if debug_enabled () then print_string ("Function "^(string_of_int count)^" : spilling "^(string_of_int num_to_spill)^" registers\n");
+      if debug_enabled () then (
+         print_string ("Function "^(string_of_int count)^" : spilling "^(string_of_int num_to_spill)^" registers\n");
+         flush stdout
+      );
       let (nameop,il2,ns) = List.fold_left (fun (res,ilt,tnum) (id,vl) -> 
          (*print_var hd;
          print_string "\n";*)
