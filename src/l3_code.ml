@@ -177,11 +177,27 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) : L2_ast.i
        L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,L2_ast.VarOrReg(p,L2_ast.eax_id,false)))]
    | NewTupleDExp(p,svl) ->
       let len = List.length svl in
+      let uv = L2_ast.VarOrReg(p,get_unique_symbol l3_prefix,true) in
+      let has_dexp = List.fold_left (fun res sv ->
+         match (res,sv) with
+         | (true,_) -> res
+         | (_,SValDExp(p,_)) -> res
+         | (_,_) -> true
+      ) false svl in
+      let the_src = (if has_dexp then L2_ast.VarOrReg(p,get_unique_symbol l3_prefix,true)
+                                 else L2_ast.VarOrReg(p,L2_ast.eax_id,false)) in
       let (_,l2) = List.fold_left (fun (off,res) sv ->
-         ((off+4),res@[L2_ast.MemWriteInstr(p,L2_ast.VarOrReg(p,L2_ast.eax_id,false),Int32.of_int off,compile_sval sv)])
+         let (pre_list,comp_sv) = (match sv with
+         | SValDExp(p,sv) -> ([],compile_sval sv)
+         | _ -> 
+            (compile_dexp sv uv false, L2_ast.VarSVal(p,uv))
+         ) in
+         ((off+4),res@pre_list@
+         [L2_ast.MemWriteInstr(p,the_src,Int32.of_int off,comp_sv)])
       ) (4,[]) svl in
-      [L2_ast.AllocInstr(p,L2_ast.IntTVal(p,Int32.of_int (2*len+1)),L2_ast.IntTVal(p,0l))]@l2@
-      [L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,L2_ast.VarOrReg(p,L2_ast.eax_id,false)))]
+      [L2_ast.AllocInstr(p,L2_ast.IntTVal(p,Int32.of_int (2*len+1)),L2_ast.IntTVal(p,0l))]@
+      (if has_dexp then [L2_ast.AssignInstr(p,the_src,L2_ast.VarSVal(p,L2_ast.VarOrReg(p,L2_ast.eax_id,false)))] else [])@l2@
+      [L2_ast.AssignInstr(p,dest,L2_ast.VarSVal(p,the_src))]
    | ArefDExp(p,sv1,sv2) ->
       let sv1t = (compile_sval sv1) in
       let tv1 = L2_ast.get_tval sv1t in
@@ -252,7 +268,7 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) : L2_ast.i
      * (closure-proc a) is the same as (aref a 0)
      * (closure-vars a) is the same as (aref a 1) *)
    | MakeClosureDExp(p,s,sv) -> 
-      compile_dexp (NewTupleDExp(p,[LabelSVal(p,s);sv])) dest tail 
+      compile_dexp (NewTupleDExp(p,[SValDExp(p,LabelSVal(p,s));SValDExp(p,sv)])) dest tail 
    | ClosureProcDExp(p,sv) -> 
       compile_dexp (ArefDExp(p,sv,IntSVal(p,0l))) dest tail
    | ClosureVarsDExp(p,sv) -> 

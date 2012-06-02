@@ -1,10 +1,10 @@
 ;; SAT benchmarks from http://www.cs.ubc.ca/~hoos/SATLIB/benchm.html
 (let ([ARRAY_MAX_ITEM 100000])
 (let ([ARRAY_MIN_ITEM -100000])
-(let ([TRIANGLE_TEST_ITERATIONS 0]) ;; 100
+(let ([TRIANGLE_TEST_ITERATIONS 100]) ;; 100
 (let ([ADD_TEST_ITERATIONS 1000])     ;; 1000
 (let ([DO_SAT_TEST 1])                ;; 1
-(let ([DO_CONCAT_TEST 0])             ;; 1
+(let ([DO_CONCAT_TEST 1])             ;; 1
 (let ([clauses (new-tuple
 (new-tuple 4 -18 19) 
 (new-tuple 3 18 -5) 

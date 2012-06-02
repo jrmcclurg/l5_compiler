@@ -195,7 +195,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       | _ -> ([],e) )
    | NewTupleExp(p,el) -> 
       let (pull2,env2,b) = List.fold_left (fun (pull2,env2,b) e ->
-            let (pull3,env3) = lift_one e SValEnv in
+            let (pull3,env3) = lift_one e DExpEnv in
             if b then (pull2,env2@[e],b) else
             if List.length pull3 > 0 then (pull3,env2@[env3],true) else
             (pull2,env2@[e],b)
@@ -414,7 +414,7 @@ and compile_exp (e2 : L4_ast.exp) : L3_ast.exp =
       L3_ast.DExpExp(p,L3_ast.AppDExp(p,compile_exp_to_sval e, List.map (fun e -> compile_exp_to_sval e) el))
    | NewArrayExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.NewArrayDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2))
    | NewTupleExp(p,el) ->
-      L3_ast.DExpExp(p,L3_ast.NewTupleDExp(p,List.map (fun e -> compile_exp_to_sval e) el))
+      L3_ast.DExpExp(p,L3_ast.NewTupleDExp(p,List.map (fun e -> compile_exp_to_dexp e) el))
    | ArefExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.ArefDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2))
    | AsetExp(p,e1,e2,e3,c) ->
       L3_ast.DExpExp(p,L3_ast.AsetDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2,compile_exp_to_sval e3,c))
@@ -442,7 +442,7 @@ and compile_exp_to_dexp (e : L4_ast.exp) : L3_ast.dexp =
    match e with
    | AppExp(p,e,el) -> L3_ast.AppDExp(p,compile_exp_to_sval e, List.map (fun ex -> compile_exp_to_sval ex) el)
    | NewArrayExp(p,e1,e2) -> L3_ast.NewArrayDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2)
-   | NewTupleExp(p,el) -> L3_ast.NewTupleDExp(p,List.map (fun ex -> compile_exp_to_sval ex) el)
+   | NewTupleExp(p,el) -> L3_ast.NewTupleDExp(p,List.map (fun ex -> compile_exp_to_dexp ex) el)
    | ArefExp(p,e1,e2) -> L3_ast.ArefDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2)
    | AsetExp(p,e1,e2,e3,c) -> L3_ast.AsetDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2,compile_exp_to_sval e3,c)
    | AlenExp(p,e) -> L3_ast.AlenDExp(p,compile_exp_to_sval e)

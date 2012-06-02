@@ -40,6 +40,8 @@ all:			L1c spill liveness graph L2c L3c L4c L5c Lc
 
 
 
+
+
 ### Lc compiler ###
 
 Lc:	lc_main.$(CMO) l5_parser.$(CMO) l5_lexer.$(CMO) l5_ast.$(CMO) l4_ast.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) \
@@ -366,7 +368,8 @@ l5c_tarball:		L5c clean
 lc_tarball:		Lc clean
 			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tLc/g" > Makefile_temp
 			mv Makefile_temp Makefile
-			tar -cvzf mcclurg.Lc.tar.gz Lc* Makefile lc* l5* l5_code.ml l4_code.ml l3_code.ml l2_code.ml l1_code.ml \
+			tar -cvzf mcclurg.Lc.tar.gz Lc* Makefile lc* l5_lexer.mll l5_parser.mly \
+			l5_code.ml l4_code.ml l3_code.ml l2_code.ml l1_code.ml \
 			l5_ast.ml l4_ast.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml flags.ml mcclurg.L5
 			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
 			mv Makefile_temp Makefile

@@ -33,7 +33,7 @@ type program = Program of pos * exp * func list
           | ArrayPredDExp of pos * sval
           | AppDExp of pos * sval * sval list
           | NewArrayDExp of pos * sval * sval
-          | NewTupleDExp of pos * sval list
+          | NewTupleDExp of pos * dexp list
           | ArefDExp of pos * sval * sval
           | AsetDExp of pos * sval * sval * sval * bool
           | AlenDExp of pos * sval
@@ -155,7 +155,7 @@ and output_dexp out de = match de with
       output_string out "(new-tuple";
       let _ = List.fold_left (fun _ svt ->
          output_string out " ";
-         output_sval out svt;
+         output_dexp out svt;
          true
       ) false svl in
       output_string out ")"
