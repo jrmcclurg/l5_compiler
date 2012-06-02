@@ -137,17 +137,20 @@ let get_gens_kills (i : instr) : (IntSet.t * IntSet.t) =
    | SrlInstr(_,VarOrReg(_,v,_),ShVar(_,VarOrReg(_,v2,_))) -> (IntSet.add v2 (IntSet.singleton v),IntSet.singleton v)
    | SrlInstr(_,VarOrReg(_,v,_),_) -> ((IntSet.singleton v), (IntSet.singleton v))
    (* less-than comparison *)
-   | LtInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) -> (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
+   | LtInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) ->
+      (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
    | LtInstr(_,VarOrReg(_,v,_),_,VarTVal(_,VarOrReg(_,v3,_))) -> ((IntSet.singleton v3),(IntSet.singleton v))
    | LtInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),_) -> ((IntSet.singleton v2),(IntSet.singleton v))
    | LtInstr(_,VarOrReg(_,v,_),_,_) -> (IntSet.empty, (IntSet.singleton v))
    (* less-than-or-equal-to comparison *)
-   | LeqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) -> (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
+   | LeqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) ->
+      (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
    | LeqInstr(_,VarOrReg(_,v,_),_,VarTVal(_,VarOrReg(_,v3,_))) -> ((IntSet.singleton v3),(IntSet.singleton v))
    | LeqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),_) -> ((IntSet.singleton v2),(IntSet.singleton v))
    | LeqInstr(_,VarOrReg(_,v,_),_,_) -> (IntSet.empty, (IntSet.singleton v))
    (* equal-to comparison *)
-   | EqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) -> (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
+   | EqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) ->
+      (IntSet.add v3 (IntSet.singleton v2),(IntSet.singleton v))
    | EqInstr(_,VarOrReg(_,v,_),_,VarTVal(_,VarOrReg(_,v3,_))) -> ((IntSet.singleton v3),(IntSet.singleton v))
    | EqInstr(_,VarOrReg(_,v,_),VarTVal(_,VarOrReg(_,v2,_)),_) -> ((IntSet.singleton v2),(IntSet.singleton v))
    | EqInstr(_,VarOrReg(_,v,_),_,_) -> (IntSet.empty, (IntSet.singleton v))
@@ -156,15 +159,18 @@ let get_gens_kills (i : instr) : (IntSet.t * IntSet.t) =
    (* goto *)
    | GotoInstr(_,_) -> (IntSet.empty,IntSet.empty)
    (* less-than jump *)
-   | LtJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) -> (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
+   | LtJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) ->
+      (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
    | LtJumpInstr(_,_,VarTVal(_,VarOrReg(_,v2,_)),_,_) -> ((IntSet.singleton v2),IntSet.empty)
    | LtJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),_,_,_) -> ((IntSet.singleton v1),IntSet.empty)
    (* less-than-or-equal-to jump *)
-   | LeqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) -> (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
+   | LeqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) ->
+      (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
    | LeqJumpInstr(_,_,VarTVal(_,VarOrReg(_,v2,_)),_,_) -> ((IntSet.singleton v2),IntSet.empty)
    | LeqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),_,_,_) -> ((IntSet.singleton v1),IntSet.empty)
    (* equal-to jump *)
-   | EqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) -> (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
+   | EqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),VarTVal(_,VarOrReg(_,v2,_)),_,_) ->
+      (IntSet.add v2 (IntSet.singleton v1),IntSet.empty)
    | EqJumpInstr(_,_,VarTVal(_,VarOrReg(_,v2,_)),_,_) -> ((IntSet.singleton v2),IntSet.empty)
    | EqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),_,_,_) -> ((IntSet.singleton v1),IntSet.empty)
    (* call *)
@@ -467,6 +473,10 @@ let add_all_edges (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
  * add_edge function.  The "first" argument should be true
  * when this function is called normally.
  *)
+(* l1 is all the usable registers except ecx *)
+let l1_adj = (List.fold_right IntSet.add [eax_id;ebx_id;edi_id;edx_id;esi_id] IntSet.empty);;
+(* l2 is the callee-save registers *)
+let l2_adj = (List.fold_right IntSet.add [edi_id;esi_id] IntSet.empty);;
 let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
                                 (h : (int, IntSet.t) Hashtbl.t)
                                 (first : bool) : unit =
@@ -494,21 +504,17 @@ let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
        * of the first instruction. *)
       add_all_edges kills outs temp h;
       (* handle the special instructions *)
-      (* l1 is all the usable registers except ecx *)
-      let l1 = (List.fold_right IntSet.add [eax_id;ebx_id;edi_id;edx_id;esi_id] IntSet.empty) in
-      (* l2 is the callee-save registers *)
-      let l2 = (List.fold_right IntSet.add [edi_id;esi_id] IntSet.empty) in
       (match i with
       (* any shift variable v will conflict with all usable registers except ecx
        * (since ecx is the only allowable shift register in the x86 instruction) *)
-      | SllInstr(_,_,ShVar(_,(VarOrReg(_,v,true)))) -> add_all_edges (IntSet.singleton v) l1 None h
-      | SrlInstr(_,_,ShVar(_,(VarOrReg(_,v,true)))) -> add_all_edges (IntSet.singleton v) l1 None h
+      | SllInstr(_,_,ShVar(_,(VarOrReg(_,v,true)))) -> add_all_edges (IntSet.singleton v) l1_adj None h
+      | SrlInstr(_,_,ShVar(_,(VarOrReg(_,v,true)))) -> add_all_edges (IntSet.singleton v) l1_adj None h
       (* a destination variable for comparisons will conflict with the 
        * callee-save registers, since the callER-save registers are the only
        * valid destinations *)
-      | LtInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2 None h
-      | LeqInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2 None h
-      | EqInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2 None h
+      | LtInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2_adj None h
+      | LeqInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2_adj None h
+      | EqInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2_adj None h
       | _ -> ());
       (* recursively process the remaining instructions *)
       compute_adjacency_table more h false
@@ -544,17 +550,45 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
    (*if debug_enabled () then (print_string ("   graph color: "^(string_of_int (List.length il))^"... ");
    flush stdout );*)
    (* perform the liveness analysis based on the instruction list *)
+   if debug_enabled () then (
+      print_string ("Liveness... ");
+      flush stdout
+   );
    let il2 = liveness il in
+   if debug_enabled () then (
+      print_string ("done.\n");
+      flush stdout
+   );
    (* make sure all of the usable registers are connected *)
    let l1 = List.fold_right IntSet.add
             [eax_id;ebx_id;ecx_id;edi_id;edx_id;esi_id] IntSet.empty in
    (* create an empty hashtable for the graph *)
    let h = ((Hashtbl.create (IntSet.cardinal l1)) : (int, IntSet.t) Hashtbl.t) in
    (* add edges between all the usable registers *)
+   if debug_enabled () then (
+      print_string ("Edges... ");
+      flush stdout
+   );
    add_all_edges l1 l1 None h;
+   if debug_enabled () then (
+      print_string ("done.\n");
+      flush stdout
+   );
    (* populate h with the conflict graph *)
+   if debug_enabled () then (
+      print_string ("Computing graph... ");
+      flush stdout
+   );
    compute_adjacency_table il2 h true;
+   if debug_enabled () then (
+      print_string ("done.\n");
+      flush stdout
+   );
    (* find all the source vertices in graph h *)
+   if debug_enabled () then (
+      print_string ("Sorting... ");
+      flush stdout
+   );
    let keys = Hashtbl.fold (fun k tab res -> 
       (k,tab)::res
    ) h [] in
@@ -570,6 +604,10 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
    let assignments = ((Hashtbl.create (IntSet.cardinal l1)) : (int,int) Hashtbl.t) in
    (* go through the graph (via the sorted keys2 list)
     * and compute the return values (ag,colors,ok) *)
+   if debug_enabled () then (
+      print_string ("done.\n");
+      flush stdout
+   );
    let (ag,colors,ok,the_max,the_num,_,_,_) =
    List.fold_left (fun (r2,r3,flag,the_max_local,the_num_local,the_prev_local,the_prev_max_local,the_counter_local) x -> 
       (* find the current source variable "x" in the graph
@@ -714,7 +752,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l1 = if drop then [] else if (read || write) then [new_inst] else [i] in
          (* notice that a unique variable name is never used for this instruction, so k stays the same. *)
          (* also, notice that the header/footer instructions are not used *)
-         (l@l1,k)
+         (* (l@l1,k) *)
+         (List.rev_append l1 l,k)
       (* (v1 <- (mem v2 i)) *)
       | MemReadInstr(p1,v1,v2,i) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -739,7 +778,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if read then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* ((mem v1 i) <- v2) *)
       | MemWriteInstr(p1,v1,i,sv) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -762,7 +802,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1 || read2) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
       (* (v1 += t) *)
       | PlusInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -787,7 +828,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read || write) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (v1 -= t) *)
       | MinusInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -812,7 +854,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read || write) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (v1 *= t) *)
       | TimesInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -837,7 +880,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read || write) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (v1 &= t) *)
       | BitAndInstr(p1,v1,t) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -862,7 +906,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read || write) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (v1 <<= svr) *)
       | SllInstr(p1,v1,svr) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -887,7 +932,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read || write) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (v1 >>= svr) *)
       | SrlInstr(p1,v1,svr) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -912,7 +958,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read || write) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (v1 <- t1 < t2) *)
       | LtInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -942,7 +989,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read1 || read2) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (v1 <- t1 <= t2) *)
       | LeqInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -972,7 +1020,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read1 || read2) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (v1 <- t1 = t2) *)
       | EqInstr(p1,v1,t1,t2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1002,7 +1051,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l3 = new_inst::l2 in
          let l4 = if (read1 || read2) then header::l3 else l3 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l4,new_k)
+         (*(l@l4,new_k)*)
+         (List.rev_append l4 l,new_k)
       (* (cjump t1 < t2 s1 s2) *)
       | LtJumpInstr(p1,t1,t2,s1,s2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1026,7 +1076,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1 || read2) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
       (* (cjump t1 <= t2 s1 s2) *)
       | LeqJumpInstr(p1,t1,t2,s1,s2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1050,7 +1101,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1 || read2) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
       (* (cjump t1 = t2 s1 s2) *)
       | EqJumpInstr(p1,t1,t2,s1,s2) ->
          (* if v1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1074,7 +1126,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1 || read2) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
       (* (call u) *)
       | CallInstr(p1,u) ->
          (* if u is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1093,7 +1146,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
       (* (tail-call u) *)
       | TailCallInstr(p1,u) ->
          (* if u is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1112,7 +1166,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
       (* (eax <- (print t1)) *)
       | PrintInstr(p1,t1) ->
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1131,7 +1186,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
       (* (eax <- (allocate t1 t2)) *)
       | AllocInstr(p1,t1,t2) ->
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1155,7 +1211,8 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1 || read2) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
       (* (eax <- (array-error t1 t2)) *)
       | ArrayErrorInstr(p1,t1,t2) ->
          (* if t1 is equal to the spill variable, it will be replaced by a unique variable name *)
@@ -1179,9 +1236,11 @@ let rec spill (il : instr list) (v : int) (off : int32) (prefix : string) : inst
          let l2 = new_inst::l1 in
          let l3 = if (read1 || read2) then header::l2 else l2 in
          (* add our instruction(s) to the list, and inform the loop of the new unique number *)
-         (l@l3,new_k)
-      | _ -> (l@[i],k)
-   ) ([],0) il in result (* start with an empty list and unique counter "0". return the expanded
+         (*(l@l3,new_k)*)
+         (List.rev_append l3 l,new_k)
+      (*| _ -> (l@[i],k)*)
+      | _ -> (List.rev_append [i] l,k)
+   ) ([],0) il in List.rev result (* start with an empty list and unique counter "0". return the expanded
                           * list of instructions *)
 ;;
 
