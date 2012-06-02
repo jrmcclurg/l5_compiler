@@ -38,7 +38,7 @@ let debug_enabled () =
 
 module IntSet = Set.Make(struct 
                             type t = int
-                            let compare = compare
+                            let compare = (Pervasives.compare : (int -> int -> int))
                          end);;
 
 (* prints a list of ints *)
@@ -108,6 +108,11 @@ and find_target_ins (il : (instr * IntSet.t * IntSet.t) list) (s1 : int) (s2o : 
 *)
 
 (* given instruction i, returns (gens, kills) *)
+let regs1 = List.fold_right IntSet.add [eax_id;edx_id;ecx_id] IntSet.empty;;
+let regs2 = List.fold_right IntSet.add [eax_id;ebx_id;ecx_id;edx_id] IntSet.empty;;
+let regs4 = List.fold_right IntSet.add [eax_id;edx_id;ecx_id;edi_id;esi_id] IntSet.empty;;
+let regs5 = List.fold_right IntSet.add [eax_id;ecx_id;edi_id;edx_id;esi_id] IntSet.empty;;
+let regs6 = List.fold_right IntSet.add [eax_id;edi_id;esi_id] IntSet.empty;;
 let get_gens_kills (i : instr) : (IntSet.t * IntSet.t) =
    match i with
    (* assignment *)
@@ -175,38 +180,36 @@ let get_gens_kills (i : instr) : (IntSet.t * IntSet.t) =
    | EqJumpInstr(_,VarTVal(_,VarOrReg(_,v1,_)),_,_,_) -> ((IntSet.singleton v1),IntSet.empty)
    (* call *)
    | CallInstr(_,VarUVal(p,VarOrReg(_,v,_))) ->
-      let l = IntSet.add v (List.fold_right IntSet.add [eax_id;edx_id;ecx_id] IntSet.empty) in
-      (l,(List.fold_right IntSet.add [eax_id;ebx_id;ecx_id;edx_id] IntSet.empty))
+      let l = IntSet.add v regs1 in
+      (l,regs2)
    | CallInstr(p,_) ->
-      (List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty,
-      List.fold_right IntSet.add [eax_id;ebx_id;ecx_id;edx_id] IntSet.empty)
+      (regs1,regs2)
    (* tail-call *)
    | TailCallInstr(_,VarUVal(p,VarOrReg(_,v,_))) ->
-      let l = IntSet.add v (List.fold_right IntSet.add [eax_id;edx_id;ecx_id;edi_id;esi_id] IntSet.empty) in
+      let l = IntSet.add v regs4 in
       (l,IntSet.empty)
-   | TailCallInstr(p,_) -> (List.fold_right IntSet.add [eax_id;ecx_id;edi_id;edx_id;esi_id] IntSet.empty,
-                            IntSet.empty)
+   | TailCallInstr(p,_) -> (regs5,IntSet.empty)
    (* return *)
-   | ReturnInstr(p) -> (List.fold_right IntSet.add [eax_id;edi_id;esi_id] IntSet.empty,IntSet.empty)
+   | ReturnInstr(p) -> (regs6,IntSet.empty)
    (* print *)
-   | PrintInstr(p,VarTVal(_,VarOrReg(_,v,_))) -> ((IntSet.singleton v),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
-   | PrintInstr(p,_) -> (IntSet.empty,List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+   | PrintInstr(p,VarTVal(_,VarOrReg(_,v,_))) -> ((IntSet.singleton v),regs1)
+   | PrintInstr(p,_) -> (IntSet.empty,regs1)
    (* allocate *)
    | AllocInstr(p,VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) ->
-      (IntSet.add v3 (IntSet.singleton v2),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+      (IntSet.add v3 (IntSet.singleton v2),regs1)
    | AllocInstr(p,_,VarTVal(_,VarOrReg(_,v3,_))) ->
-      ((IntSet.singleton v3),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+      ((IntSet.singleton v3),regs1)
    | AllocInstr(p,VarTVal(_,VarOrReg(_,v2,_)),_) ->
-      ((IntSet.singleton v2),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
-   | AllocInstr(p,_,_) -> (IntSet.empty,List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+      ((IntSet.singleton v2),regs1)
+   | AllocInstr(p,_,_) -> (IntSet.empty,regs1)
    (* array-error *)
    | ArrayErrorInstr(p,VarTVal(_,VarOrReg(_,v2,_)),VarTVal(_,VarOrReg(_,v3,_))) ->
-      (IntSet.add v3 (IntSet.singleton v2),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+      (IntSet.add v3 (IntSet.singleton v2),regs1)
    | ArrayErrorInstr(p,_,VarTVal(_,VarOrReg(_,v3,_))) ->
-      ((IntSet.singleton v3),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+      ((IntSet.singleton v3),regs1)
    | ArrayErrorInstr(p,VarTVal(_,VarOrReg(_,v2,_)),_) ->
-      ((IntSet.singleton v2),List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
-   | ArrayErrorInstr(p,_,_) -> (IntSet.empty,List.fold_right IntSet.add [eax_id;ecx_id;edx_id] IntSet.empty)
+      ((IntSet.singleton v2),regs1)
+   | ArrayErrorInstr(p,_,_) -> (IntSet.empty,regs1)
    | _ -> (IntSet.empty,IntSet.empty)
 ;;
 
@@ -563,7 +566,7 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
    let l1 = List.fold_right IntSet.add
             [eax_id;ebx_id;ecx_id;edi_id;edx_id;esi_id] IntSet.empty in
    (* create an empty hashtable for the graph *)
-   let h = ((Hashtbl.create (IntSet.cardinal l1)) : (int, IntSet.t) Hashtbl.t) in
+   let h = ((Hashtbl.create (List.length il2)) : (int, IntSet.t) Hashtbl.t) in (* TODO - size? *)
    (* add edges between all the usable registers *)
    if debug_enabled () then (
       print_string ("Edges... ");
@@ -576,7 +579,7 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
    );
    (* populate h with the conflict graph *)
    if debug_enabled () then (
-      print_string ("Computing graph... ");
+      print_string ("Computing graph ("^(string_of_int (List.length il2))^" instr)... ");
       flush stdout
    );
    compute_adjacency_table il2 h true;
@@ -593,7 +596,8 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
       (k,tab)::res
    ) h [] in
    (* sort the source vertices by (ascending order of) number of conflicts *)
-   let keyst = List.sort (fun (a,at) (b,bt) -> compare (IntSet.cardinal bt) (IntSet.cardinal at)) keys in (* XXX *)
+   let keyst = List.sort (fun (a,at) (b,bt) ->
+      (Pervasives.compare : (int -> int -> int)) (IntSet.cardinal bt) (IntSet.cardinal at)) keys in (* XXX *)
    let keys2 = List.map (fun (k,tab) -> k) keyst in
    let num_sources = List.length keys2 in
    let max_edges = (match keyst with
