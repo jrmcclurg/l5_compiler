@@ -30,12 +30,16 @@
 
 # OCAMLC = ocamlcp -p a
 #OCAMLC = ocamlopt -p -g
-OCAMLC = ocamlopt -ccopt -O2
+OCAMLC = ocamlopt -ccopt -O3
 CMO = cmx
 CMA = cmxa
 LIBS = str.$(CMA) unix.$(CMA)
 
 all:			L1c spill liveness graph L2c L3c L4c L5c Lc
+
+
+
+
 
 ### Lc compiler ###
 

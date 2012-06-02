@@ -1,6 +1,9 @@
 (let ([ARRAY_MAX_ITEM 100000])
 (let ([ARRAY_MIN_ITEM -100000])
-(let ([TRIANGLE_TEST_ITERATIONS 50]) ;; 50
+(let ([TRIANGLE_TEST_ITERATIONS 100]) ;; 100
+(let ([ADD_TEST_ITERATIONS 1000])     ;; 1000
+(let ([DO_SAT_TEST 1])                ;; 1
+(let ([DO_CONCAT_TEST 1])             ;; 1
 (let ([clauses (new-tuple
 (new-tuple 4 -18 19) 
 (new-tuple 3 18 -5) 
@@ -197,6 +200,24 @@
    (let ([sat_result (sat_helper clauses (new-tuple) (new-tuple) literals 1)])
    (let ([is_sat (aref sat_result 0)]) (let ([assignment (aref sat_result 1)]) (let ([n (aref sat_result 2)])
    (begin (print n) (new-tuple is_sat (sort assignment)))))))))])
+(let ([sat2 (lambda (clauses literals)
+   (let ([sat_result (sat_helper clauses (new-tuple) (new-tuple) literals 1)])
+   (let ([is_sat (aref sat_result 0)]) (let ([assignment (aref sat_result 1)]) (let ([n (aref sat_result 2)])
+   (begin (print n) (new-tuple is_sat (sort assignment))))))))])
+(letrec ([add_test (lambda (x num) (if (<= num 0) 0
+   (+ (add_test x (- num 1)) (+ (+ (+ (+ (+ (+ (+ (+ x x) (+ x x)) (+ (+ x (+ (+ (+ (+ (+ (+ (+ (+ x x) (+ x x))
+   (+ (+ x x) (+ x x))) (+ (+ (+ x x) (+ x x)) (+ (+ x x) (+ x x)))) x) (+ x x)) (+ (+ x x)
+   (+ x x))) (+ (+ (+ x x) (+ x x)) (+ (+ (+ (+ (+ (+ (+ (+ (+ (+ x x) (+ x x)) (+ (+ x (+ (+ (+ (+ (+ (+ (+ (+ x x) (+ x x))
+   (+ (+ x x) (+ x x))) (+ (+ (+ x x) (+ x x)) (+ (+ x x) (+ x x)))) x) (+ x x)) (+ (+ x x)
+   (+ x x))) (+ (+ (+ x x) (+ x x)) (+ (+ x x) (+ x x))))) (+ x x))) (+ (+ (+ x x) (+ x x))
+   (+ (+ x x) (+ x x)))) x) (+ x x)) (+ (+ x x) (+ x x))) (+ (+ (+ x x) (+ x x)) (+ (+ x x) (+ x x)))) x)
+   (+ x x))))) (+ x x))) (+ (+ (+ x x) (+ x x))
+   (+ (+ x x) (+ x x)))) x) (+ x x)) (+ (+ x x) (+ x x))) (+ (+ (+ x x) (+ x x)) (+ (+ x x) (+ x x)))) )))])
+(letrec ([concat_test (lambda (lists)
+   (let ([all (concat_all lists)])
+   (let ([rev (reverse all)])
+   (let ([s1 (sort all)])
+   (let ([s1 (sort rev)]) (checksum s1))))))])
 (let ([test1 (new-tuple 1 2 3 4 5 6 7 8 9 10 9 8 7 6 5 4 3 2 1)])
 (let ([test2 (new-array 10 2)])
 (let ([temp (copy test1 0 test2 5 7)])
@@ -210,5 +231,9 @@
 (let ([the_inc (mk_triangle_tuple 11)])
 (let ([the_rev2 (reverse the_inc)])
 (let ([t (triangle_test TRIANGLE_TEST_ITERATIONS)])
-(begin (print test4) (begin (print the_sorted) (begin (print (sat clauses)) (print t))))
-)))))))))))))))))))))))))))))))))))))))))))))))))))))
+(let ([t2 (if DO_SAT_TEST (sat clauses) 0)])
+(let ([t2_2 (if DO_SAT_TEST (sat2 clauses (reverse (get_all_vars clauses))) 0)])
+(let ([t3 (add_test 123 ADD_TEST_ITERATIONS)])
+(let ([t4 (if DO_CONCAT_TEST (concat_test clauses) 0)])
+(begin (print t2) (begin (print t2_2) (begin (print t) (begin (print t3) (print t4)))))
+)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))

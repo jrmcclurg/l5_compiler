@@ -17,11 +17,12 @@ type spill_mode_type = SpillMin
                      | SpillMax
                      | SpillDampedDiff
                      | SpillIncrease
+                     | SpillHalve
 ;;
 
 (* defaults for command-line args *)
 let heap_size        = ref 1048576;;                (* one megabyte *)
-let spill_mode       = ref SpillDampedDiff;;        (* damped diff mode *)
+let spill_mode       = ref SpillIncrease;;          (* increase mode *)
 let filename         = ref (None : string option);; (* stdin *)
 let out_file_name    = ref (None : string option);;
 let binary_file_name = ref "a.out";;
@@ -43,8 +44,10 @@ let args = Arg.align [
    ("-spill",    Arg.String(fun x -> match x with
                     | "min" -> spill_mode := SpillMin
                     | "max" -> spill_mode := SpillMax
+                    | "diff" -> spill_mode := SpillDampedDiff
+                    | "halve" -> spill_mode := SpillHalve
                     | "inc" -> spill_mode := SpillIncrease
-                    | _ -> spill_mode := SpillDampedDiff
+                    | _ -> spill_mode := SpillHalve
                  ),
                     "<mode> Spill mode (max, inc, diff, min)");
    ("-debug",    Arg.String(fun x -> add_debug x),

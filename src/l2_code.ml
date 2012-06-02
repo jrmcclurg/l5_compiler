@@ -514,15 +514,16 @@ let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
       compute_adjacency_table more h false
 ;;
 
-let estimate_spill_num edges diff i max_i = match !spill_mode with
+let estimate_spill_num edges max_edges diff i num_sources = match !spill_mode with
    | SpillMin -> 1
    | SpillMax -> i
    (*| SpillConst(c) -> max 1 (min c i)
    | SpillPercent(p) -> max 1 (min (int_of_float (ceil (p*.(float_of_int diff)))) diff)*)
    | SpillDampedDiff ->
       (int_of_float ((float_of_int diff) /.
-         ((float_of_int max_i)/.((float_of_int max_i)**(1.0 -. ((float_of_int i)/.(float_of_int max_i)))))))
+         ((float_of_int num_sources)/.((float_of_int num_sources)**(1.0 -. ((float_of_int i)/.(float_of_int num_sources)))))))
    | SpillIncrease -> min i edges
+   | SpillHalve -> min ((3 - 1) * i * max_edges / num_sources) edges (* the (k -1) causes a "halving" by a factor of 1/k *)
 ;;
 
 (*
@@ -560,6 +561,10 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
    (* sort the source vertices by (ascending order of) number of conflicts *)
    let keyst = List.sort (fun (a,at) (b,bt) -> compare (IntSet.cardinal bt) (IntSet.cardinal at)) keys in (* XXX *)
    let keys2 = List.map (fun (k,tab) -> k) keyst in
+   let num_sources = List.length keys2 in
+   let max_edges = (match keyst with
+   | (a,at)::b -> IntSet.cardinal at
+   | _ -> 0) in
    (* now we do the heuristic graph coloring *)
    (* create a hashtable for mapping variable ids to their register (color) assignments *)
    let assignments = ((Hashtbl.create (IntSet.cardinal l1)) : (int,int) Hashtbl.t) in
@@ -575,13 +580,14 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
       let test = IntSet.cardinal tbl in
       let the_max_local_2 = if test > the_max_local then test else the_max_local in
       let diff = max 0 (the_prev_local - test) in
-      let check = (max 0 (estimate_spill_num test diff (the_counter_local+1) (List.length keys2))) in
+      let check = (max 0 (estimate_spill_num test max_edges diff (the_counter_local+1) num_sources)) in
       if has_debug "spill" then (
-         print_string ((string_of_int (the_counter_local+1))^"/"^(string_of_int (List.length keys2))^
-                       ". Edges: "^(string_of_int test)^" diff = "^(string_of_int diff)^" (est = "^(string_of_int check)^")\n");
+         print_string ((string_of_int (the_counter_local+1))^"/"^(string_of_int num_sources)^
+                       ". Edges: "^(string_of_int test)^" diff = "^(string_of_int diff)^" (max = "^
+                       (string_of_int max_edges)^") (est = "^(string_of_int check)^")\n");
          flush stdout
       );
-      let the_num_local_2 = if check > the_prev_max_local then check else the_num_local in
+      let the_num_local_2 = if check > the_prev_max_local then the_counter_local else the_num_local in
       let the_prev_max_local_2 = if check > the_prev_max_local then check else the_prev_max_local in
       let the_prev_local_2 = test in
       let the_counter_local_2 = the_counter_local + 1 in
@@ -1259,7 +1265,7 @@ and compile_instr_list (il : L2_ast.instr list) (num : int32) (count : int) (spi
       flush stdout );*)
       (*print_string ("Table size = "^(string_of_int (List.length at))^"\n");*)
       if debug_enabled () then (
-         print_string ("Function "^(string_of_int count)^" : spilling "^(string_of_int num_to_spill)^" registers\n");
+         print_string ("Function "^(string_of_int count)^" : spilling "^(string_of_int num_to_spill)^" registers...");
          flush stdout
       );
       let (nameop,il2,ns) = List.fold_left (fun (res,ilt,tnum) (id,vl) -> 
@@ -1280,6 +1286,10 @@ and compile_instr_list (il : L2_ast.instr list) (num : int32) (count : int) (spi
              ) ) ) (* this is the "not already spilled" case *)
 	 else (res,ilt,tnum)
       ) (None,il,0) at in
+      if debug_enabled () then (
+         print_string ("done.\n");
+         flush stdout
+      );
       (* spill and try again *)
       match nameop with
       (* if there's nothing left to spill, fail *)
