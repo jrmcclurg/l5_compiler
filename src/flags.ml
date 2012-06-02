@@ -17,7 +17,7 @@ type spill_mode_type = SpillMin
                      | SpillMax
                      | SpillDampedDiff
                      | SpillIncrease
-                     | SpillHalve
+                     | SpillHalve of int
 ;;
 
 (* defaults for command-line args *)
@@ -45,13 +45,21 @@ let args = Arg.align [
                     | "min" -> spill_mode := SpillMin
                     | "max" -> spill_mode := SpillMax
                     | "diff" -> spill_mode := SpillDampedDiff
-                    | "halve" -> spill_mode := SpillHalve
+                    | "halve" -> spill_mode := SpillHalve(3)
+                    | "halve2" -> spill_mode := SpillHalve(2)
+                    | "halve3" -> spill_mode := SpillHalve(3)
+                    | "halve4" -> spill_mode := SpillHalve(4)
+                    | "halve5" -> spill_mode := SpillHalve(5)
+                    | "halve6" -> spill_mode := SpillHalve(6)
+                    | "halve7" -> spill_mode := SpillHalve(7)
+                    | "halve8" -> spill_mode := SpillHalve(8)
+                    | "halve9" -> spill_mode := SpillHalve(9)
                     | "inc" -> spill_mode := SpillIncrease
-                    | _ -> spill_mode := SpillHalve
+                    | _ -> spill_mode := SpillHalve(3)
                  ),
                     "<mode> Spill mode (max, inc, diff, min)");
    ("-debug",    Arg.String(fun x -> add_debug x),
-                    "<flag> Add a debug flag (1, 2, 3, 4, 5, gc, spill)");
+                    "<flag> Add a debug flag (1, 2, 3, 4, 5, gc, spill, regs)");
    ("-heap",     Arg.Int(fun x -> heap_size := x),
                     "<size> Set the heap size in bytes (default 1048576)");
    ("-nogc",     Arg.Unit(fun x -> gc_enabled := false),

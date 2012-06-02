@@ -559,7 +559,7 @@ let estimate_spill_num edges max_edges diff i num_sources = match !spill_mode wi
       (int_of_float ((float_of_int diff) /.
          ((float_of_int num_sources)/.((float_of_int num_sources)**(1.0 -. ((float_of_int i)/.(float_of_int num_sources)))))))
    | SpillIncrease -> min i edges
-   | SpillHalve -> min ((3 - 1) * i * max_edges / num_sources) edges (* the (k -1) causes a "halving" by a factor of 1/k *)
+   | SpillHalve(k) -> min ((k - 1) * i * max_edges / num_sources) edges (* the (k -1) causes a "halving" by a factor of 1/k *)
 ;;
 
 (*
@@ -1290,7 +1290,7 @@ let rec compile_program (p : L2_ast.program) : L1_ast.program =
       let (_,fl2) = List.fold_left (fun (count,res) f ->
          (count+1,res@[compile_func f count])
       ) (0,[]) fl in
-      if debug_enabled () then (
+      if (debug_enabled () || has_debug "regs") then (
          print_string ("Total spill count: "^(string_of_int !global_spill_count)^"\n");
          flush stdout
       );
