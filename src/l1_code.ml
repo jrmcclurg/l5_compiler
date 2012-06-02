@@ -432,7 +432,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
          output_string o "\n" 
    | CallInstr(ps, uv) ->
       (* pushl $r_j_k *)
-      output_string o ("\t"^"pushl"^"\t"^"$r_"^(string_of_int j)^(string_of_int k)^"\n");
+      output_string o ("\t"^"pushl"^"\t"^"$r_"^(string_of_int j)^"_"^(string_of_int k)^"\n");
       (* pushl %ebp *)
       output_string o ("\t"^"pushl"^"\t"^"%ebp"^"\n");
       (* movl %esp, %ebp *)
@@ -442,7 +442,7 @@ and compile_instr (o : out_channel) (i : instr) (first : bool) (j : int) (k : in
       compile_uval o uv;
       output_string o "\n";
       (* r_j_k: *)
-      output_string o ("r_"^(string_of_int j)^(string_of_int k)^":"^"\n");
+      output_string o ("r_"^(string_of_int j)^"_"^(string_of_int k)^":"^"\n");
    | TailCallInstr(ps, uv) ->
       (* movl %ebp, %esp *)
       output_string o ("\t"^"movl"^"\t"^"%ebp, %esp"^"\n");
@@ -613,9 +613,9 @@ let compile_and_link (filename : string) (assembly_file_name : string) (runtime_
    if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));
    if (r3 <> 0) then die_system_error ("compiler/linker failed: \""^r3c^"\" returned "^(string_of_int r3));
    (* delete all the temporary files *)
-   Unix.unlink assembly_file_name;
+   if (not !emit_asm) then Unix.unlink assembly_file_name;
    Unix.unlink (assembly_file_name^".o");
-   Unix.unlink runtime_file_name;
+   if (not !emit_runtime) then Unix.unlink runtime_file_name;
    Unix.unlink (runtime_file_name^".o");
 ;;
 

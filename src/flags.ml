@@ -28,6 +28,8 @@ let out_file_name    = ref (None : string option);;
 let binary_file_name = ref "a.out";;
 let target_lang      = ref 0;;                      (* compile to binary *)
 let gc_enabled       = ref true;;                   (* runtime GC enabled *)
+let emit_asm         = ref false;;
+let emit_runtime     = ref false;;
 
 let debug_table = ref (StringSet.empty : StringSet.t);;
 
@@ -64,6 +66,10 @@ let args = Arg.align [
                     "<size> Set the heap size in bytes (default 1048576)");
    ("-nogc",     Arg.Unit(fun x -> gc_enabled := false),
                     " Turn off runtime garbage collection");
+   ("-runtime",  Arg.Unit(fun x -> emit_runtime := true),
+                    " Emit the C runtime");
+   ("-asm",      Arg.Unit(fun x -> emit_asm := true),
+                    " Emit the generated assembly code");
    ("-target",   Arg.Int(fun x -> target_lang := x),
                     "<k> Set the target language to Lk (default to n-1)");
    ("-o",        Arg.String(fun x -> out_file_name := Some(x); binary_file_name := x),
