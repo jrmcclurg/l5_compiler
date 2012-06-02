@@ -178,12 +178,7 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) : L2_ast.i
    | NewTupleDExp(p,svl) ->
       let len = List.length svl in
       let uv = L2_ast.VarOrReg(p,get_unique_symbol l3_prefix,true) in
-      let has_dexp = List.fold_left (fun res sv ->
-         match (res,sv) with
-         | (true,_) -> res
-         | (_,SValDExp(p,_)) -> res
-         | (_,_) -> true
-      ) false svl in
+      let has_dexp = dexp_list_is_flat svl in
       let the_src = (if has_dexp then L2_ast.VarOrReg(p,get_unique_symbol l3_prefix,true)
                                  else L2_ast.VarOrReg(p,L2_ast.eax_id,false)) in
       let (_,l2) = List.fold_left (fun (off,res) sv ->

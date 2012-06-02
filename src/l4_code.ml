@@ -144,11 +144,11 @@ type environment = ExpEnv | DExpEnv | SValEnv;;
  * xe  - a list of (x,e2) where x is a variable and e2 is its value
  * env - the remainder of the expression, with x's inserted appropriately
  *)
-let rec lift_one (e : L4_ast.exp) (en : environment) :
+let rec lift_one (e : L4_ast.exp) (en : environment) (flatten_tuples : bool) :
                            ((L4_ast.var * L4_ast.exp) list * L4_ast.exp) =
    match e with
    | LetExp(p,v,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 DExpEnv in
+      let (pull1,env1) = lift_one e1 DExpEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,LetExp(p,v,env1,e2)) else (
       match en with
       | ExpEnv -> ([],e) 
@@ -157,23 +157,23 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
          let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(v2,e1);(uv,(replace_in_exp e2 v (VarExp(p,v2))))], VarExp(p,uv)) )
    | IfExp(p,e1,e2,e3) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,IfExp(p,env1,e2,e3)) else (
       match en with
       | ExpEnv -> ([],e) 
       | _ -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv)) )
    | BeginExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 DExpEnv in
+      let (pull1,env1) = lift_one e1 DExpEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,BeginExp(p,env1,e2)) else (
       match en with
       | ExpEnv -> ([],e)
       | _ -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv)) )
    | AppExp(p,ex,el) -> 
-      let (pull1,env1) = lift_one ex SValEnv in
+      let (pull1,env1) = lift_one ex SValEnv flatten_tuples in
       let (pull2,env2,b) = List.fold_left (fun (pull2,env2,b) e ->
-            let (pull3,env3) = lift_one e SValEnv in
+            let (pull3,env3) = lift_one e SValEnv flatten_tuples in
             if b then (pull2,env2@[e],b) else
             if List.length pull3 > 0 then (pull3,env2@[env3],true) else
             (pull2,env2@[e],b)
@@ -185,8 +185,8 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | NewArrayExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,NewArrayExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,NewArrayExp(p,e1,env2)) else (
       match en with
@@ -195,7 +195,7 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
       | _ -> ([],e) )
    | NewTupleExp(p,el) -> 
       let (pull2,env2,b) = List.fold_left (fun (pull2,env2,b) e ->
-            let (pull3,env3) = lift_one e DExpEnv in
+            let (pull3,env3) = lift_one e (if flatten_tuples then SValEnv else DExpEnv) flatten_tuples in
             if b then (pull2,env2@[e],b) else
             if List.length pull3 > 0 then (pull3,env2@[env3],true) else
             (pull2,env2@[e],b)
@@ -206,8 +206,8 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | ArefExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,ArefExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,ArefExp(p,e1,env2)) else (
       match en with
@@ -215,9 +215,9 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | AsetExp(p,e1,e2,e3,c) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
-      let (pull3,env3) = lift_one e3 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
+      let (pull3,env3) = lift_one e3 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,AsetExp(p,env1,e2,e3,c)) else
       if List.length pull2 > 0 then (pull2,AsetExp(p,e1,env2,e3,c)) else
       if List.length pull3 > 0 then (pull3,AsetExp(p,e1,e2,env3,c)) else (
@@ -226,43 +226,43 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | AlenExp(p,e1) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,AlenExp(p,env1)) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | PrintExp(p,e1) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,PrintExp(p,env1)) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | MakeClosureExp(p,s,e1) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,MakeClosureExp(p,s,env1)) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | ClosureProcExp(p,e1) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,ClosureProcExp(p,env1)) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | ClosureVarsExp(p,e1) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,ClosureVarsExp(p,env1)) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | PlusExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,PlusExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,PlusExp(p,e1,env2)) else (
       match en with
@@ -270,8 +270,8 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | MinusExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,MinusExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,MinusExp(p,e1,env2)) else (
       match en with
@@ -279,8 +279,8 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | TimesExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,TimesExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,TimesExp(p,e1,env2)) else (
       match en with
@@ -288,8 +288,8 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | LtExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,LtExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,LtExp(p,e1,env2)) else (
       match en with
@@ -297,8 +297,8 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | LeqExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,LeqExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,LeqExp(p,e1,env2)) else (
       match en with
@@ -306,8 +306,8 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | EqExp(p,e1,e2) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
-      let (pull2,env2) = lift_one e2 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
+      let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,EqExp(p,env1,e2)) else
       if List.length pull2 > 0 then (pull2,EqExp(p,e1,env2)) else (
       match en with
@@ -315,14 +315,14 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | NumberPredExp(p,e1) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,NumberPredExp(p,env1)) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
    | ArrayPredExp(p,e1) -> 
-      let (pull1,env1) = lift_one e1 SValEnv in
+      let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       if List.length pull1 > 0 then (pull1,ArrayPredExp(p,env1)) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
@@ -338,16 +338,16 @@ let rec lift_one (e : L4_ast.exp) (en : environment) :
  * (the expression must then be cast to L3 types
  * using compile_exp)
  *)
-let rec normalize_exp (the_exp : L4_ast.exp) : L4_ast.exp =
-      let (pull,env) = lift_one the_exp ExpEnv in
+let rec normalize_exp (the_exp : L4_ast.exp) (flatten_tuples : bool) : L4_ast.exp =
+      let (pull,env) = lift_one the_exp ExpEnv flatten_tuples in
       match pull with
       | [] -> (
         match env with
-        | LetExp(p,v,e1,e2) -> LetExp(p,v,e1,normalize_exp e2)
-        | IfExp(p,e1,e2,e3) -> IfExp(p,e1,normalize_exp e2,normalize_exp e3)
-        | BeginExp(p,e1,e2) -> BeginExp(p,e1,normalize_exp e2)
+        | LetExp(p,v,e1,e2) -> LetExp(p,v,e1,normalize_exp e2 flatten_tuples)
+        | IfExp(p,e1,e2,e3) -> IfExp(p,e1,normalize_exp e2 flatten_tuples,normalize_exp e3 flatten_tuples)
+        | BeginExp(p,e1,e2) -> BeginExp(p,e1,normalize_exp e2 flatten_tuples)
         | _ -> env )
-      | _ -> recombine_exp (normalize_exp env) pull
+      | _ -> recombine_exp (normalize_exp env flatten_tuples) pull
 ;;
 
 let rec optimize_tuples (e : L4_ast.exp) : L4_ast.exp =
@@ -396,20 +396,20 @@ let rec optimize_tuples (e : L4_ast.exp) : L4_ast.exp =
  * These functions compile a (normalized) L4 program into an L3 program
  *)
 
-let rec compile_program (pr : L4_ast.program) : L3_ast.program =
+let rec compile_program (pr : L4_ast.program) (flatten_tuples : bool) : L3_ast.program =
    match pr with
-   | Program(p,e,fl) -> L3_ast.Program(p,compile_exp e,List.map (fun f -> compile_func f) fl)
+   | Program(p,e,fl) -> L3_ast.Program(p,compile_exp e flatten_tuples,List.map (fun f -> compile_func f flatten_tuples) fl)
 
-and compile_func (f : L4_ast.func) : L3_ast.func =
+and compile_func (f : L4_ast.func) (flatten_tuples : bool) : L3_ast.func =
    match f with
-   | Function(p,name,vl,e) -> L3_ast.Function(p, name, List.map (fun v -> compile_var v) vl, compile_exp e)
+   | Function(p,name,vl,e) -> L3_ast.Function(p, name, List.map (fun v -> compile_var v) vl, compile_exp e flatten_tuples)
 
-and compile_exp (e2 : L4_ast.exp) : L3_ast.exp = 
+and compile_exp (e2 : L4_ast.exp) (flatten_tuples : bool) : L3_ast.exp = 
    let e = (*optimize_tuples*) e2 in
-   let the_exp = normalize_exp e in
+   let the_exp = normalize_exp e flatten_tuples in
    match the_exp with
-   | LetExp(p,v,e1,e2) -> L3_ast.LetExp(p,compile_var v,compile_exp_to_dexp e1,compile_exp e2)
-   | IfExp(p,e1,e2,e3) -> L3_ast.IfExp(p,compile_exp_to_sval e1,compile_exp e2,compile_exp e3)
+   | LetExp(p,v,e1,e2) -> L3_ast.LetExp(p,compile_var v,compile_exp_to_dexp e1,compile_exp e2 flatten_tuples)
+   | IfExp(p,e1,e2,e3) -> L3_ast.IfExp(p,compile_exp_to_sval e1,compile_exp e2 flatten_tuples,compile_exp e3 flatten_tuples)
    | AppExp(p,e,el) ->
       L3_ast.DExpExp(p,L3_ast.AppDExp(p,compile_exp_to_sval e, List.map (fun e -> compile_exp_to_sval e) el))
    | NewArrayExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.NewArrayDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2))
@@ -421,7 +421,7 @@ and compile_exp (e2 : L4_ast.exp) : L3_ast.exp =
    | AlenExp(p,e1) -> L3_ast.DExpExp(p,L3_ast.AlenDExp(p,compile_exp_to_sval e1))
    | BeginExp(p,e1,e2) ->
       let v = L3_ast.Var(p,get_unique_symbol l4_prefix) in
-      L3_ast.LetExp(p,v,compile_exp_to_dexp e1,compile_exp e2)
+      L3_ast.LetExp(p,v,compile_exp_to_dexp e1,compile_exp e2 flatten_tuples)
    | PrintExp(p,e) -> L3_ast.DExpExp(p,L3_ast.PrintDExp(p,compile_exp_to_sval e)) 
    | MakeClosureExp(p,s,e) -> L3_ast.DExpExp(p,L3_ast.MakeClosureDExp(p,s,compile_exp_to_sval e))
    | ClosureProcExp(p,e) -> L3_ast.DExpExp(p,L3_ast.ClosureProcDExp(p,compile_exp_to_sval e))
