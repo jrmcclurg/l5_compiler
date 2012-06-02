@@ -394,11 +394,11 @@ let add_edge (id : int) (v2o : int option)
       if id2 == ebp_id then ()
       else if id2 == esp_id then ()
       (* otherwise, if v2o okay... *)
-      else
+      else if id != id2 then
       (* get the id of v2 *)
       (* if v2 is a different variable/register than v1, add
        * an edge (v1,v2) by putting v2 in v1's dest table *)
-      if (id != id2) then Hashtbl.replace h id (IntSet.add id2 t)
+      Hashtbl.replace h id (IntSet.add id2 t)
    | _ -> () ))
 ;;
 
@@ -431,7 +431,7 @@ let add_all_edges (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
       (* if vl2 is empty, just add a vertex for the current item of vl1 *)
       | true -> add_edge s1 None h
       | _ ->
-         (* if vl2 is non-empty, iterate through its item *)
+         (* if vl2 is non-empty, iterate through its items *)
          IntSet.iter (fun s2 ->
             (* get the ids for v1/v2 *)
             (match so with
@@ -446,13 +446,19 @@ let add_all_edges (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
                (* if (v1,v2) is not the ignored edge... *)
                else (
                   (* add the edges (v1,v2) and (v2,v1) *)
-                  add_edge s1 (Some(s2)) h;
-                  add_edge s2 (Some(s1)) h )
+                  if s1 == s2 then add_edge s1 None h else (
+                     add_edge s1 (Some(s2)) h;
+                     add_edge s2 (Some(s1)) h
+                  )
+               )
             (* if there's no edge we want to ignore... *)
             | _ -> 
                (* add the edges (v1,v2) and (v2,v1) *)
-               add_edge s1 (Some(s2)) h;
-               add_edge s2 (Some(s1)) h )
+               if s1 == s2 then add_edge s1 None h else (
+                  add_edge s1 (Some(s2)) h;
+                  add_edge s2 (Some(s1)) h
+               )
+            )
          ) vl2 )
    ) vl1
 ;;
@@ -482,10 +488,10 @@ let l1_adj = (List.fold_right IntSet.add [eax_id;ebx_id;edi_id;edx_id;esi_id] In
 let l2_adj = (List.fold_right IntSet.add [edi_id;esi_id] IntSet.empty);;
 let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
                                 (h : (int, IntSet.t) Hashtbl.t)
-                                (first : bool) : unit =
-   match (il) with
-   | [] -> ()
-   | (i,ins,outs)::more -> 
+                                : unit =
+   let num = List.length il in
+   let _ = List.fold_left (fun (first,n) (i,ins,outs) ->
+      flush stdout;
       (* "temp" is a potential edge to ignore when generating the graph *)
       let temp = (match i with
       (* if this instruction is a <- b, then a,b don't conflict, so
@@ -496,11 +502,15 @@ let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
       (* add edges between variables that are live at the same time
        * (this means any variables that appear in any "out" set together,
        * or any variables that appear together in the first instruction's
-       * "in" set *)
+       * "in" set) *)
       if first then add_all_edges ins ins None h else add_all_edges ins (IntSet.empty) None h;
       add_all_edges outs outs temp h;
       (* add edges between the kills and the out set *)
       let (gens,kills) = get_gens_kills i in
+      print_string ("computing "^(string_of_int n)^"/"^(string_of_int num)^
+         ": first="^(if first then "yes" else "no")^" ins="^(string_of_int (IntSet.cardinal ins))^
+         " outs="^(string_of_int (IntSet.cardinal outs))^
+         " gens="^(string_of_int (IntSet.cardinal gens))^" kills="^(string_of_int (IntSet.cardinal kills))^"\n");
       (* NOTE: we don't need to add vertices for the gens, since all the gens
        * except for that of the first instruction go into the outs of previous
        * instructions.  The gens for the first instruction are capture by the ins
@@ -519,8 +529,9 @@ let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
       | LeqInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2_adj None h
       | EqInstr(_,(VarOrReg(_,v,true)),_,_) -> add_all_edges (IntSet.singleton v) l2_adj None h
       | _ -> ());
-      (* recursively process the remaining instructions *)
-      compute_adjacency_table more h false
+      (false,n+1)
+      (* process the remaining instructions *)
+   ) (true,1) il in ()
 ;;
 
 let estimate_spill_num edges max_edges diff i num_sources = match !spill_mode with
@@ -582,7 +593,7 @@ let graph_color (il : instr list) : ((int * IntSet.t) list * (int * int) list * 
       print_string ("Computing graph ("^(string_of_int (List.length il2))^" instr)... ");
       flush stdout
    );
-   compute_adjacency_table il2 h true;
+   compute_adjacency_table il2 h;
    if debug_enabled () then (
       print_string ("done.\n");
       flush stdout
