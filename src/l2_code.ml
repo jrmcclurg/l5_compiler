@@ -368,8 +368,15 @@ let liveness (il : instr list) : ((instr * IntSet.t * IntSet.t) list) =
  * dests is a hashtable mapping vertex names to their
  * corresponding vars).
  *)
+let all_the_edges = ref 0;;
 let add_edge (id : int) (v2o : int option)
                   (h : (int, IntSet.t) Hashtbl.t) : unit =
+   (*print_string "add_edge(";
+   print_int id;
+   (match v2o with
+   | Some(x) -> print_string (", "^(string_of_int x)^"")
+   | _ -> ());
+   print_string ")\n"; *)
    (* leave ebp/esp registers out of the graph *)
    if id == ebp_id then ()
    else if id == esp_id then ()
@@ -394,11 +401,13 @@ let add_edge (id : int) (v2o : int option)
       if id2 == ebp_id then ()
       else if id2 == esp_id then ()
       (* otherwise, if v2o okay... *)
-      else if id != id2 then
+      else if id != id2 then (
       (* get the id of v2 *)
       (* if v2 is a different variable/register than v1, add
        * an edge (v1,v2) by putting v2 in v1's dest table *)
-      Hashtbl.replace h id (IntSet.add id2 t)
+         all_the_edges := !all_the_edges + 1;
+         Hashtbl.replace h id (IntSet.add id2 t)
+      )
    | _ -> () ))
 ;;
 
@@ -419,8 +428,8 @@ let add_edge (id : int) (v2o : int option)
  * added as vertices in h.  The graph h has the same structure
  * as the "h" parameter of the add_edge function.
  *)
-let add_all_edges (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
-                  (h : (int, IntSet.t) Hashtbl.t) : unit =
+let add_all_edges_helper (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
+                         (h : (int, IntSet.t) Hashtbl.t) (reverse : bool) : unit =
    (* if vl1 is empty, just add a vertex for each item in vl2 *)
    match (IntSet.is_empty vl1) with
    | true -> IntSet.iter (fun v2 -> add_edge v2 None h) vl2
@@ -448,7 +457,7 @@ let add_all_edges (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
                   (* add the edges (v1,v2) and (v2,v1) *)
                   if s1 == s2 then add_edge s1 None h else (
                      add_edge s1 (Some(s2)) h;
-                     add_edge s2 (Some(s1)) h
+                     if reverse then add_edge s2 (Some(s1)) h
                   )
                )
             (* if there's no edge we want to ignore... *)
@@ -456,11 +465,16 @@ let add_all_edges (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
                (* add the edges (v1,v2) and (v2,v1) *)
                if s1 == s2 then add_edge s1 None h else (
                   add_edge s1 (Some(s2)) h;
-                  add_edge s2 (Some(s1)) h
+                  if reverse then add_edge s2 (Some(s1)) h
                )
             )
          ) vl2 )
    ) vl1
+;;
+
+let add_all_edges (vl1 : IntSet.t) (vl2 : IntSet.t) (so : (int * int) option)
+                  (h : (int, IntSet.t) Hashtbl.t) : unit =
+   add_all_edges_helper vl1 vl2 so h true
 ;;
 
 (*
@@ -491,6 +505,7 @@ let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
                                 : unit =
    let num = List.length il in
    let _ = List.fold_left (fun (first,n) (i,ins,outs) ->
+      all_the_edges := 0;
       flush stdout;
       (* "temp" is a potential edge to ignore when generating the graph *)
       let temp = (match i with
@@ -503,14 +518,15 @@ let rec compute_adjacency_table (il : (instr * IntSet.t * IntSet.t) list)
        * (this means any variables that appear in any "out" set together,
        * or any variables that appear together in the first instruction's
        * "in" set) *)
-      if first then add_all_edges ins ins None h else add_all_edges ins (IntSet.empty) None h;
-      add_all_edges outs outs temp h;
+      if first then add_all_edges_helper ins ins None h false else add_all_edges ins (IntSet.empty) None h;
+      add_all_edges_helper outs outs temp h false;
       (* add edges between the kills and the out set *)
       let (gens,kills) = get_gens_kills i in
-      print_string ("computing "^(string_of_int n)^"/"^(string_of_int num)^
+      (*print_string ("computing "^(string_of_int n)^"/"^(string_of_int num)^
          ": first="^(if first then "yes" else "no")^" ins="^(string_of_int (IntSet.cardinal ins))^
          " outs="^(string_of_int (IntSet.cardinal outs))^
-         " gens="^(string_of_int (IntSet.cardinal gens))^" kills="^(string_of_int (IntSet.cardinal kills))^"\n");
+         " gens="^(string_of_int (IntSet.cardinal gens))^" kills="^(string_of_int (IntSet.cardinal kills))^
+         " num_added="^(string_of_int !all_the_edges)^"\n");*)
       (* NOTE: we don't need to add vertices for the gens, since all the gens
        * except for that of the first instruction go into the outs of previous
        * instructions.  The gens for the first instruction are capture by the ins
