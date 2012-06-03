@@ -37,11 +37,6 @@ LIBS = str.$(CMA) unix.$(CMA)
 
 all:			L1c spill liveness graph L2c L3c L4c L5c Lc
 
-
-
-
-
-
 ### Lc compiler ###
 
 Lc:	lc_main.$(CMO) l5_parser.$(CMO) l5_lexer.$(CMO) l5_ast.$(CMO) l4_ast.$(CMO) l3_ast.$(CMO) l2_ast.$(CMO) l1_ast.$(CMO) \
