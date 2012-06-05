@@ -14,6 +14,7 @@
 
 open L3_ast;;
 open Utils;;
+open Flags;;
 
 let resvd_words = [
    add_symbol "esi";
@@ -43,6 +44,11 @@ let resvd_words = [
 let rec compile_program (p : L3_ast.program) : L2_ast.program =
    match p with
    | Program(p,e,fl) -> 
+      let start_time = Sys.time () in
+      if !debug_3 || !verbose_mode then (
+         print_string ("Compiling L3 to L2..."^(if !verbose_mode then " " else "\n"));
+         flush Pervasives.stdout
+      );
       (* compile all the functions into L1 functions, giving
        * each one a unique count (starting with 0) *)
       let (_,fl2) = List.fold_left (fun (count,res) f ->
@@ -50,6 +56,12 @@ let rec compile_program (p : L3_ast.program) : L2_ast.program =
       ) (1,[]) fl in (* start with the unique id "1", since we use "0" for
                       * the exp "e" *)
       let main = (L2_ast.Function(p,None,compile_exp e true)) in
+      if !debug_3 || !verbose_mode then (
+         let diff = (Sys.time ()) -. start_time in
+         print_string ((if !verbose_mode then "" else "...")^"done"^
+            (if !verbose_mode then "" else " with L3->L2")^": "^(string_of_float diff)^" sec.\n");
+         flush Pervasives.stdout
+      );
       L2_ast.Program(p, main::fl2)
 and compile_func (f : L3_ast.func) : L2_ast.func = 
    match f with
@@ -121,8 +133,8 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) : L2_ast.i
        L2_ast.SrlInstr(p,dest,L2_ast.IntShVal(p,1l));
        L2_ast.TimesInstr(p,dest,L2_ast.VarTVal(p,tmp));
        L2_ast.TimesInstr(p,dest,L2_ast.IntTVal(p,2l));
-       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1l));
-       L2_ast.AssignInstr(p,tmp,L2_ast.IntSVal(p,1l))]
+       L2_ast.PlusInstr(p,dest,L2_ast.IntTVal(p,1l))]@
+       (if !clear_uninit then [L2_ast.AssignInstr(p,tmp,L2_ast.IntSVal(p,1l))] else [])
    | LtDExp(p,sv1,sv2) ->
       let tmpd = L2_ast.VarOrReg(p,get_unique_symbol l3_prefix,true (*prefix 0*)) in
       let tv1 = L2_ast.get_tval (compile_sval sv1) in
@@ -215,10 +227,9 @@ and compile_dexp (de : L3_ast.dexp) (dest : L2_ast.var) (tail : bool) : L2_ast.i
        L2_ast.LabelInstr(p,tl2); (* success label 2 *)
        L2_ast.TimesInstr(p,tmpd,L2_ast.IntTVal(p,4l));
        L2_ast.PlusInstr(p,tmpd,tv1);
-       L2_ast.MemReadInstr(p,dest,tmpd,4l);
-       L2_ast.AssignInstr(p,tmpd,L2_ast.IntSVal(p,1l));
-       L2_ast.AssignInstr(p,tmp,L2_ast.IntSVal(p,1l));
-      ]
+       L2_ast.MemReadInstr(p,dest,tmpd,4l)]@
+       (if !clear_uninit then [L2_ast.AssignInstr(p,tmpd,L2_ast.IntSVal(p,1l));
+       L2_ast.AssignInstr(p,tmp,L2_ast.IntSVal(p,1l))] else [])
    | AsetDExp(p,sv1,sv2,sv3,do_check) ->
       let sv1t = (compile_sval sv1) in
       let tv1 = L2_ast.get_tval sv1t in

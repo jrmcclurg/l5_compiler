@@ -42,4 +42,8 @@ else (
    output_string out_stream "\n";
    let _ = close_out_file out_stream in ()
 );
+if !debug_stats || !verbose_mode then (
+   print_string ("Total execution time: "^(string_of_float (Sys.time ()))^" sec\n");
+   flush stdout
+);
 exit 0

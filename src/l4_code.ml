@@ -14,6 +14,7 @@
 
 open L4_ast;;
 open Utils;;
+open Flags;;
 
 (*********************************************************
  **  L4-to-L3 CODE GENERATION                           **
@@ -398,7 +399,21 @@ let rec optimize_tuples (e : L4_ast.exp) : L4_ast.exp =
 
 let rec compile_program (pr : L4_ast.program) (flatten_tuples : bool) : L3_ast.program =
    match pr with
-   | Program(p,e,fl) -> L3_ast.Program(p,compile_exp e flatten_tuples,List.map (fun f -> compile_func f flatten_tuples) fl)
+   | Program(p,e,fl) ->
+      let start_time = Sys.time () in
+      if !debug_4 || !verbose_mode then (
+         print_string ("Compiling L4 to L3..."^(if !verbose_mode then " " else "\n"));
+         flush Pervasives.stdout
+      );
+      let e2 = compile_exp e flatten_tuples in
+      let fl2 = List.map (fun f -> compile_func f flatten_tuples) fl in
+      if !debug_4 || !verbose_mode then (
+         let diff = (Sys.time ()) -. start_time in
+         print_string ((if !verbose_mode then "" else "...")^"done"^
+            (if !verbose_mode then "" else " with L4->L3")^": "^(string_of_float diff)^" sec.\n");
+         flush Pervasives.stdout
+      );
+      L3_ast.Program(p,e2,fl2)
 
 and compile_func (f : L4_ast.func) (flatten_tuples : bool) : L3_ast.func =
    match f with

@@ -14,6 +14,7 @@
 
 open L5_ast;;
 open Utils;;
+open Flags;;
 
 (*********************************************************
  **  L5-to-L4 CODE GENERATION                           **
@@ -318,7 +319,18 @@ let rec get_free_vars (e : L5_ast.exp) (vl : L5_ast.var list) : (L5_ast.var list
 let rec compile_program (pr : L5_ast.program) : L4_ast.program =
    match pr with
    | Program(p,e) -> 
+      let start_time = Sys.time () in
+      if !debug_5 || !verbose_mode then (
+         print_string ("Compiling L5 to L4..."^(if !verbose_mode then " " else "\n"));
+         flush Pervasives.stdout
+      );
       let (e2,fl) = compile_exp e in
+      if !debug_5 || !verbose_mode then (
+         let diff = (Sys.time ()) -. start_time in
+         print_string ((if !verbose_mode then "" else "...")^"done"^
+            (if !verbose_mode then "" else " with L5->L4")^": "^(string_of_float diff)^" sec.\n");
+         flush Pervasives.stdout
+      );
       L4_ast.Program(p,e2,fl)
 
 and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =

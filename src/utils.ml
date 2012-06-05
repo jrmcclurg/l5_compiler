@@ -112,6 +112,11 @@ let check_int_alignment (i : int32) =
    if ((Int32.rem i 4l) <> 0l) then parse_error "offset must be divisible by 4"
 ;;
 
+let rec make_counter_list (start : int32) (fin : int32) (inc : int32) =
+   if (start > fin) then [] else
+   start::(make_counter_list (Int32.add start inc) fin inc)
+;;
+
 let prefix_chr = "0";;
 let unique_counter = ref 0;;
 let max_prefix = ref "";;

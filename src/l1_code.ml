@@ -18,11 +18,6 @@ open L1_ast;;
 open Utils;;
 open Unix;;
 
-let debug_enabled () =
-   let result = has_debug "1" in 
-   result
-;;
-
 (*
  * the compile_... functions generate x86 assembly code based on
  * L1 program constructs and writes the code to the output channel o
@@ -31,6 +26,11 @@ let debug_enabled () =
 (* compiles an L1 "p" nonterminal into x86 assembly *)
 let rec compile_program (o : out_channel) (p : program) : unit = match p with
    | Program(ps, fl) ->
+      let start_time = Sys.time () in
+      if !debug_1 || !verbose_mode then (
+         print_string ("Compiling L1 to assembly..."^(if !verbose_mode then " " else "\n"));
+         flush Pervasives.stdout
+      );
       (* output some boilerplate for the assembly file *)
       output_string o "	.file	\"prog.c\"\n" ;
       output_string o "	.text\n" ;
@@ -48,6 +48,12 @@ let rec compile_program (o : out_channel) (p : program) : unit = match p with
       (* output some boilerplate for the assembly file *)
       output_string o "	.ident	\"GCC: (Ubuntu 4.3.2-1ubuntu12) 4.3.2\"\n" ;
       output_string o "	.section	.note.GNU-stack,\"\",@progbits\n" ;
+      if !debug_1 || !verbose_mode then (
+         let diff = (Sys.time ()) -. start_time in
+         print_string ((if !verbose_mode then "" else "...")^"done"^
+            (if !verbose_mode then "" else " with L1->assembly")^": "^(string_of_float diff)^" sec.\n");
+         flush Pervasives.stdout
+      )
 
 (*
  * compiles an L1 "(i ...)" or "(label i ...)" expression into x86 assembly
@@ -602,21 +608,27 @@ and compile_strlit (o : out_channel) (s : string) (p : pos) (first : bool) (j : 
  * returns unit
  *)
 let compile_and_link (filename : string) (assembly_file_name : string) (runtime_file_name : string) : unit =
-   let r1c = ("as --32 -o "^assembly_file_name^".o "^assembly_file_name) in
-   let r2c = ("gcc -m32 "^(if has_debug "gdb" then "-g " else "")^"-c -O2 -o "^runtime_file_name^".o "^runtime_file_name) in
-   let r3c = ("gcc -m32 "^(if has_debug "gdb" then "-g " else "")^"-o "^
-      filename^" "^assembly_file_name^".o "^runtime_file_name^".o") in
-   let r1 = Sys.command (r1c^" 2> /dev/null")  in
-   let r2 = Sys.command (r2c^" 2> /dev/null") in
+   (*let r1c = ("as --32 -o "^assembly_file_name^".o "^assembly_file_name) in
+   let r2c = ("gcc -m32 -O2 "^(if !debug_gdb then "-g " else "")^"-c -o "^runtime_file_name^".o "^runtime_file_name) in*)
+   let r3c = ("gcc -m32 -O2 "^(if !debug_gdb then "-g " else "")^"-o "^
+      filename^" "^assembly_file_name^" "^runtime_file_name^"") in
+      (*filename^" "^assembly_file_name^".o "^runtime_file_name^".o") in*)
+   (if !debug_1 then
+      (*print_string ("System command: "^r1c^"\n");
+      print_string ("System command: "^r2c^"\n");*)
+      print_string ("System command: "^r3c^"\n")
+   );
+   (*let r1 = Sys.command (r1c^" 2> /dev/null")  in
+   let r2 = Sys.command (r2c^" 2> /dev/null") in*)
    let r3 = Sys.command (r3c^" 2> /dev/null") in
-   if (r1 <> 0) then die_system_error ("assembler failed: \""^r1c^"\" returned "^(string_of_int r1));
-   if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));
+   (*if (r1 <> 0) then die_system_error ("assembler failed: \""^r1c^"\" returned "^(string_of_int r1));
+   if (r2 <> 0) then die_system_error ("compiler failed: \""^r2c^"\" returned "^(string_of_int r2));*)
    if (r3 <> 0) then die_system_error ("compiler/linker failed: \""^r3c^"\" returned "^(string_of_int r3));
    (* delete all the temporary files *)
    if (not !emit_asm) then Unix.unlink assembly_file_name;
-   Unix.unlink (assembly_file_name^".o");
+   (*Unix.unlink (assembly_file_name^".o");*)
    if (not !emit_runtime) then Unix.unlink runtime_file_name;
-   Unix.unlink (runtime_file_name^".o");
+   (*Unix.unlink (runtime_file_name^".o");*)
 ;;
 
 (*
@@ -650,6 +662,11 @@ let generate_runtime (o : out_channel) : unit =
    output_string o " * 2. similarly, immediately before a call to\n";
    output_string o " *    allocate(), the stack should not contain\n";
    output_string o " *    unencoded numeric values\n";
+   output_string o " * 3. the boilerplate for the \"go\" function\n";
+   output_string o " *    should appear exactly as listed in the\n";
+   output_string o " *    lecture notes (that is, exactly 5 things\n";
+   output_string o " *    should be pushed onto the stack before\n";
+   output_string o " *    the body of the function)\n";
    output_string o " */\n";
    output_string o "#include <string.h>\n";
    output_string o "#include <stdlib.h>\n";
@@ -659,7 +676,7 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "//#define HEAP_SIZE 1048576  // one megabyte\n";
    output_string o "//#define HEAP_SIZE 20       // small heap size for testing\n";
    output_string o ((if !gc_enabled then "" else "//")^"#define ENABLE_GC          // uncomment this to enable GC\n");
-   output_string o ((if has_debug "gc" then "" else "//")^"#define GC_DEBUG           // uncomment this to enable GC debugging\n");
+   output_string o ((if !debug_gc then "" else "//")^"#define GC_DEBUG           // uncomment this to enable GC debugging\n");
    output_string o "\n";
    output_string o "typedef struct {\n";
    output_string o "   int *allocptr;           // current allocation position\n";
@@ -713,6 +730,13 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "int print(void *l) {\n";
    output_string o "   print_content(l, 0);\n";
    output_string o "   printf(\"\\n\");\n";
+   output_string o "\n";
+   output_string o "   asm (\"movl $1, %%ecx;\"\n";
+   output_string o "        \"movl $1, %%edx;\"\n";
+   output_string o "      :             // outputs (none)\n";
+   output_string o "      :             // inputs (none)\n";
+   output_string o "      : \"%ecx\", \"%edx\" // clobbered registers (caller-saves, except return val EAX)\n";
+   output_string o "   );\n";
    output_string o "\n";
    output_string o "   return 1;\n";
    output_string o "}\n";
@@ -905,6 +929,8 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   \"popl %edx\\n\"  // original return addr\n";
    output_string o "   \"popl %ecx\\n\"  // junk\n";
    output_string o "   \"pushl %edx\\n\"  // restore return addr\n";
+   output_string o "   \"movl $1, %ecx\\n\" // make sure the caller-saves don't have fake-ptr garbage\n";
+   output_string o "   \"movl $1, %edx\\n\"\n";
    output_string o "   \"ret\\n\" \n";
    output_string o ");\n";
    output_string o "\n";
@@ -933,7 +959,8 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
    output_string o "   //printf(\"runtime.c: allocate(%d,%d (%p)) @ %p: ESP = %p (%d), EDI = %p (%d), ESI = %p (%d), EBX = %p (%d)\\n\",\n";
-   output_string o "   //       data_size, (int)fw_fill, fw_fill, heap.allocptr, esp, (int)esp, (int*)esp[2], esp[2], (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
+   output_string o "   //       data_size, (int)fw_fill, fw_fill, heap.allocptr, esp, (int)esp, (int*)esp[2], esp[2],\n";
+   output_string o "   //       (int*)esp[1], esp[1], (int*)esp[0], esp[0]);\n";
    output_string o "   //fflush(stdout);\n";
    output_string o "#endif\n";
    output_string o "\n";
@@ -976,17 +1003,12 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   if(data_size == 0) {\n";
    output_string o "      ret[1] = 1;\n";
    output_string o "      valid[1] = 0;\n";
-   output_string o "      //printf(\" set %p to 1\\n\", &ret[1]);\n";
-   output_string o "      //fflush(stdout);\n";
    output_string o "   } else {\n";
    output_string o "      // Fill the array with the fill value\n";
    output_string o "      for(i = 1; i < array_size; i++) {\n";
    output_string o "         ret[i] = (int)fw_fill;\n";
    output_string o "         valid[i] = 0;\n";
-   output_string o "         //printf(\" set %p to %d (%p)\", &ret[i], fw_fill, fw_fill);\n";
    output_string o "      }\n";
-   output_string o "      //printf(\"\\n\");\n";
-   output_string o "      //fflush(stdout);\n";
    output_string o "   }\n";
    output_string o "\n";
    output_string o "   return ret;\n";
@@ -1001,16 +1023,13 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   exit(0);\n";
    output_string o "}\n";
    output_string o "\n";
-   output_string o "\n";
    output_string o "/*\n";
    output_string o " * Program entry-point\n";
    output_string o " */\n";
    output_string o "int main() {\n";
    output_string o "   int b1 = alloc_heap(&heap);\n";
    output_string o "   int b2 = alloc_heap(&heap2);\n";
-   output_string o "   // NOTE: allocptr needs to appear in the following check, because otherwise\n";
-   output_string o "   // gcc apparently optimizes away the assignment (i.e. the allocate_helper function\n";
-   output_string o "   // sees allocptr as NULL)\n";
+   output_string o "\n";
    output_string o "   if(!b1 || !b2) {\n";
    output_string o "      printf(\"malloc failed\\n\");\n";
    output_string o "      exit(-1);\n";
@@ -1025,13 +1044,17 @@ let generate_runtime (o : out_channel) : unit =
    output_string o "   asm (\"movl %%esp, %%eax;\"\n";
    output_string o "        \"subl $24, %%eax;\" // 6 * 4\n";
    output_string o "        \"movl %%eax, %0;\"\n";
-   output_string o "        \"movl $1, %%ebx;\"\n";
+   output_string o "        \"movl $1, %%eax;\"  // clear the caller-saves\n";
+   output_string o "        \"movl $1, %%ecx;\"\n";
+   output_string o "        \"movl $1, %%edx;\"\n";
+   output_string o "        \"movl $1, %%ebx;\"  // clear the callee-saves\n";
    output_string o "        \"movl $1, %%edi;\"\n";
    output_string o "        \"movl $1, %%esi;\"\n";
    output_string o "        \"call go;\"\n";
    output_string o "      : \"=m\"(stack) // outputs\n";
    output_string o "      :             // inputs (none)\n";
-   output_string o "      : \"%eax\", \"%ebx\", \"%edi\", \"%esi\" // clobbered registers (eax)\n";
+   output_string o "      : \"%eax\", \"%ecx\", \"%edx\", \"%ebx\", \"%edi\", \"%esi\" // clobbered registers ";
+   output_string o "(caller- & callee-saves)\n";
    output_string o "   );  \n";
    output_string o "\n";
    output_string o "#ifdef GC_DEBUG\n";
@@ -1045,7 +1068,7 @@ let generate_runtime (o : out_channel) : unit =
 (* this dumps the binary, given a program AST *)
 let generate_binary (result : program) (output_file_name : string) : unit = 
    let runtime_file_name = (Filename.temp_file ?temp_dir:(Some("")) "runtime_" ".c") in
-   let assembly_file_name = (Filename.temp_file ?temp_dir:(Some("")) "prog_" ".S") in
+   let assembly_file_name = (Filename.temp_file ?temp_dir:(Some("")) "prog_" ".s") in
    (* generate the C runtime *)
    let out1 = (try (open_out runtime_file_name)
       with _ -> die_system_error ("can't write to file: "^
