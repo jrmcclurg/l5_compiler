@@ -65,7 +65,7 @@ dexp:
    | LPAREN NEWARRAY sval sval RPAREN      { NewArrayDExp(get_current_pos (), $3, $4) }
    | LPAREN NEWTUPLE dexp_list RPAREN      { NewTupleDExp(get_current_pos (), $3) }
    | LPAREN AREF sval sval RPAREN          { ArefDExp(get_current_pos (), $3, $4) }
-   | LPAREN ASET sval sval sval RPAREN     { AsetDExp(get_current_pos (), $3, $4, $5, true) }
+   | LPAREN ASET sval sval sval RPAREN     { AsetDExp(get_current_pos (), $3, $4, $5) }
    | LPAREN ALEN sval RPAREN               { AlenDExp(get_current_pos (), $3) }
    | LPAREN PRINT sval RPAREN              { PrintDExp(get_current_pos (), $3) }
    | LPAREN MAKECLOSURE LABEL sval RPAREN  { MakeClosureDExp(get_current_pos (), $3, $4) }

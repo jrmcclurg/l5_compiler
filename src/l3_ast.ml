@@ -35,7 +35,7 @@ type program = Program of pos * exp * func list
           | NewArrayDExp of pos * sval * sval
           | NewTupleDExp of pos * dexp list
           | ArefDExp of pos * sval * sval
-          | AsetDExp of pos * sval * sval * sval * bool
+          | AsetDExp of pos * sval * sval * sval
           | AlenDExp of pos * sval
           | PrintDExp of pos * sval
           | MakeClosureDExp of pos * int * sval
@@ -183,7 +183,7 @@ and output_dexp out de = match de with
       output_string out " ";
       output_sval out sv2;
       output_string out ")"
-   | AsetDExp(_,sv1,sv2,sv3,_) ->
+   | AsetDExp(_,sv1,sv2,sv3) ->
       output_string out "(aset ";
       output_sval out sv1;
       output_string out " ";

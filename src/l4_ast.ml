@@ -26,7 +26,7 @@ type program = Program of pos * exp * func list
          | NewArrayExp of pos * exp * exp
          | NewTupleExp of pos * exp list
          | ArefExp of pos * exp * exp
-         | AsetExp of pos * exp * exp * exp * bool
+         | AsetExp of pos * exp * exp * exp
          | AlenExp of pos * exp
          | BeginExp of pos * exp * exp
          | PrintExp of pos * exp
@@ -117,7 +117,7 @@ and output_exp out (e : exp) = match e with
       output_string out " ";
       output_exp out e2;
       output_string out ")"
-   | AsetExp(_,e1,e2,e3,c) ->
+   | AsetExp(_,e1,e2,e3) ->
       output_string out "(aset ";
       output_exp out e1;
       output_string out " ";

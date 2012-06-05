@@ -207,11 +207,11 @@ let get_aset_func (p : pos) : (int * int * L4_ast.func list) =
       (name,fname,[L4_ast.Function(p,name,vars,
              L4_ast.AsetExp(p,L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,0l)),
                               L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,1l)),
-                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,2l)),true));
+                              L4_ast.ArefExp(p,L4_ast.VarExp(p,bv),L4_ast.IntExp(p,2l))));
              L4_ast.Function(p,fname,fvars,
              L4_ast.AsetExp(p,L4_ast.VarExp(p,List.nth fvars 0),
                               L4_ast.VarExp(p,List.nth fvars 1),
-                              L4_ast.VarExp(p,List.nth fvars 2),true))
+                              L4_ast.VarExp(p,List.nth fvars 2)))
             ])
    | _ -> (name,fname,[])
 ;;
@@ -416,7 +416,7 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
       let (x2,_) = compile_exp x in
       (L4_ast.LetExp(p,v2,
          L4_ast.NewTupleExp(p,[zero2]),
-         L4_ast.BeginExp(p,L4_ast.AsetExp(p,x2,zero2,e1n,true),e2n)),fl1@fl2)
+         L4_ast.BeginExp(p,L4_ast.AsetExp(p,x2,zero2,e1n),e2n)),fl1@fl2)
    | IfExp(p,e1,e2,e3) ->
       let (e1n,fl1) = compile_exp e1 in
       let (e2n,fl2) = compile_exp e2 in
@@ -478,7 +478,7 @@ and compile_exp (e : L5_ast.exp) : (L4_ast.exp * L4_ast.func list) =
             (L4_ast.ArefExp(p,List.nth el2 0,List.nth el2 1),fl2)
          | AsetPrim(p2) ->
             if List.length el2 <> 3 then die_error p "the 'aset' operator takes 3 arguments";
-            (L4_ast.AsetExp(p,List.nth el2 0,List.nth el2 1,List.nth el2 2,true),fl2)
+            (L4_ast.AsetExp(p,List.nth el2 0,List.nth el2 1,List.nth el2 2),fl2)
          | AlenPrim(p2) ->
             if List.length el2 <> 1 then die_error p "the 'alen' operator takes 1 argument";
             (L4_ast.AlenExp(p,List.nth el2 0),fl2)

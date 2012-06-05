@@ -51,9 +51,9 @@ let rec replace_in_exp (ex : L4_ast.exp) (target : L4_ast.var) (repl : L4_ast.ex
    | NewTupleExp(p,el) -> NewTupleExp(p, List.map (fun ex -> replace_in_exp ex target repl) el)
    | ArefExp(p,e1,e2) -> ArefExp(p, replace_in_exp e1 target repl,
                                     replace_in_exp e2 target repl)
-   | AsetExp(p,e1,e2,e3,c) -> AsetExp(p, replace_in_exp e1 target repl,
+   | AsetExp(p,e1,e2,e3) -> AsetExp(p, replace_in_exp e1 target repl,
                                        replace_in_exp e2 target repl,
-                                       replace_in_exp e3 target repl, c)
+                                       replace_in_exp e3 target repl)
    | AlenExp(p,e1) -> AlenExp(p, replace_in_exp e1 target repl);
    | BeginExp(p,e1,e2) -> BeginExp(p, replace_in_exp e1 target repl,
                                       replace_in_exp e2 target repl)
@@ -112,7 +112,7 @@ let rec recombine_exp (e2 : L4_ast.exp) (extr : (L4_ast.var * L4_ast.exp) list) 
       | NewArrayExp(p,e1,e2) -> L4_ast.LetExp(p,x,extracted,env) 
       | NewTupleExp(p,el) -> L4_ast.LetExp(p,x,extracted,env) 
       | ArefExp(p,e1,e2) -> L4_ast.LetExp(p,x,extracted,env) 
-      | AsetExp(p,e1,e2,e3,c) -> L4_ast.LetExp(p,x,extracted,env) 
+      | AsetExp(p,e1,e2,e3) -> L4_ast.LetExp(p,x,extracted,env) 
       | AlenExp(p,e1) -> L4_ast.LetExp(p,x,extracted,env) 
       | PrintExp(p,e) -> L4_ast.LetExp(p,x,extracted,env) 
       | MakeClosureExp(p,s,e) -> L4_ast.LetExp(p,x,extracted,env) 
@@ -215,13 +215,13 @@ let rec lift_one (e : L4_ast.exp) (en : environment) (flatten_tuples : bool) :
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
       | _ -> ([],e) )
-   | AsetExp(p,e1,e2,e3,c) -> 
+   | AsetExp(p,e1,e2,e3) -> 
       let (pull1,env1) = lift_one e1 SValEnv flatten_tuples in
       let (pull2,env2) = lift_one e2 SValEnv flatten_tuples in
       let (pull3,env3) = lift_one e3 SValEnv flatten_tuples in
-      if List.length pull1 > 0 then (pull1,AsetExp(p,env1,e2,e3,c)) else
-      if List.length pull2 > 0 then (pull2,AsetExp(p,e1,env2,e3,c)) else
-      if List.length pull3 > 0 then (pull3,AsetExp(p,e1,e2,env3,c)) else (
+      if List.length pull1 > 0 then (pull1,AsetExp(p,env1,e2,e3)) else
+      if List.length pull2 > 0 then (pull2,AsetExp(p,e1,env2,e3)) else
+      if List.length pull3 > 0 then (pull3,AsetExp(p,e1,e2,env3)) else (
       match en with
       | SValEnv -> let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
              ([(uv,e)], VarExp(p,uv))
@@ -351,48 +351,6 @@ let rec normalize_exp (the_exp : L4_ast.exp) (flatten_tuples : bool) : L4_ast.ex
       | _ -> recombine_exp (normalize_exp env flatten_tuples) pull
 ;;
 
-let rec optimize_tuples (e : L4_ast.exp) : L4_ast.exp =
-   match e with
-   | NewTupleExp(p,el) ->
-      let uv = L4_ast.Var(p,get_unique_symbol l4_prefix) in
-      let (asets,el2,_,flag) = List.fold_left (fun (asets,el2,n,flag) e ->
-         let (a,e2,f) = (match e with
-         (*| VarExp(_,_) -> ([],e,false)
-         | IntExp(_,_) -> ([],e,false)
-         | LabelExp(_,_) -> ([],e,false)*)
-         | _ -> ([AsetExp(p,VarExp(p,uv),IntExp(p,Int32.of_int n),optimize_tuples e,false)],IntExp(p,Int32.of_int n),true)
-         ) in
-         (a@asets,el2@[e2],n+1,(flag || f))
-      ) ([],[],0,false) el in
-      if flag then let a1 = List.fold_left (fun ex a ->
-         BeginExp(p,a,ex)
-      ) (VarExp(p,uv)) asets in
-         (LetExp(p,uv,NewArrayExp(p,IntExp(p,Int32.of_int (List.length el)),IntExp(p,0l)),a1)) else e
-   | LetExp(p,v,e1,e2) -> LetExp(p,v,optimize_tuples e1,optimize_tuples e2)
-   | IfExp(p,e1,e2,e3) -> IfExp(p,optimize_tuples e1,optimize_tuples e2,optimize_tuples e3)
-   | BeginExp(p,e1,e2) -> BeginExp(p,optimize_tuples e1,optimize_tuples e2)
-   | AppExp(p,e,el) -> AppExp(p,optimize_tuples e,List.map (fun e -> optimize_tuples e) el)
-   | NewArrayExp(p,e1,e2) -> NewArrayExp(p,optimize_tuples e1,optimize_tuples e2)
-   | ArefExp(p,e1,e2) -> ArefExp(p,optimize_tuples e1,optimize_tuples e2)
-   | AsetExp(p,e1,e2,e3,c) -> AsetExp(p,optimize_tuples e1,optimize_tuples e2,optimize_tuples e3,c)
-   | AlenExp(p,e1) -> AlenExp(p,optimize_tuples e1)
-   | PrintExp(p,e) -> PrintExp(p,optimize_tuples e)
-   | MakeClosureExp(p,s,e) -> MakeClosureExp(p,s,optimize_tuples e)
-   | ClosureProcExp(p,e) -> ClosureProcExp(p,optimize_tuples e)
-   | ClosureVarsExp(p,e) -> ClosureVarsExp(p,optimize_tuples e)
-   | PlusExp(p,e1,e2) -> PlusExp(p,optimize_tuples e1,optimize_tuples e2)
-   | MinusExp(p,e1,e2) -> MinusExp(p,optimize_tuples e1,optimize_tuples e2)
-   | TimesExp(p,e1,e2) -> TimesExp(p,optimize_tuples e1,optimize_tuples e2)
-   | LtExp(p,e1,e2) -> LtExp(p,optimize_tuples e1,optimize_tuples e2)
-   | LeqExp(p,e1,e2) -> LeqExp(p,optimize_tuples e1,optimize_tuples e2)
-   | EqExp(p,e1,e2) -> EqExp(p,optimize_tuples e1,optimize_tuples e2)
-   | NumberPredExp(p,e) -> NumberPredExp(p,optimize_tuples e)
-   | ArrayPredExp(p,e) -> ArrayPredExp(p,optimize_tuples e)
-   | VarExp(p,s) -> VarExp(p,s)
-   | IntExp(p,i) -> IntExp(p,i)
-   | LabelExp(p,s) -> LabelExp(p,s)
-;;
-
 (*
  * These functions compile a (normalized) L4 program into an L3 program
  *)
@@ -419,8 +377,7 @@ and compile_func (f : L4_ast.func) (flatten_tuples : bool) : L3_ast.func =
    match f with
    | Function(p,name,vl,e) -> L3_ast.Function(p, name, List.map (fun v -> compile_var v) vl, compile_exp e flatten_tuples)
 
-and compile_exp (e2 : L4_ast.exp) (flatten_tuples : bool) : L3_ast.exp = 
-   let e = (*optimize_tuples*) e2 in
+and compile_exp (e : L4_ast.exp) (flatten_tuples : bool) : L3_ast.exp = 
    let the_exp = normalize_exp e flatten_tuples in
    match the_exp with
    | LetExp(p,v,e1,e2) -> L3_ast.LetExp(p,compile_var v,compile_exp_to_dexp e1,compile_exp e2 flatten_tuples)
@@ -431,8 +388,8 @@ and compile_exp (e2 : L4_ast.exp) (flatten_tuples : bool) : L3_ast.exp =
    | NewTupleExp(p,el) ->
       L3_ast.DExpExp(p,L3_ast.NewTupleDExp(p,List.map (fun e -> compile_exp_to_dexp e) el))
    | ArefExp(p,e1,e2) -> L3_ast.DExpExp(p,L3_ast.ArefDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2))
-   | AsetExp(p,e1,e2,e3,c) ->
-      L3_ast.DExpExp(p,L3_ast.AsetDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2,compile_exp_to_sval e3,c))
+   | AsetExp(p,e1,e2,e3) ->
+      L3_ast.DExpExp(p,L3_ast.AsetDExp(p,compile_exp_to_sval e1,compile_exp_to_sval e2,compile_exp_to_sval e3))
    | AlenExp(p,e1) -> L3_ast.DExpExp(p,L3_ast.AlenDExp(p,compile_exp_to_sval e1))
    | BeginExp(p,e1,e2) ->
       let v = L3_ast.Var(p,get_unique_symbol l4_prefix) in
@@ -459,7 +416,7 @@ and compile_exp_to_dexp (e : L4_ast.exp) : L3_ast.dexp =
    | NewArrayExp(p,e1,e2) -> L3_ast.NewArrayDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2)
    | NewTupleExp(p,el) -> L3_ast.NewTupleDExp(p,List.map (fun ex -> compile_exp_to_dexp ex) el)
    | ArefExp(p,e1,e2) -> L3_ast.ArefDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2)
-   | AsetExp(p,e1,e2,e3,c) -> L3_ast.AsetDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2,compile_exp_to_sval e3,c)
+   | AsetExp(p,e1,e2,e3) -> L3_ast.AsetDExp(p,compile_exp_to_sval e1, compile_exp_to_sval e2,compile_exp_to_sval e3)
    | AlenExp(p,e) -> L3_ast.AlenDExp(p,compile_exp_to_sval e)
    | PrintExp(p,e) -> L3_ast.PrintDExp(p,compile_exp_to_sval e)
    | MakeClosureExp(p,s,e) -> L3_ast.MakeClosureDExp(p,s,compile_exp_to_sval e)
