@@ -360,12 +360,11 @@ l5c_tarball:		L5c clean
 			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
 			mv Makefile_temp Makefile
 
-lc_tarball:		Lc clean
+lc_tarball:		all clean
 			cat Makefile | sed "s/^\(all.*\)$$/##>>>\1\nall:\tLc/g" > Makefile_temp
 			mv Makefile_temp Makefile
-			tar -cvzf mcclurg.Lc.tar.gz Lc* Makefile lc* l5_lexer.mll l5_parser.mly \
-			l5_code.ml l4_code.ml l3_code.ml l2_code.ml l1_code.ml \
-			l5_ast.ml l4_ast.ml l3_ast.ml l2_ast.ml l1_ast.ml utils.ml flags.ml mcclurg.L5
+			tar -cvzf mcclurg.Lc.tar.gz Lc* L5* L4* L3* L2* L1* Makefile lc* l5* l4* l3* l2* l1* \
+			spill* liveness* graph* utils.ml flags.ml mcclurg.L5
 			cat Makefile | sed "s/^\(all.*\)$$//g" | sed "s/^\(##>>>\)//g" > Makefile_temp
 			mv Makefile_temp Makefile
 

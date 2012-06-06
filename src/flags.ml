@@ -22,7 +22,7 @@ type spill_mode_type = SpillMin
 
 (* defaults for command-line args *)
 let heap_size        = ref 1048576;;                (* one megabyte *)
-let spill_mode       = ref SpillIncrease;;          (* increase mode *)
+let spill_mode       = ref (SpillHalve(3));;        (* "halve" mode *)
 let filename         = ref (None : string option);; (* stdin *)
 let out_file_name    = ref (None : string option);;
 let binary_file_name = ref "a.out";;
