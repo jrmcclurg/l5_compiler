@@ -1,0 +1,5 @@
+((:fun 1 (new-tuple 2 3 4))
+ (:fun (x args) (let ([a (aref args 0)])
+                (let ([b (aref args 1)])
+                (let ([c (aref args 2)])
+                (print (+ (+ a b) (+ c x))))))))

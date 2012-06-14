@@ -1,0 +1,1 @@
+(let ([x 123]) (let ([f (lambda (y) (print y))]) (f x)))
