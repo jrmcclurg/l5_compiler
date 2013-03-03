@@ -1,0 +1,195 @@
+\documentclass[handout]{beamer}
+\usetheme{Warsaw}
+\newtheorem{thm}{Theorem}
+\title[Multi-stage L5 Compiler]{A Multi-stage Compiler for the Lightweight Higher-order Functional Language {\it L5}}
+\author[presented by Jedidiah McClurg]{presented by \\ Jedidiah R. McClurg}
+\institute{Northwestern University}
+\date{March 4, 2012}
+\usepackage{listings}
+%\usepackage{color}
+%\usepackage[usernames,dvipsnames]{xcolor}
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Slide 1 - Title Page    %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}[fragile]{Grammar for L1 \& L2}
+\begin{columns}[t]
+\column{.5\textwidth}
+{\tiny\tt\bf{\begin{lstlisting}[mathescape]
+$program \rightarrow$ ( $function^+$ )
+$function \rightarrow$ ( $instruction^+$ )
+$instruction \rightarrow$
+   $\hphantom{|}$ ($var$ <- $sval$)
+   $|$ ($var$ <- (mem $var$ $int$))
+   $|$ ((mem $var$ $INT$) <- $sval$)
+   $|$ ($var$ += $sval$)
+   $|$ ($var$ -= $sval$)
+   $|$ ($var$ *= $sval$)
+   $|$ ($var$ &= $sval$)
+   $|$ ($var$ <<= $svar$)
+   $|$ ($var$ >>= $svar$)
+   $|$ ($var$ <- $sval$ < $sval$)
+   $|$ ($var$ <- $sval$ <= $sval$)
+   $|$ ($var$ <- $sval$ = $sval$)
+   $|$ $label$
+   $|$ (goto $label$)
+   $|$ (cjump $sval$ < $sval$ $label$ $label$)
+   $|$ (cjump $sval$ <= $sval$ $label$ $label$)
+   $|$ (cjump $sval$ = $sval$ $label$ $label$)
+   $|$ (call $sval$)
+   $|$ (tail-call $sval$)
+   $|$ (return)
+   $|$ ($var$ <- (print $sval$))
+   $|$ ($var$ <- (allocate $sval$ $sval$))
+   $|$ ($var$ <- (array-error $sval$ $sval$))
+\end{lstlisting}}}
+
+\column{.5\textwidth}
+{\tiny\tt\bf{\begin{lstlisting}[mathescape]
+$var \rightarrow$
+   $\hphantom{|}$ esi $|$ edi $|$ ebp $|$ esp
+   $|$ eax $|$ ecx $|$ edx $|$ ebx
+$svar \rightarrow$ ecx $|$ $int$
+$sval \rightarrow$ $var$ $|$ $int$ $|$ $label$
+\end{lstlisting}}}
+
+where $int$ is an integer and $label$ is an alphanumeric label starting with a colon. \\ \vspace{5mm}
+
+The {\it L2} grammar is identical to that of {\it L1}, except two rules have been fundamentally changed:
+{\tiny\tt\bf{\begin{lstlisting}[mathescape]
+$var \rightarrow$
+   $\hphantom{|}$ esi $|$ edi $|$ ebp $|$ esp
+   $|$ eax $|$ ecx $|$ edx $|$ ebx $|$ $ident$
+$svar \rightarrow$ $var$ $|$ $int$
+\end{lstlisting}}}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Grammar for L3 \& L4}
+\begin{columns}[t]
+\column{.5\textwidth}
+{\tiny\tt\bf{\begin{lstlisting}[mathescape]
+$program \rightarrow$ ( $exp$ $function^*$ )
+$function \rightarrow$ ( $label$ ( $var^*$ ) $exp$ )
+$exp \rightarrow$
+   $\hphantom{|}$ ( let ([$var$ $dexp$]) $exp$ )
+   $|$ ( if $sval$ $exp$ $exp$ )
+   $|$ $dexp$
+$dexp \rightarrow$
+   $\hphantom{|}$ ( + $sval$ $sval$ )
+   $|$ ( - $sval$ $sval$ ) 
+   $|$ ( * $sval$ $sval$ )
+   $|$ ( < $sval$ $sval$ )
+   $|$ ( <= $sval$ $sval$ )
+   $|$ ( = $sval$ $sval$ )
+   $|$ ( number? $sval$ )
+   $|$ ( a? $sval$ )
+   $|$ ( $sval^+$ )
+   $|$ ( new-array $sval$ $sval$ )
+   $|$ ( new-tuple $dexp^*$ )
+   $|$ ( aref $sval$ $sval$ )
+   $|$ ( aset $sval$ $sval$ $sval$ )
+   $|$ ( alen $sval$ )
+   $|$ ( print $sval$ )
+   $|$ ( make-closure $label$ $sval$ )
+   $|$ ( closure-proc $sval$ )
+   $|$ ( closure-vars $sval$ )
+   $|$ $sval$
+$sval \rightarrow var$ $|$ $int$ $|$ $label$
+\end{lstlisting}}}
+
+where $var$ is any identifier.
+
+\column{.5\textwidth}
+{\tiny\tt\bf{\begin{lstlisting}[mathescape]
+$program \rightarrow$ ( $exp$ $function^*$ )
+$function \rightarrow$ ( $label$ ( $var^*$ ) $exp$ )
+$exp \rightarrow$
+   $\hphantom{|}$ ( let ([$var$ $exp$]) $exp$ )
+   $|$ ( if $exp$ $exp$ $exp$ )
+   $|$ ( begin $exp$ $exp$ )
+
+   $|$ ( + $exp$ $exp$ )
+   $|$ ( - $exp$ $exp$ ) 
+   $|$ ( * $exp$ $exp$ )
+   $|$ ( < $exp$ $exp$ )
+   $|$ ( <= $exp$ $exp$ )
+   $|$ ( = $exp$ $exp$ )
+   $|$ ( number? $exp$ )
+   $|$ ( a? $exp$ )
+   $|$ ( $exp^+$ )
+   $|$ ( new-array $exp$ $sval$ )
+   $|$ ( new-tuple $exp^*$ )
+   $|$ ( aref $exp$ $sval$ )
+   $|$ ( aset $exp$ $sval$ $sval$ )
+   $|$ ( alen $exp$ )
+   $|$ ( print $exp$ )
+   $|$ ( make-closure $label$ $exp$ )
+   $|$ ( closure-proc $exp$ )
+   $|$ ( closure-vars $exp$ )
+   $|$ $sval$
+$sval \rightarrow var$ $|$ $int$ $|$ $label$
+\end{lstlisting}}}
+
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Grammar for L5}
+\begin{columns}[t]
+\column{.5\textwidth}
+{\tiny\tt\bf{\begin{lstlisting}[mathescape]
+$program \rightarrow$ $exp$
+$exp \rightarrow$
+   $\hphantom{|}$ ( lambda ($var^*$) $exp$ )
+   $|$ ( let ([$var$ $exp$]) $exp$ )
+   $|$ ( letrec ([$var$ $exp$]) $exp$ )
+   $|$ ( if $exp$ $exp$ $exp$ )
+   $|$ ( new-tuple $exp^*$ )
+   $|$ ( begin $exp$ $exp$ )
+   $|$ ( $exp^+$ )
+   $|$ $var$
+   $|$ $prim$
+   $|$ $int$
+$prim \rightarrow$
+   $\hphantom{|}$ +
+   $|$ -
+   $|$ *
+   $|$ < 
+   $|$ <=
+   $|$ =
+   $|$ number?
+   $|$ a?
+   $|$ print
+   $|$ new-array
+   $|$ aref
+   $|$ aset
+   $|$ alen
+\end{lstlisting}}}
+
+\column{.5\textwidth}
+Here is an example {\it L5} function which prints a range of integers:
+{\small\begin{verbatim}
+(letrec ([range (lambda (a b)
+  (if (< b a) 0 (begin
+    (print a)
+    (range (+ a 1) b)
+  )))])
+  (range 1 10))
+\end{verbatim}}
+\end{columns}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Slide X - Bibliography  %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\begin{frame}{Thanks!}
+%\bibliography{mybib}{}
+%\bibliographystyle{plain}
+%\end{frame}
+
+\end{document}
